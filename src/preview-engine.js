@@ -1,4 +1,4 @@
-import { BACKGROUND_MODES, SAFE_AREA_MODES, generateOverlayUrl } from "./utils.js";
+﻿import { BACKGROUND_MODES, SAFE_AREA_MODES, generateOverlayUrl } from "./utils.js";
 
 const BACKGROUND_CLASS_MAP = {
   "Transparent Grid": "bg-transparent-grid",
@@ -20,18 +20,21 @@ const SAFE_AREA_CLASS_MAP = {
 };
 
 export class PreviewEngine {
-  constructor({ stage, frame, safeArea, statusText }) {
+  constructor({ stage, frame, safeArea, statusText, onRenderReport }) {
     this.stage = stage;
     this.frame = frame;
     this.safeArea = safeArea;
     this.statusText = statusText;
+    this.onRenderReport = onRenderReport;
     this.state = {
       template: null,
       theme: {},
       matchData: null,
       animationStyle: "smooth-broadcast",
       backgroundMode: BACKGROUND_MODES[0],
-      safeAreaMode: SAFE_AREA_MODES[0]
+      safeAreaMode: SAFE_AREA_MODES[0],
+      slotInspectorMode: "Off",
+      visualQaMode: "Off"
     };
 
     this.frameLoaded = false;
@@ -39,6 +42,30 @@ export class PreviewEngine {
       this.frameLoaded = true;
       this.postLiveUpdate();
     });
+
+    this.handleWindowMessage = this.handleWindowMessage.bind(this);
+    window.addEventListener("message", this.handleWindowMessage);
+  }
+
+  dispose() {
+    window.removeEventListener("message", this.handleWindowMessage);
+  }
+
+  handleWindowMessage(event) {
+    if (event.source !== this.frame.contentWindow) {
+      return;
+    }
+    const payload = event.data;
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+    if (payload.type !== "pepslive:render-contract-report") {
+      return;
+    }
+    if (this.state.template?.id && payload.report?.templateId && payload.report.templateId !== this.state.template.id) {
+      return;
+    }
+    this.onRenderReport?.(payload.report || null);
   }
 
   setTemplate(template) {
@@ -62,6 +89,22 @@ export class PreviewEngine {
     this.postMessage({
       type: "pepslive:update-data",
       data: this.state.matchData
+    });
+  }
+
+  setSlotInspectorMode(mode) {
+    this.state.slotInspectorMode = mode || "Off";
+    this.postMessage({
+      type: "pepslive:set-slot-inspector",
+      mode: this.state.slotInspectorMode
+    });
+  }
+
+  setVisualQaMode(mode) {
+    this.state.visualQaMode = mode || "Off";
+    this.postMessage({
+      type: "pepslive:set-visual-qa-mode",
+      mode: this.state.visualQaMode
     });
   }
 
@@ -134,6 +177,14 @@ export class PreviewEngine {
     this.postMessage({
       type: "pepslive:update-skin",
       skinId: this.state.template.id
+    });
+    this.postMessage({
+      type: "pepslive:set-slot-inspector",
+      mode: this.state.slotInspectorMode
+    });
+    this.postMessage({
+      type: "pepslive:set-visual-qa-mode",
+      mode: this.state.visualQaMode
     });
     if (this.state.matchData) {
       this.postMessage({

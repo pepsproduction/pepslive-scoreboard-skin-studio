@@ -170,3 +170,23 @@ basketball extra:
 - เพิ่ม schema versioning และ migration
 - ต่อ Google Sheet/Tournament Manager แบบเต็ม
 - แยกโมดูล Lower Third / Goal Frame / Player Card / Sponsor Board / Countdown / Marketplace
+
+## Phase 2.2 Template Render Contract
+- ระบบเพิ่มไฟล์ `src/template-render-contract.js` เป็นสัญญากลางของการ render template ทั้ง 40 แบบ
+- ทุก template ถูกตรวจ required slots ตาม sport/type ก่อนส่งเข้า Visual QA
+- มี critical slots สำหรับความพร้อมใช้งาน overlay:
+  - `eventLogo`, `homeLogo`, `awayLogo`, `score`, `gameClock`, `statusLabel`
+- Overlay ส่งรายงาน contract กลับไปที่ Dock Panel แบบเรียลไทม์
+- ถ้า slot สำคัญหาย ระบบจะขึ้น warning/error โดยไม่ทำให้หน้า crash
+
+## Slot Inspector และ Visual QA
+- Slot Inspector:
+  - `Off`
+  - `Core Slots`
+  - `All Slots`
+- Visual QA Mode:
+  - `Off`
+  - `Slot Grid`
+  - `Contrast Boost`
+  - `Overflow Check`
+- ใช้เพื่อเช็กตำแหน่ง slot, ความอ่านง่าย, และปัญหา overflow ก่อนนำขึ้น OBS จริง

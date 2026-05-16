@@ -1,4 +1,4 @@
-export const STYLE_TAGS = ["Minimal", "Broadcast", "Premium", "Neon", "Glass", "Local", "Tournament", "Social", "Compact", "Large"];
+﻿export const STYLE_TAGS = ["Minimal", "Broadcast", "Premium", "Neon", "Glass", "Local", "Tournament", "Social", "Compact", "Large"];
 export const LIST_FILTERS = ["All", "Favorites", "Recently Used"];
 export const SAFE_AREA_MODES = ["Off", "16:9 Safe Area", "9:16 Safe Area", "YouTube Safe Area", "Facebook Live Safe Area", "OBS Corner Guide"];
 export const BACKGROUND_MODES = [
@@ -12,6 +12,9 @@ export const BACKGROUND_MODES = [
 ];
 
 export const ANIMATION_PRESETS = ["none", "fade", "slide-left", "slide-top", "pop-bounce", "smooth-broadcast", "neon-pulse", "glass-reveal"];
+
+export const SLOT_INSPECTOR_MODES = ["Off", "Core Slots", "All Slots"];
+export const VISUAL_QA_MODES = ["Off", "Slot Grid", "Contrast Boost", "Overflow Check"];
 
 export function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);

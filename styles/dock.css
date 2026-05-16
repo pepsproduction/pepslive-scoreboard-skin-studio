@@ -479,10 +479,19 @@ textarea:focus {
   margin-top: 8px;
   min-height: 148px;
   resize: vertical;
+  white-space: pre;
+  overflow: auto;
+  font-family: "Consolas", "Fira Code", "Cascadia Mono", monospace;
 }
 
 .json-area.small {
   min-height: 110px;
+}
+
+.contract-summary {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
 }
 
 .tiny-note {

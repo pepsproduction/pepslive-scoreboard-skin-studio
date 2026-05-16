@@ -26,9 +26,20 @@ import {
   toggleFavorite
 } from "./skin-storage.js";
 import { SharedStateBridge, getSharedOverlayState } from "./shared-state-bridge.js";
+import { auditTemplateContracts, getRenderContractByTemplateId } from "./template-render-contract.js";
 import { TemplateGallery } from "./template-gallery.js";
 import { DEFAULT_THEME, ThemeEditor } from "./theme-editor.js";
-import { ANIMATION_PRESETS, BACKGROUND_MODES, SAFE_AREA_MODES, STYLE_TAGS, downloadJson, nowIso, setButtonGroupActive } from "./utils.js";
+import {
+  ANIMATION_PRESETS,
+  BACKGROUND_MODES,
+  SAFE_AREA_MODES,
+  SLOT_INSPECTOR_MODES,
+  STYLE_TAGS,
+  VISUAL_QA_MODES,
+  downloadJson,
+  nowIso,
+  setButtonGroupActive
+} from "./utils.js";
 
 const adapters = createDefaultAdapters();
 const dockAdapter = adapters.find((item) => item.source === "pepslive-dock");
@@ -45,7 +56,9 @@ const state = {
   bridge: null,
   lastValidation: null,
   applyingRemote: false,
-  lastProtocolPayload: null
+  lastProtocolPayload: null,
+  slotInspectorMode: SLOT_INSPECTOR_MODES[0],
+  visualQaMode: VISUAL_QA_MODES[0]
 };
 
 const ui = {};
@@ -75,6 +88,14 @@ function updateBridgeStatus(message, level = "ok") {
   }
   ui.bridgeStatusText.textContent = message;
   ui.bridgeStatusText.dataset.state = level;
+}
+
+function updateContractStatus(message, level = "ok") {
+  if (!ui.contractStatusText) {
+    return;
+  }
+  ui.contractStatusText.textContent = message;
+  ui.contractStatusText.dataset.state = level;
 }
 
 function updateProtocolMeta(payload = null, syncTime = null) {
@@ -111,6 +132,48 @@ function renderValidationResult(result) {
   }
 
   ui.payloadValidationResult.value = lines.join("\n");
+}
+
+function renderContractReport(report) {
+  if (!ui.contractReportArea) {
+    return;
+  }
+  if (!report) {
+    ui.contractReportArea.value = "";
+    return;
+  }
+
+  const lines = [];
+  lines.push(`Template: ${report.templateId || "-"}`);
+  lines.push(`Sport/Type: ${report.sport || "-"}/${report.type || "-"}`);
+  lines.push(`Contract Version: ${report.contractVersion || "-"}`);
+  lines.push(`Status: ${report.isPass ? "PASS" : "FAIL"}`);
+  lines.push(`Required Slots: ${report.requiredSlots?.length || 0}`);
+  lines.push(`Rendered Slots: ${report.renderedSlots?.length || 0}`);
+  lines.push(`Missing Required: ${(report.missingRequired || []).join(", ") || "-"}`);
+  lines.push(`Missing Critical: ${(report.missingCritical || []).join(", ") || "-"}`);
+  if (Array.isArray(report.warnings) && report.warnings.length > 0) {
+    lines.push("Warnings:");
+    report.warnings.forEach((item) => lines.push(`- ${item}`));
+  }
+  ui.contractReportArea.value = lines.join("\n");
+}
+
+function applyContractReport(report) {
+  renderContractReport(report);
+  if (!report) {
+    updateContractStatus("Render Contract: waiting preview report", "warn");
+    return;
+  }
+  if (report.missingCritical?.length) {
+    updateContractStatus(`Render Contract: critical missing (${report.missingCritical.length})`, "error");
+    return;
+  }
+  if (report.missingRequired?.length) {
+    updateContractStatus(`Render Contract: warning (${report.missingRequired.length} slots missing)`, "warn");
+    return;
+  }
+  updateContractStatus("Render Contract: PASS", "ok");
 }
 
 function buildProtocolPayloadFromState(partial = {}) {
@@ -162,13 +225,31 @@ async function applyTemplate(template, options = {}) {
   previewEngine.setTemplate(template);
   previewEngine.setTheme(state.currentTheme);
   previewEngine.setAnimation(state.animationStyle);
+  previewEngine.setSlotInspectorMode(state.slotInspectorMode);
+  previewEngine.setVisualQaMode(state.visualQaMode);
   themeEditor.setTheme(state.currentTheme, { silent: true });
   ui.animationPreset.value = state.animationStyle;
+  ui.slotInspectorSelect.value = state.slotInspectorMode;
+  ui.visualQaModeSelect.value = state.visualQaMode;
   updateCurrentSkinLabel();
   saveSkinState();
 
   state.activeMatchData = matchDataOverride || (await resolveMatchDataForTemplate(template, { forceMock }));
   previewEngine.setMatchData(state.activeMatchData);
+  const contract = getRenderContractByTemplateId(template.id);
+  renderContractReport({
+    templateId: contract.id,
+    sport: contract.sport,
+    type: contract.type,
+    contractVersion: contract.contractVersion,
+    requiredSlots: contract.requiredSlots,
+    renderedSlots: [],
+    missingRequired: [],
+    missingCritical: [],
+    warnings: ["Waiting for overlay render report"],
+    isPass: false
+  });
+  updateContractStatus("Render Contract: waiting preview report", "warn");
 
   if (markRecent) {
     state.recentlyUsed = pushRecentlyUsed(template.id);
@@ -383,6 +464,16 @@ function bindPreviewTools() {
       state.bridge?.publishAnimation({ style: state.animationStyle });
       state.bridge?.publishTheme(state.currentTheme);
     }
+  });
+
+  ui.slotInspectorSelect.addEventListener("change", () => {
+    state.slotInspectorMode = ui.slotInspectorSelect.value;
+    previewEngine.setSlotInspectorMode(state.slotInspectorMode);
+  });
+
+  ui.visualQaModeSelect.addEventListener("change", () => {
+    state.visualQaMode = ui.visualQaModeSelect.value;
+    previewEngine.setVisualQaMode(state.visualQaMode);
   });
 }
 
@@ -673,6 +764,10 @@ function cacheElements() {
   ui.backgroundMode = document.getElementById("backgroundModeSelect");
   ui.safeAreaMode = document.getElementById("safeAreaSelect");
   ui.animationPreset = document.getElementById("animationPresetSelect");
+  ui.slotInspectorSelect = document.getElementById("slotInspectorSelect");
+  ui.visualQaModeSelect = document.getElementById("visualQaModeSelect");
+  ui.contractStatusText = document.getElementById("contractStatusText");
+  ui.contractReportArea = document.getElementById("contractReportArea");
 
   ui.exportJsonBtn = document.getElementById("exportJsonBtn");
   ui.importJsonBtn = document.getElementById("importJsonBtn");
@@ -711,6 +806,8 @@ function renderStaticOptions() {
   ui.backgroundMode.innerHTML = BACKGROUND_MODES.map((item) => `<option value="${item}">${item}</option>`).join("");
   ui.safeAreaMode.innerHTML = SAFE_AREA_MODES.map((item) => `<option value="${item}">${item}</option>`).join("");
   ui.animationPreset.innerHTML = ANIMATION_PRESETS.map((item) => `<option value="${item}">${item}</option>`).join("");
+  ui.slotInspectorSelect.innerHTML = SLOT_INSPECTOR_MODES.map((item) => `<option value="${item}">${item}</option>`).join("");
+  ui.visualQaModeSelect.innerHTML = VISUAL_QA_MODES.map((item) => `<option value="${item}">${item}</option>`).join("");
 }
 
 async function loadThemePresets() {
@@ -759,10 +856,15 @@ function initPreview() {
     stage: ui.previewStage,
     frame: ui.previewFrame,
     safeArea: ui.safeArea,
-    statusText: ui.previewStatus
+    statusText: ui.previewStatus,
+    onRenderReport: (report) => {
+      applyContractReport(report);
+    }
   });
   previewEngine.setBackgroundMode(BACKGROUND_MODES[0]);
   previewEngine.setSafeAreaMode(SAFE_AREA_MODES[0]);
+  previewEngine.setSlotInspectorMode(state.slotInspectorMode);
+  previewEngine.setVisualQaMode(state.visualQaMode);
 }
 
 function initThemeEditor() {
@@ -817,6 +919,14 @@ async function initApp() {
   initGallery();
   initThemeEditor();
   renderPhaseRoadmap();
+  const contractAudit = auditTemplateContracts();
+  if (!contractAudit.pass) {
+    updateContractStatus(`Render Contract Audit failed (${contractAudit.errors.length} errors)`, "error");
+  } else if (contractAudit.warnings.length > 0) {
+    updateContractStatus(`Render Contract Audit warning (${contractAudit.warnings.length})`, "warn");
+  } else {
+    updateContractStatus(`Render Contract Audit pass (${contractAudit.contractCount} templates)`, "ok");
+  }
 
   bindSidebarFilters();
   bindTopActions();
@@ -854,6 +964,7 @@ async function initApp() {
 
 window.addEventListener("beforeunload", () => {
   state.bridge?.stop();
+  previewEngine?.dispose?.();
 });
 
 document.addEventListener("DOMContentLoaded", () => {

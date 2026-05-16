@@ -1,7 +1,8 @@
-import { getTemplateById } from "../templates/template-registry.js";
+﻿import { getTemplateById } from "../templates/template-registry.js";
 import { validateIncomingPayload } from "../src/payload-validator.js";
 import { PEPSLIVE_MESSAGE_TYPES, PEPSLIVE_SCOREBOARD_PROTOCOL, createProtocolPayload } from "../src/pepslive-payload-protocol.js";
 import { SharedStateBridge, getSharedOverlayState } from "../src/shared-state-bridge.js";
+import { evaluateRenderedSlots, getRenderContractByTemplateId } from "../src/template-render-contract.js";
 
 const DEFAULT_THEME = {
   primaryColor: "#ff7a18",
@@ -42,6 +43,19 @@ const EXTRA_LABELS = {
 const SPORT_EXTRAS = {
   football: ["addedTime", "aggregateScore", "penaltyScore", "goalScorerList", "cardInfo"],
   basketball: ["shotClock", "homeFouls", "awayFouls", "homeTimeouts", "awayTimeouts", "possession", "bonus", "quarterBreakdown", "topScorer"]
+};
+
+const SLOT_INSPECTOR_CLASS_MAP = {
+  Off: "slot-inspector-off",
+  "Core Slots": "slot-inspector-core",
+  "All Slots": "slot-inspector-all"
+};
+
+const VISUAL_QA_CLASS_MAP = {
+  Off: "qa-off",
+  "Slot Grid": "qa-slot-grid",
+  "Contrast Boost": "qa-contrast-boost",
+  "Overflow Check": "qa-overflow-check"
 };
 
 const FALLBACK_MOCK = {
@@ -101,6 +115,9 @@ let currentTheme = { ...DEFAULT_THEME };
 let currentData = null;
 let debugEnabled = false;
 let debugElement = null;
+let slotInspectorMode = "Off";
+let visualQaMode = "Off";
+let lastContractReport = null;
 
 function parseQueryParams() {
   const params = new URLSearchParams(window.location.search);
@@ -164,13 +181,6 @@ function textOrFallback(value, fallback = "-") {
   return String(value);
 }
 
-function createLogoMarkup(value, fallbackText) {
-  if (value) {
-    return `<span class="logo-slot"><img src="${value}" alt="${fallbackText}" /></span>`;
-  }
-  return `<span class="logo-slot">${fallbackText}</span>`;
-}
-
 function getLogoFallback(data, which) {
   if (which === "homeLogo") {
     return textOrFallback(data.homeShortName, "HOM").slice(0, 3).toUpperCase();
@@ -179,6 +189,13 @@ function getLogoFallback(data, which) {
     return textOrFallback(data.awayShortName, "AWY").slice(0, 3).toUpperCase();
   }
   return textOrFallback(data.eventName, "EVT").slice(0, 3).toUpperCase();
+}
+
+function createLogoMarkup(value, fallbackText, slotName) {
+  if (value) {
+    return `<span class="logo-slot" data-slot="${slotName}"><img src="${value}" alt="${fallbackText}" /></span>`;
+  }
+  return `<span class="logo-slot placeholder" data-slot="${slotName}" aria-label="${fallbackText}"><span class="logo-fallback-badge">${fallbackText}</span></span>`;
 }
 
 function extraItemsMarkup(sport, data) {
@@ -195,6 +212,35 @@ function extraItemsMarkup(sport, data) {
     .join("");
 }
 
+function applyInspectorAndQaClass(root) {
+  const inspectorClasses = Object.values(SLOT_INSPECTOR_CLASS_MAP);
+  const qaClasses = Object.values(VISUAL_QA_CLASS_MAP);
+  root.classList.remove(...inspectorClasses, ...qaClasses);
+  root.classList.add(SLOT_INSPECTOR_CLASS_MAP[slotInspectorMode] || SLOT_INSPECTOR_CLASS_MAP.Off);
+  root.classList.add(VISUAL_QA_CLASS_MAP[visualQaMode] || VISUAL_QA_CLASS_MAP.Off);
+}
+
+function collectRenderedSlotNames(root) {
+  return Array.from(root.querySelectorAll("[data-slot]"))
+    .map((node) => node.getAttribute("data-slot"))
+    .filter(Boolean);
+}
+
+function publishContractReport(report) {
+  lastContractReport = report;
+  try {
+    window.parent?.postMessage(
+      {
+        type: "pepslive:render-contract-report",
+        report
+      },
+      "*"
+    );
+  } catch (_error) {
+    // ignore cross-window issues
+  }
+}
+
 function renderScoreboard(template, data) {
   const root = document.getElementById("overlay-root");
   if (!root) {
@@ -204,43 +250,49 @@ function renderScoreboard(template, data) {
   root.className = `${mode === "summary" ? "mode-summary" : "mode-live"} skin-${template.id} anim-${currentAnimation}`;
   root.innerHTML = `
     <section class="scoreboard-shell">
-      <div class="event-row">
+      <div class="event-row" data-slot="eventRow">
         <div class="event-meta">
-          ${createLogoMarkup(data.eventLogo, getLogoFallback(data, "eventLogo"))}
-          <span class="event-name">${textOrFallback(data.eventName)}</span>
+          ${createLogoMarkup(data.eventLogo, getLogoFallback(data, "eventLogo"), "eventLogo")}
+          <span class="event-name" data-slot="eventName">${textOrFallback(data.eventName)}</span>
         </div>
-        <span class="status-badge">${textOrFallback(data.statusLabel)}</span>
+        <span class="status-badge" data-slot="statusLabel">${textOrFallback(data.statusLabel)}</span>
       </div>
-      <div class="teams-row">
-        <div class="team-block home">
-          ${createLogoMarkup(data.homeLogo, getLogoFallback(data, "homeLogo"))}
+      <div class="teams-row" data-slot="teamsRow">
+        <div class="team-block home" data-slot="homeTeam">
+          ${createLogoMarkup(data.homeLogo, getLogoFallback(data, "homeLogo"), "homeLogo")}
           <div class="team-name-box">
-            <span class="team-name">${textOrFallback(data.homeName)}</span>
-            <span class="team-short">${textOrFallback(data.homeShortName)}</span>
+            <span class="team-name" data-slot="homeName">${textOrFallback(data.homeName)}</span>
+            <span class="team-short" data-slot="homeShortName">${textOrFallback(data.homeShortName)}</span>
           </div>
         </div>
-        <div class="score-block">
+        <div class="score-block" data-slot="score">
           <div class="score-values">
-            <span>${textOrFallback(data.homeScore, "0")}</span>
+            <span data-slot="homeScore">${textOrFallback(data.homeScore, "0")}</span>
             <span class="score-divider">:</span>
-            <span>${textOrFallback(data.awayScore, "0")}</span>
+            <span data-slot="awayScore">${textOrFallback(data.awayScore, "0")}</span>
           </div>
           <div class="game-meta">
-            <span>${textOrFallback(data.gameClock, "00:00")}</span>
-            <span>${textOrFallback(data.periodLabel, "-")}</span>
+            <span data-slot="gameClock">${textOrFallback(data.gameClock, "00:00")}</span>
+            <span data-slot="periodLabel">${textOrFallback(data.periodLabel, "-")}</span>
           </div>
         </div>
-        <div class="team-block away">
-          ${createLogoMarkup(data.awayLogo, getLogoFallback(data, "awayLogo"))}
+        <div class="team-block away" data-slot="awayTeam">
+          ${createLogoMarkup(data.awayLogo, getLogoFallback(data, "awayLogo"), "awayLogo")}
           <div class="team-name-box">
-            <span class="team-name">${textOrFallback(data.awayName)}</span>
-            <span class="team-short">${textOrFallback(data.awayShortName)}</span>
+            <span class="team-name" data-slot="awayName">${textOrFallback(data.awayName)}</span>
+            <span class="team-short" data-slot="awayShortName">${textOrFallback(data.awayShortName)}</span>
           </div>
         </div>
       </div>
-      <div class="extra-row">${extraItemsMarkup(data.sport, data)}</div>
+      <div class="extra-row" data-slot="extraRow">${extraItemsMarkup(data.sport, data)}</div>
     </section>
   `;
+
+  applyInspectorAndQaClass(root);
+
+  const slotNames = collectRenderedSlotNames(root);
+  const contractReport = evaluateRenderedSlots(template.id, slotNames);
+  publishContractReport(contractReport);
 }
 
 async function loadMockData() {
@@ -270,7 +322,7 @@ function ensureDebugBox() {
   debugElement.style.position = "fixed";
   debugElement.style.right = "10px";
   debugElement.style.bottom = "10px";
-  debugElement.style.maxWidth = "280px";
+  debugElement.style.maxWidth = "300px";
   debugElement.style.background = "rgba(2, 6, 23, 0.72)";
   debugElement.style.color = "#e2e8f0";
   debugElement.style.border = "1px solid rgba(148, 163, 184, 0.45)";
@@ -291,12 +343,15 @@ function updateDebugBox({ protocolStatus, validationStatus, updateTime, template
   if (!debugElement) {
     return;
   }
+  const missingCritical = lastContractReport?.missingCritical?.length || 0;
   debugElement.innerHTML = `
     <div><strong>Protocol:</strong> ${protocolStatus}</div>
     <div><strong>Validation:</strong> ${validationStatus}</div>
     <div><strong>Last Update:</strong> ${updateTime || "-"}</div>
     <div><strong>Skin:</strong> ${template?.id || "-"}</div>
     <div><strong>Sport/Type:</strong> ${sport || "-"}/${type || "-"}</div>
+    <div><strong>Inspector/QA:</strong> ${slotInspectorMode} / ${visualQaMode}</div>
+    <div><strong>Missing Critical:</strong> ${missingCritical}</div>
   `;
 }
 
@@ -361,13 +416,14 @@ function setupSharedBridge() {
         return;
       }
       if (message.type === PEPSLIVE_MESSAGE_TYPES.PING || message.type === PEPSLIVE_MESSAGE_TYPES.PONG) {
+        const activeTemplate = getTemplateById(currentSkinId || "FB-LIVE-01");
         updateDebugBox({
           protocolStatus: message.protocol || PEPSLIVE_SCOREBOARD_PROTOCOL,
           validationStatus: message.type,
           updateTime: message.timestamp,
-          template: getTemplateById(currentSkinId || "FB-LIVE-01"),
-          sport: getTemplateById(currentSkinId || "FB-LIVE-01").sport,
-          type: getTemplateById(currentSkinId || "FB-LIVE-01").type
+          template: activeTemplate,
+          sport: activeTemplate.sport,
+          type: activeTemplate.type
         });
         return;
       }
@@ -402,12 +458,19 @@ function setupPostMessageBridge() {
     if (payload.type === "pepslive:update-data" && payload.data && typeof payload.data === "object") {
       currentData = { ...(currentData || {}), ...payload.data };
     }
+    if (payload.type === "pepslive:set-slot-inspector") {
+      slotInspectorMode = payload.mode || "Off";
+    }
+    if (payload.type === "pepslive:set-visual-qa-mode") {
+      visualQaMode = payload.mode || "Off";
+    }
 
+    const activeTemplate = getTemplateById(currentSkinId || template.id);
     const composedPayload = createProtocolPayload({
       source: "overlay-postmessage",
-      sport: getTemplateById(currentSkinId || template.id).sport,
-      skinId: currentSkinId || template.id,
-      type: getTemplateById(currentSkinId || template.id).type,
+      sport: activeTemplate.sport,
+      skinId: activeTemplate.id,
+      type: activeTemplate.type,
       theme: currentTheme,
       animation: { style: currentAnimation },
       matchData: currentData || {}
@@ -426,6 +489,11 @@ async function initOverlay() {
   const sharedPayload = sharedState.currentPayload;
   currentSkinId = query.skinId || sharedPayload?.skinId || "FB-LIVE-01";
   currentAnimation = query.animationStyle || sharedPayload?.animation?.style || currentAnimation;
+
+  const contract = getRenderContractByTemplateId(currentSkinId);
+  if (!contract) {
+    currentSkinId = "FB-LIVE-01";
+  }
 
   const queryTheme = parseThemeFromQuery(query.themeRaw);
   const storedTheme = getStoredTheme(currentSkinId);
