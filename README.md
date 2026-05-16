@@ -299,3 +299,63 @@ Checklist ที่ใช้ตรวจรอบ Visual QA + Overlay Smoke Test
   - `https://USERNAME.github.io/pepslive-scoreboard-skin-studio/overlays/live.html?skin=FB-LIVE-01`
   - `https://USERNAME.github.io/pepslive-scoreboard-skin-studio/overlays/summary.html?skin=FB-SUM-01`
 - ระบบ generate URL ใช้ base path อัตโนมัติให้ไม่พังบน GitHub Pages
+
+## Production Readiness Checklist
+- [x] `dock.html`, `index.html`, `test-protocol.html` เปิดได้
+- [x] Live/Summary overlay เปิดได้ทั้ง football และ basketball
+- [x] Overlay ยังเป็นพื้นหลังโปร่งใส (`background: transparent`)
+- [x] Template gallery ครบ 40 แบบ และ filter/search ทำงาน
+- [x] Theme editor และ preset ใช้งานได้แบบ real-time
+- [x] Payload protocol validation + legacy adapter ทำงาน
+- [x] OBS Manual Mode พร้อม copy URL/CSS และ preset source size
+- [x] GitHub Pages path จำลองใช้งานได้
+
+## GitHub Pages Final Setup
+1. Push โค้ดขึ้น branch `main`
+2. ไปที่ `Settings > Pages`
+3. ตั้งค่า Source เป็น `Deploy from a branch`
+4. เลือก Branch `main` และ Folder `/root`
+5. รอ deploy แล้วทดสอบ URL:
+- `https://pepsproduction.github.io/pepslive-scoreboard-skin-studio/`
+- `https://pepsproduction.github.io/pepslive-scoreboard-skin-studio/dock.html`
+- `https://pepsproduction.github.io/pepslive-scoreboard-skin-studio/overlays/live.html?skin=FB-LIVE-01`
+- `https://pepsproduction.github.io/pepslive-scoreboard-skin-studio/overlays/summary.html?skin=FB-SUM-01`
+
+## Quick Start for pepslive-tools
+1. ให้ Dock UI เดิมส่ง state เข้าผ่าน `PEPSLIVE_SCOREBOARD_STATE_V1` หรือ legacy payload
+2. ใช้ `PepsLiveDockAdapter` + `payload-validator` เพื่อ normalize/validate
+3. Publish shared state ผ่าน channel `pepslive-scoreboard-state-v1`
+4. เปิด overlay URL ใน OBS Browser Source
+
+ลิงก์ทดสอบด่วน:
+- Dock: [dock.html](./dock.html)
+- Live overlay: [overlays/live.html?skin=FB-LIVE-01](./overlays/live.html?skin=FB-LIVE-01)
+- Summary overlay: [overlays/summary.html?skin=FB-SUM-01](./overlays/summary.html?skin=FB-SUM-01)
+- Protocol test: [test-protocol.html](./test-protocol.html)
+
+## Recommended OBS Browser Source Settings
+- Live Source:
+  - Width: `900` (หรือ preset ที่เลือก)
+  - Height: `180` (หรือ preset ที่เลือก)
+- Summary Source:
+  - Width: `1920` (หรือ preset ที่เลือก)
+  - Height: `1080` (หรือ preset ที่เลือก)
+- Custom CSS:
+```css
+body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }
+```
+- Shutdown source when not visible: `Off`
+- Refresh browser when scene becomes active: `On`
+
+## Final Troubleshooting
+- URL เปิดไม่ได้:
+  - ตรวจ path ว่าเป็น `.../overlays/live.html` หรือ `.../overlays/summary.html`
+  - ตรวจว่าขึ้นด้วยโปรเจกต์ path บน GitHub Pages ถูกต้อง
+- Overlay ไม่โปร่งใส:
+  - ตรวจ Custom CSS ใน OBS
+  - ตรวจว่าใช้ overlay page ของโปรเจกต์นี้โดยตรง
+- Overlay ไม่อัปเดตหลังเปลี่ยน skin:
+  - ใช้ `Regenerate URL` แล้ว `Copy Fresh URL`
+  - ถ้าใช้ WebSocket ให้กด `Force Refresh Source`
+- Debug box โผล่ในงานจริง:
+  - ใช้ Production URL ที่ไม่มี `debug=1`
