@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PepsLive Scoreboard Skin Studio</title>
+    <link rel="stylesheet" href="./styles/dock.css" />
+    <link rel="stylesheet" href="./styles/preview.css" />
+    <link rel="stylesheet" href="./styles/responsive.css" />
+  </head>
+  <body>
+    <div class="dock-app">
+      <header class="dock-header glass-panel">
+        <div class="brand-block">
+          <h1>PepsLive Scoreboard Skin Studio</h1>
+          <p>Dock UI สำหรับเลือก Skin / Template ของ Scoreboard</p>
+        </div>
+        <div class="header-meta">
+          <div class="status-line">
+            <span>OBS Status:</span>
+            <strong id="obsStatusText" class="disconnected">Disconnected</strong>
+          </div>
+          <div class="status-line current-skin">
+            <span>Current Skin:</span>
+            <strong id="currentSkinLabel">-</strong>
+          </div>
+          <div class="header-actions">
+            <button type="button" class="capsule-btn" id="copyUrlBtn">Copy URL</button>
+            <button type="button" class="capsule-btn primary" id="addSourceBtn">Add Source</button>
+          </div>
+        </div>
+      </header>
+
+      <div id="dockMessage" class="dock-message" data-level="info">กำลังโหลด...</div>
+
+      <div class="dock-layout">
+        <aside class="sidebar glass-panel">
+          <section class="side-group">
+            <h2>Sport Filter</h2>
+            <div class="chip-group" id="sportFilter">
+              <button type="button" class="chip-btn is-active" data-value="all" aria-pressed="true">All Sports</button>
+              <button type="button" class="chip-btn" data-value="football" aria-pressed="false">Football</button>
+              <button type="button" class="chip-btn" data-value="basketball" aria-pressed="false">Basketball</button>
+            </div>
+          </section>
+
+          <section class="side-group">
+            <h2>Type Filter</h2>
+            <div class="chip-group" id="typeFilter">
+              <button type="button" class="chip-btn is-active" data-value="all" aria-pressed="true">All Types</button>
+              <button type="button" class="chip-btn" data-value="live" aria-pressed="false">Live Scoreboard</button>
+              <button type="button" class="chip-btn" data-value="summary" aria-pressed="false">Summary Board</button>
+            </div>
+          </section>
+
+          <section class="side-group">
+            <h2>Style Tags</h2>
+            <div class="chip-group wrap" id="styleFilter"></div>
+          </section>
+
+          <section class="side-group">
+            <h2>List Filter</h2>
+            <div class="chip-group" id="listFilter">
+              <button type="button" class="chip-btn is-active" data-value="All" aria-pressed="true">All</button>
+              <button type="button" class="chip-btn" data-value="Favorites" aria-pressed="false">Favorites</button>
+              <button type="button" class="chip-btn" data-value="Recently Used" aria-pressed="false">Recently Used</button>
+            </div>
+          </section>
+        </aside>
+
+        <main class="main-panel glass-panel">
+          <div id="templateGalleryRoot"></div>
+        </main>
+
+        <aside class="right-panel glass-panel">
+          <section class="panel-block">
+            <div class="block-head">
+              <h2>Large Live Preview</h2>
+              <small id="previewStatusText">-</small>
+            </div>
+            <div id="previewStage" class="preview-stage bg-transparent-grid">
+              <iframe
+                id="overlayPreviewFrame"
+                title="Overlay Preview"
+                loading="eager"
+                allowtransparency="true"
+              ></iframe>
+              <div id="safeAreaOverlay" class="safe-layer safe-off"></div>
+            </div>
+            <div class="inline-grid">
+              <label>
+                <span>Background Test Mode</span>
+                <select id="backgroundModeSelect" class="ui-select"></select>
+              </label>
+              <label>
+                <span>Safe Area Preview</span>
+                <select id="safeAreaSelect" class="ui-select"></select>
+              </label>
+              <label>
+                <span>Animation Preset</span>
+                <select id="animationPresetSelect" class="ui-select"></select>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel-block">
+            <h2>Theme Editor</h2>
+            <div id="themeEditorRoot"></div>
+          </section>
+
+          <section class="panel-block">
+            <h2>OBS Source Manager</h2>
+            <div class="obs-form">
+              <label>
+                <span>Host</span>
+                <input id="obsHost" type="text" placeholder="localhost" />
+              </label>
+              <label>
+                <span>Port</span>
+                <input id="obsPort" type="text" placeholder="4455" />
+              </label>
+              <label>
+                <span>Password</span>
+                <input id="obsPassword" type="password" placeholder="OBS WebSocket Password" />
+              </label>
+            </div>
+            <div class="inline-row">
+              <button type="button" class="capsule-btn primary" id="obsConnectBtn">Connect OBS</button>
+              <button type="button" class="capsule-btn" id="obsTestBtn">Test Connection</button>
+            </div>
+            <div class="inline-row">
+              <button type="button" class="capsule-btn" id="obsRefreshBtn">Refresh Browser Source</button>
+              <button type="button" class="capsule-btn" id="obsHealthBtn">Source Health Check</button>
+            </div>
+          </section>
+
+          <section class="panel-block">
+            <h2>Import / Export Skin JSON</h2>
+            <div class="inline-row">
+              <button type="button" class="capsule-btn" id="exportJsonBtn">Export Current Skin JSON</button>
+              <button type="button" class="capsule-btn" id="importJsonBtn">Import Skin JSON</button>
+            </div>
+            <div class="inline-row">
+              <button type="button" class="capsule-btn" id="resetSkinBtn">Reset Skin</button>
+              <button type="button" class="capsule-btn" id="duplicateSkinBtn">Duplicate Skin</button>
+            </div>
+            <textarea
+              id="skinJsonArea"
+              class="json-area"
+              placeholder="วาง Skin JSON ที่นี่เพื่อ Import หรือกด Export เพื่อสร้างไฟล์"
+            ></textarea>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

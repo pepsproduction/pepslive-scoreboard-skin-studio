@@ -1,0 +1,378 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+:root {
+  --primary-color: #ff7a18;
+  --secondary-color: #101827;
+  --home-color: #f97316;
+  --away-color: #3b82f6;
+  --text-color: #f8fafc;
+  --accent-color: #fb923c;
+  --background-opacity: 0.78;
+  --border-radius: 16px;
+  --shadow-intensity: 0.45;
+  --glow-intensity: 0.3;
+  --font-family: "Rajdhani", "Segoe UI", sans-serif;
+  --logo-slot-size: 42px;
+  --scoreboard-scale: 1;
+  --border-width: 1.6px;
+  --glass-blur: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--text-color);
+}
+
+#overlay-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  pointer-events: none;
+  padding: 18px;
+}
+
+#overlay-root.mode-summary {
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.scoreboard-shell {
+  width: min(96vw, 1180px);
+  min-height: 126px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: var(--border-radius);
+  border: var(--border-width) solid color-mix(in srgb, var(--primary-color) 55%, transparent);
+  background: color-mix(in srgb, var(--secondary-color) calc(var(--background-opacity) * 100%), transparent);
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow:
+    0 14px 32px rgba(15, 23, 42, calc(var(--shadow-intensity) * 0.8)),
+    0 0 28px color-mix(in srgb, var(--accent-color) calc(var(--glow-intensity) * 100%), transparent);
+  padding: 10px 14px;
+  transform-origin: top center;
+  transform: scale(var(--scoreboard-scale));
+}
+
+#overlay-root.mode-summary .scoreboard-shell {
+  width: min(92vw, 1400px);
+  min-height: 300px;
+  padding: 24px;
+  gap: 18px;
+}
+
+.event-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.event-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.event-name {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 24%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-color) 45%, transparent);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+.logo-slot {
+  width: var(--logo-slot-size);
+  height: var(--logo-slot-size);
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text-color) 34%, transparent);
+  background: color-mix(in srgb, var(--secondary-color) 75%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+}
+
+.logo-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.teams-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.team-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: calc(var(--border-radius) * 0.74);
+  border: 1px solid color-mix(in srgb, var(--text-color) 12%, transparent);
+}
+
+.team-block.home {
+  background: color-mix(in srgb, var(--home-color) 24%, transparent);
+}
+
+.team-block.away {
+  background: color-mix(in srgb, var(--away-color) 24%, transparent);
+}
+
+.team-name-box {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.team-name {
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.team-short {
+  font-size: 0.78rem;
+  font-weight: 700;
+  opacity: 0.85;
+  letter-spacing: 0.08em;
+}
+
+.score-block {
+  min-width: 220px;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+
+.score-values {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.score-divider {
+  font-size: 1rem;
+  opacity: 0.7;
+}
+
+.game-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.extra-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.extra-item {
+  background: color-mix(in srgb, var(--secondary-color) 62%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent);
+  border-radius: 12px;
+  padding: 6px 8px;
+  display: grid;
+  gap: 1px;
+}
+
+.extra-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  opacity: 0.64;
+}
+
+.extra-value {
+  font-size: 0.79rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#overlay-root.mode-summary .event-row {
+  justify-content: center;
+}
+
+#overlay-root.mode-summary .teams-row {
+  grid-template-columns: 1fr minmax(300px, auto) 1fr;
+}
+
+#overlay-root.mode-summary .team-name {
+  font-size: 1.35rem;
+}
+
+#overlay-root.mode-summary .score-values {
+  font-size: clamp(3rem, 9vw, 8rem);
+}
+
+#overlay-root.mode-summary .score-block {
+  min-width: 380px;
+}
+
+#overlay-root.mode-summary .extra-row {
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+}
+
+.slot-hidden {
+  display: none !important;
+}
+
+.anim-none .scoreboard-shell {
+  animation: none;
+}
+
+.anim-fade .scoreboard-shell {
+  animation: animFade 420ms ease both;
+}
+
+.anim-slide-left .scoreboard-shell {
+  animation: animSlideLeft 480ms ease both;
+}
+
+.anim-slide-top .scoreboard-shell {
+  animation: animSlideTop 480ms ease both;
+}
+
+.anim-pop-bounce .scoreboard-shell {
+  animation: animPopBounce 650ms cubic-bezier(0.17, 0.89, 0.32, 1.28) both;
+}
+
+.anim-smooth-broadcast .scoreboard-shell {
+  animation: animSmoothBroadcast 540ms cubic-bezier(0.2, 0.7, 0, 1) both;
+}
+
+.anim-neon-pulse .scoreboard-shell {
+  animation: animNeonPulse 2.5s ease-in-out infinite alternate;
+}
+
+.anim-glass-reveal .scoreboard-shell {
+  animation: animGlassReveal 620ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes animFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes animSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-22px) scale(var(--scoreboard-scale));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(var(--scoreboard-scale));
+  }
+}
+
+@keyframes animSlideTop {
+  from {
+    opacity: 0;
+    transform: translateY(-18px) scale(var(--scoreboard-scale));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(var(--scoreboard-scale));
+  }
+}
+
+@keyframes animPopBounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(var(--scoreboard-scale));
+  }
+}
+
+@keyframes animSmoothBroadcast {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(var(--scoreboard-scale));
+    filter: blur(0);
+  }
+}
+
+@keyframes animNeonPulse {
+  from {
+    box-shadow:
+      0 14px 32px rgba(15, 23, 42, calc(var(--shadow-intensity) * 0.75)),
+      0 0 22px color-mix(in srgb, var(--accent-color) 32%, transparent);
+  }
+  to {
+    box-shadow:
+      0 14px 32px rgba(15, 23, 42, calc(var(--shadow-intensity) * 0.75)),
+      0 0 44px color-mix(in srgb, var(--accent-color) 86%, transparent);
+  }
+}
+
+@keyframes animGlassReveal {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0 round 20px);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0 round 20px);
+  }
+}

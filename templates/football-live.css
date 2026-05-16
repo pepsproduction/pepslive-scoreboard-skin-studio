@@ -1,0 +1,164 @@
+.skin-FB-LIVE-01 .scoreboard-shell {
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.skin-FB-LIVE-01 .extra-row {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.skin-FB-LIVE-02 .scoreboard-shell {
+  width: min(86vw, 980px);
+  border-radius: 28px;
+  padding: 8px 18px;
+}
+
+.skin-FB-LIVE-02 .teams-row {
+  gap: 6px;
+}
+
+.skin-FB-LIVE-02 .team-block {
+  border-radius: 999px;
+}
+
+.skin-FB-LIVE-03 .scoreboard-shell {
+  border-radius: 999px;
+  padding: 10px 20px;
+}
+
+.skin-FB-LIVE-03 .event-row {
+  order: 2;
+  opacity: 0.86;
+}
+
+.skin-FB-LIVE-03 .extra-row {
+  order: 3;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.skin-FB-LIVE-04 .scoreboard-shell {
+  width: min(72vw, 800px);
+  margin-left: auto;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--secondary-color) 48%, transparent);
+}
+
+.skin-FB-LIVE-04 .teams-row {
+  grid-template-columns: auto 1fr auto;
+}
+
+.skin-FB-LIVE-04 .score-block {
+  min-width: 160px;
+}
+
+.skin-FB-LIVE-05 .scoreboard-shell {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--accent-color) 90%, transparent);
+  box-shadow:
+    0 0 25px color-mix(in srgb, var(--accent-color) 70%, transparent),
+    0 10px 28px rgba(0, 0, 0, 0.6);
+}
+
+.skin-FB-LIVE-05 .team-block {
+  background: color-mix(in srgb, var(--secondary-color) 58%, transparent);
+}
+
+.skin-FB-LIVE-05 .score-values {
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-color) 70%, transparent);
+}
+
+.skin-FB-LIVE-06 .scoreboard-shell {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--home-color) 26%, transparent) 0%,
+      color-mix(in srgb, var(--home-color) 26%, transparent) 45%,
+      color-mix(in srgb, var(--away-color) 26%, transparent) 55%,
+      color-mix(in srgb, var(--away-color) 26%, transparent) 100%
+    );
+}
+
+.skin-FB-LIVE-06 .team-block {
+  background: transparent;
+  border-color: transparent;
+}
+
+.skin-FB-LIVE-06 .score-block {
+  background: rgba(10, 18, 34, 0.78);
+  border-radius: 16px;
+  padding: 6px 16px;
+}
+
+.skin-FB-LIVE-07 .teams-row {
+  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+}
+
+.skin-FB-LIVE-07 .team-block {
+  gap: 14px;
+}
+
+.skin-FB-LIVE-07 .logo-slot {
+  width: calc(var(--logo-slot-size) * 1.15);
+  height: calc(var(--logo-slot-size) * 1.15);
+  border-width: 2px;
+}
+
+.skin-FB-LIVE-08 .scoreboard-shell {
+  width: min(38vw, 380px);
+  margin-left: auto;
+  min-height: 220px;
+}
+
+.skin-FB-LIVE-08 .event-row {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.skin-FB-LIVE-08 .teams-row {
+  grid-template-columns: 1fr;
+}
+
+.skin-FB-LIVE-08 .score-block {
+  width: 100%;
+}
+
+.skin-FB-LIVE-08 .extra-row {
+  grid-template-columns: 1fr 1fr;
+}
+
+.skin-FB-LIVE-09 .scoreboard-shell {
+  border-radius: 6px;
+  border-width: 3px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, #111 72%, transparent) 0,
+      color-mix(in srgb, #111 72%, transparent) 8px,
+      color-mix(in srgb, #1f2937 70%, transparent) 8px,
+      color-mix(in srgb, #1f2937 70%, transparent) 16px
+    );
+}
+
+.skin-FB-LIVE-09 .score-values {
+  font-family: "Share Tech Mono", "Rajdhani", monospace;
+  letter-spacing: 0.08em;
+}
+
+.skin-FB-LIVE-09 .status-badge {
+  text-transform: uppercase;
+}
+
+.skin-FB-LIVE-10 .scoreboard-shell {
+  border-radius: 12px;
+  border-color: color-mix(in srgb, #d1d5db 28%, transparent);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.32);
+}
+
+.skin-FB-LIVE-10 .team-block {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--text-color) 24%, transparent);
+}
+
+.skin-FB-LIVE-10 .extra-item {
+  background: rgba(15, 23, 42, 0.52);
+}
