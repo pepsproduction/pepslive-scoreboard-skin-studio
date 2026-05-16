@@ -31,7 +31,7 @@
 }
 
 .skin-BB-LIVE-03 .extra-row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .skin-BB-LIVE-04 .score-block {
@@ -113,8 +113,8 @@
 }
 
 .skin-BB-LIVE-09 .logo-slot {
-  width: calc(var(--logo-slot-size) * 1.3);
-  height: calc(var(--logo-slot-size) * 1.3);
+  width: calc(var(--logo-slot-size) * 1.15);
+  height: calc(var(--logo-slot-size) * 1.15);
 }
 
 .skin-BB-LIVE-09 .team-name {
@@ -122,7 +122,7 @@
 }
 
 .skin-BB-LIVE-09 .score-block {
-  min-width: 240px;
+  min-width: 220px;
 }
 
 .skin-BB-LIVE-10 .scoreboard-shell {
@@ -132,7 +132,17 @@
 }
 
 .skin-BB-LIVE-10 .event-row {
-  display: none;
+  min-height: 24px;
+  align-items: center;
+}
+
+.skin-BB-LIVE-10 .event-name {
+  font-size: 0.72rem;
+}
+
+.skin-BB-LIVE-10 .status-badge {
+  font-size: 0.64rem;
+  padding: 3px 8px;
 }
 
 .skin-BB-LIVE-10 .teams-row {
@@ -145,5 +155,18 @@
 }
 
 .skin-BB-LIVE-10 .extra-row {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.skin-BB-LIVE-10 .extra-item {
+  padding: 4px 6px;
+}
+
+.skin-BB-LIVE-10 .extra-label {
+  font-size: 0.56rem;
+}
+
+.skin-BB-LIVE-10 .extra-value {
+  font-size: 0.68rem;
 }

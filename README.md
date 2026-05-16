@@ -190,3 +190,16 @@ basketball extra:
   - `Contrast Boost`
   - `Overflow Check`
 - ใช้เพื่อเช็กตำแหน่ง slot, ความอ่านง่าย, และปัญหา overflow ก่อนนำขึ้น OBS จริง
+
+## Phase 2.2.1 Visual Smoke Test
+Checklist ที่ใช้ตรวจรอบ Visual QA + Overlay Smoke Test:
+- [x] เปิด `dock.html`
+- [x] เปิด Live overlay football (`overlays/live.html?skin=FB-LIVE-01&debug=1`)
+- [x] เปิด Live overlay basketball (`overlays/live.html?skin=BB-LIVE-01&debug=1`)
+- [x] เปิด Summary overlay football (`overlays/summary.html?skin=FB-SUM-01&debug=1`)
+- [x] เปิด Summary overlay basketball (`overlays/summary.html?skin=BB-SUM-01&debug=1`)
+- [x] ตรวจ `debug=1` และโหมดปกติ (ไม่มี debug box)
+- [x] ตรวจพื้นหลังโปร่งใส (`html/body` transparent)
+- [x] ตรวจ GitHub Pages path (`/pepslive-scoreboard-skin-studio/...`)
+- [x] ทดสอบ sample payload 4 ไฟล์ (validate + ingest)
+- [x] ทดสอบ OBS Browser Source manual URL (Copy URL / fallback)

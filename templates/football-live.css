@@ -103,27 +103,52 @@
   border-width: 2px;
 }
 
+.skin-FB-LIVE-08 {
+  --scoreboard-scale: 0.74;
+}
+
 .skin-FB-LIVE-08 .scoreboard-shell {
   width: min(38vw, 380px);
   margin-left: auto;
-  min-height: 220px;
+  min-height: 176px;
+  padding: 8px 10px;
 }
 
 .skin-FB-LIVE-08 .event-row {
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: center;
 }
 
 .skin-FB-LIVE-08 .teams-row {
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 6px;
 }
 
 .skin-FB-LIVE-08 .score-block {
-  width: 100%;
+  width: auto;
+  min-width: 0;
 }
 
 .skin-FB-LIVE-08 .extra-row {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.skin-FB-LIVE-08 .team-block {
+  padding: 6px 8px;
+}
+
+.skin-FB-LIVE-08 .score-values {
+  font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+}
+
+.skin-FB-LIVE-08 .team-name {
+  font-size: 0.88rem;
+}
+
+.skin-FB-LIVE-08 .logo-slot {
+  width: 30px;
+  height: 30px;
 }
 
 .skin-FB-LIVE-09 .scoreboard-shell {

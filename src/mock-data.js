@@ -55,7 +55,7 @@ export async function loadMockData() {
     return cache;
   }
   try {
-    const response = await fetch("./data/mock-match-data.json");
+    const response = await fetch(new URL("../data/mock-match-data.json", import.meta.url));
     cache = response.ok ? await response.json() : FALLBACK;
   } catch (_error) {
     cache = FALLBACK;
