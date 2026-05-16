@@ -61,9 +61,16 @@ function normalizeScoreValue(value) {
   return 0;
 }
 
+function isPlainObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 function inferSport(raw) {
-  if (raw?.sport && SUPPORTED_SPORTS.includes(raw.sport)) {
-    return raw.sport;
+  if (!isPlainObject(raw)) {
+    return null;
+  }
+  if (typeof raw.sport === "string" && raw.sport.trim() !== "") {
+    return SUPPORTED_SPORTS.includes(raw.sport) ? raw.sport : "__invalid__";
   }
   if (typeof raw?.skinId === "string" && raw.skinId.startsWith("FB-")) {
     return "football";
@@ -75,8 +82,14 @@ function inferSport(raw) {
 }
 
 function inferType(raw) {
-  if (raw?.type && SUPPORTED_TYPES.includes(raw.type)) {
-    return raw.type;
+  if (!isPlainObject(raw)) {
+    return null;
+  }
+  if (typeof raw.type === "string" && raw.type.trim() !== "") {
+    if (SUPPORTED_TYPES.includes(raw.type)) {
+      return raw.type;
+    }
+    return "__invalid__";
   }
   if (typeof raw?.skinId === "string" && raw.skinId.includes("-SUM-")) {
     return "summary";
@@ -120,7 +133,7 @@ function mergeMatchDataWithFallback(fallback, incoming, sport) {
 
 export function getPayloadValidationErrors(payload) {
   const errors = [];
-  if (!payload || typeof payload !== "object") {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     errors.push("Payload must be an object");
     return errors;
   }
@@ -132,6 +145,8 @@ export function getPayloadValidationErrors(payload) {
   const sport = inferSport(payload);
   if (!sport) {
     errors.push("Unsupported sport");
+  } else if (sport === "__invalid__") {
+    errors.push("Sport must be football or basketball");
   } else if (!SUPPORTED_SPORTS.includes(sport)) {
     errors.push("Sport must be football or basketball");
   }
@@ -140,7 +155,7 @@ export function getPayloadValidationErrors(payload) {
 }
 
 export function isCompatiblePayload(payload) {
-  if (!payload || typeof payload !== "object") {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return false;
   }
   if (payload.protocol !== PEPSLIVE_SCOREBOARD_PROTOCOL) {
@@ -153,7 +168,7 @@ export async function normalizeIncomingPayload(payload) {
   const warnings = [];
   const errors = [];
 
-  if (!payload || typeof payload !== "object") {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return {
       accepted: false,
       warnings,
@@ -172,11 +187,16 @@ export async function normalizeIncomingPayload(payload) {
   }
 
   if (payload.version !== undefined && payload.version !== PEPSLIVE_SCOREBOARD_PROTOCOL_VERSION) {
-    warnings.push(`Protocol version ${payload.version} differs from expected ${PEPSLIVE_SCOREBOARD_PROTOCOL_VERSION}`);
+    return {
+      accepted: false,
+      warnings,
+      errors: [`Protocol version ${payload.version} is incompatible with expected ${PEPSLIVE_SCOREBOARD_PROTOCOL_VERSION}`],
+      payload: null
+    };
   }
 
   const sport = inferSport(payload);
-  if (!sport || !SUPPORTED_SPORTS.includes(sport)) {
+  if (!sport || sport === "__invalid__" || !SUPPORTED_SPORTS.includes(sport)) {
     return {
       accepted: false,
       warnings,
@@ -186,6 +206,10 @@ export async function normalizeIncomingPayload(payload) {
   }
 
   let type = inferType(payload);
+  if (type === "__invalid__") {
+    warnings.push("Type is invalid, fallback to inferred/default type");
+    type = null;
+  }
   if (!type || !SUPPORTED_TYPES.includes(type)) {
     type = "live";
     warnings.push("Type is missing or invalid, fallback to live");
@@ -199,8 +223,24 @@ export async function normalizeIncomingPayload(payload) {
     skinId = fallbackTemplate.id;
   }
 
+  if (!isPlainObject(payload.matchData)) {
+    warnings.push("matchData is missing or invalid, fallback to mock data");
+  }
+
+  if (!isPlainObject(payload.theme)) {
+    warnings.push("theme is missing or invalid, fallback to default theme");
+  }
+
+  if (!isPlainObject(payload.animation)) {
+    warnings.push("animation is missing or invalid, fallback to default animation");
+  }
+
+  if (payload.timestamp === undefined) {
+    warnings.push("timestamp is missing, fallback to current time");
+  }
+
   const fallbackMock = await getMockDataBySport(sport);
-  const mergedMatchData = mergeMatchDataWithFallback(fallbackMock, payload.matchData || {}, sport);
+  const mergedMatchData = mergeMatchDataWithFallback(fallbackMock, isPlainObject(payload.matchData) ? payload.matchData : {}, sport);
   const normalized = createProtocolPayload({
     protocol: PEPSLIVE_SCOREBOARD_PROTOCOL,
     version: PEPSLIVE_SCOREBOARD_PROTOCOL_VERSION,
@@ -209,8 +249,8 @@ export async function normalizeIncomingPayload(payload) {
     sport,
     skinId,
     type,
-    theme: payload.theme && typeof payload.theme === "object" ? payload.theme : {},
-    animation: payload.animation && typeof payload.animation === "object" ? payload.animation : {},
+    theme: isPlainObject(payload.theme) ? payload.theme : {},
+    animation: isPlainObject(payload.animation) ? payload.animation : {},
     matchData: {
       ...mergedMatchData,
       sport
@@ -218,10 +258,12 @@ export async function normalizeIncomingPayload(payload) {
   });
 
   if (payload.matchData?.homeScore !== undefined && typeof payload.matchData.homeScore === "string") {
-    warnings.push("homeScore string converted to number");
+    const converted = Number(payload.matchData.homeScore.trim());
+    warnings.push(Number.isFinite(converted) ? "homeScore string converted to number" : "homeScore is non-numeric string, fallback to numeric default");
   }
   if (payload.matchData?.awayScore !== undefined && typeof payload.matchData.awayScore === "string") {
-    warnings.push("awayScore string converted to number");
+    const converted = Number(payload.matchData.awayScore.trim());
+    warnings.push(Number.isFinite(converted) ? "awayScore string converted to number" : "awayScore is non-numeric string, fallback to numeric default");
   }
 
   return {

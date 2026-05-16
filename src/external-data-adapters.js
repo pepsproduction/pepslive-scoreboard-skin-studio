@@ -1,91 +1,93 @@
-import { createProtocolPayload } from "./pepslive-payload-protocol.js";
+import { PEPSLIVE_SCOREBOARD_PROTOCOL, createProtocolPayload } from "./pepslive-payload-protocol.js";
 import { normalizeIncomingPayload } from "./payload-validator.js";
 
 function mapLegacyFlatToProtocol(payload) {
+  const safe = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
   return createProtocolPayload({
-    source: payload.source || "legacy-flat",
-    timestamp: payload.timestamp,
-    sport: payload.sport,
-    skinId: payload.skinId,
-    type: payload.type,
-    theme: payload.theme || {},
-    animation: payload.animation || {},
+    source: safe.source || "legacy-flat",
+    timestamp: safe.timestamp,
+    sport: safe.sport,
+    skinId: safe.skinId,
+    type: safe.type,
+    theme: safe.theme || {},
+    animation: safe.animation || {},
     matchData: {
-      eventName: payload.eventName,
-      eventLogo: payload.eventLogo,
-      homeLogo: payload.homeLogo,
-      awayLogo: payload.awayLogo,
-      homeName: payload.homeName,
-      awayName: payload.awayName,
-      homeShortName: payload.homeShortName,
-      awayShortName: payload.awayShortName,
-      homeScore: payload.homeScore,
-      awayScore: payload.awayScore,
-      gameClock: payload.gameClock,
-      periodLabel: payload.periodLabel,
-      statusLabel: payload.statusLabel,
-      addedTime: payload.addedTime,
-      aggregateScore: payload.aggregateScore,
-      penaltyScore: payload.penaltyScore,
-      goalScorerList: payload.goalScorerList,
-      cardInfo: payload.cardInfo,
-      shotClock: payload.shotClock,
-      homeFouls: payload.homeFouls,
-      awayFouls: payload.awayFouls,
-      homeTimeouts: payload.homeTimeouts,
-      awayTimeouts: payload.awayTimeouts,
-      possession: payload.possession,
-      bonus: payload.bonus,
-      quarterBreakdown: payload.quarterBreakdown,
-      topScorer: payload.topScorer
+      eventName: safe.eventName,
+      eventLogo: safe.eventLogo,
+      homeLogo: safe.homeLogo,
+      awayLogo: safe.awayLogo,
+      homeName: safe.homeName,
+      awayName: safe.awayName,
+      homeShortName: safe.homeShortName,
+      awayShortName: safe.awayShortName,
+      homeScore: safe.homeScore,
+      awayScore: safe.awayScore,
+      gameClock: safe.gameClock,
+      periodLabel: safe.periodLabel,
+      statusLabel: safe.statusLabel,
+      addedTime: safe.addedTime,
+      aggregateScore: safe.aggregateScore,
+      penaltyScore: safe.penaltyScore,
+      goalScorerList: safe.goalScorerList,
+      cardInfo: safe.cardInfo,
+      shotClock: safe.shotClock,
+      homeFouls: safe.homeFouls,
+      awayFouls: safe.awayFouls,
+      homeTimeouts: safe.homeTimeouts,
+      awayTimeouts: safe.awayTimeouts,
+      possession: safe.possession,
+      bonus: safe.bonus,
+      quarterBreakdown: safe.quarterBreakdown,
+      topScorer: safe.topScorer
     }
   });
 }
 
 function mapLegacyNestedToProtocol(payload) {
-  const event = payload.event || {};
-  const teams = payload.teams || {};
-  const home = teams.home || payload.home || {};
-  const away = teams.away || payload.away || {};
-  const clock = payload.clock || {};
-  const stats = payload.stats || {};
+  const safe = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+  const event = safe.event || {};
+  const teams = safe.teams || {};
+  const home = teams.home || safe.home || {};
+  const away = teams.away || safe.away || {};
+  const clock = safe.clock || {};
+  const stats = safe.stats || {};
 
   return createProtocolPayload({
-    source: payload.source || "legacy-nested",
-    timestamp: payload.timestamp,
-    sport: payload.sport || payload.match?.sport,
-    skinId: payload.skinId,
-    type: payload.type,
-    theme: payload.theme || {},
-    animation: payload.animation || {},
+    source: safe.source || "legacy-nested",
+    timestamp: safe.timestamp,
+    sport: safe.sport || safe.match?.sport,
+    skinId: safe.skinId,
+    type: safe.type,
+    theme: safe.theme || {},
+    animation: safe.animation || {},
     matchData: {
-      eventName: event.name || payload.eventName,
-      eventLogo: event.logo || payload.eventLogo,
-      homeLogo: home.logo || payload.homeLogo,
-      awayLogo: away.logo || payload.awayLogo,
-      homeName: home.name || payload.homeName,
-      awayName: away.name || payload.awayName,
-      homeShortName: home.shortName || payload.homeShortName,
-      awayShortName: away.shortName || payload.awayShortName,
-      homeScore: home.score ?? payload.homeScore,
-      awayScore: away.score ?? payload.awayScore,
-      gameClock: clock.display || clock.value || payload.gameClock,
-      periodLabel: clock.period || payload.periodLabel,
-      statusLabel: payload.statusLabel || clock.status || payload.status,
-      addedTime: clock.addedTime || payload.addedTime,
-      aggregateScore: stats.aggregateScore || payload.aggregateScore,
-      penaltyScore: stats.penaltyScore || payload.penaltyScore,
-      goalScorerList: stats.goalScorerList || payload.goalScorerList,
-      cardInfo: stats.cardInfo || payload.cardInfo,
-      shotClock: clock.shotClock || stats.shotClock || payload.shotClock,
-      homeFouls: stats.homeFouls ?? payload.homeFouls,
-      awayFouls: stats.awayFouls ?? payload.awayFouls,
-      homeTimeouts: stats.homeTimeouts ?? payload.homeTimeouts,
-      awayTimeouts: stats.awayTimeouts ?? payload.awayTimeouts,
-      possession: stats.possession || payload.possession,
-      bonus: stats.bonus || payload.bonus,
-      quarterBreakdown: stats.quarterBreakdown || payload.quarterBreakdown,
-      topScorer: stats.topScorer || payload.topScorer
+      eventName: event.name || safe.eventName,
+      eventLogo: event.logo || safe.eventLogo,
+      homeLogo: home.logo || safe.homeLogo,
+      awayLogo: away.logo || safe.awayLogo,
+      homeName: home.name || safe.homeName,
+      awayName: away.name || safe.awayName,
+      homeShortName: home.shortName || safe.homeShortName,
+      awayShortName: away.shortName || safe.awayShortName,
+      homeScore: home.score ?? safe.homeScore,
+      awayScore: away.score ?? safe.awayScore,
+      gameClock: clock.time || clock.display || clock.value || safe.gameClock,
+      periodLabel: clock.period || safe.periodLabel,
+      statusLabel: safe.statusLabel || clock.status || safe.status,
+      addedTime: clock.addedTime || safe.addedTime,
+      aggregateScore: stats.aggregateScore || safe.aggregateScore,
+      penaltyScore: stats.penaltyScore || safe.penaltyScore,
+      goalScorerList: stats.goalScorerList || safe.goalScorerList,
+      cardInfo: stats.cardInfo || safe.cardInfo,
+      shotClock: clock.shotClock || stats.shotClock || safe.shotClock,
+      homeFouls: stats.homeFouls ?? safe.homeFouls,
+      awayFouls: stats.awayFouls ?? safe.awayFouls,
+      homeTimeouts: stats.homeTimeouts ?? safe.homeTimeouts,
+      awayTimeouts: stats.awayTimeouts ?? safe.awayTimeouts,
+      possession: stats.possession || safe.possession,
+      bonus: stats.bonus || safe.bonus,
+      quarterBreakdown: stats.quarterBreakdown || safe.quarterBreakdown,
+      topScorer: stats.topScorer || safe.topScorer
     }
   });
 }
@@ -98,7 +100,7 @@ function mapUnknownPayloadToProtocol(payload) {
 }
 
 function detectPayloadShape(payload) {
-  if (payload?.protocol === "PEPSLIVE_SCOREBOARD_STATE_V1") {
+  if (payload?.protocol === PEPSLIVE_SCOREBOARD_PROTOCOL) {
     return "new-protocol";
   }
   if (payload?.teams || payload?.clock || payload?.event) {

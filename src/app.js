@@ -613,6 +613,9 @@ function initSharedBridge() {
   state.bridge = new SharedStateBridge({
     role: "dock",
     onRemoteEvent: async (message, transport) => {
+      if (transport === "local") {
+        return;
+      }
       if (!message || !message.payload) {
         return;
       }

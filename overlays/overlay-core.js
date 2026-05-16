@@ -356,7 +356,10 @@ function buildPayloadFromLocalState() {
 function setupSharedBridge() {
   sharedBridge = new SharedStateBridge({
     role: "overlay",
-    onRemoteEvent: async (message) => {
+    onRemoteEvent: async (message, transport) => {
+      if (transport === "local") {
+        return;
+      }
       if (message.type === PEPSLIVE_MESSAGE_TYPES.PING || message.type === PEPSLIVE_MESSAGE_TYPES.PONG) {
         updateDebugBox({
           protocolStatus: message.protocol || PEPSLIVE_SCOREBOARD_PROTOCOL,
