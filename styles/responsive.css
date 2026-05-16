@@ -1,6 +1,6 @@
 @media (max-width: 1560px) {
   .dock-layout {
-    grid-template-columns: 250px minmax(420px, 1fr) minmax(340px, 430px);
+    grid-template-columns: 250px minmax(0, 1fr) minmax(0, 430px);
   }
 
   .template-grid {
@@ -26,6 +26,10 @@
 
   .right-panel {
     grid-area: right;
+  }
+
+  .preview-meta-bar {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -60,6 +64,24 @@
     grid-template-columns: 1fr;
   }
 
+  .gallery-head,
+  .preview-head,
+  .editor-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .gallery-meta {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .preview-meta-bar,
+  .preset-grid,
+  .obs-mode-grid {
+    grid-template-columns: 1fr;
+  }
+
   .obs-form {
     grid-template-columns: 1fr;
   }
@@ -84,5 +106,9 @@
 
   .inline-label {
     min-width: 100%;
+  }
+
+  .card-actions .capsule-btn {
+    width: 100%;
   }
 }

@@ -214,6 +214,43 @@ Checklist ที่ใช้ตรวจรอบ Visual QA + Overlay Smoke Test
 - เพิ่ม Recommended OBS Settings + ปุ่ม Copy OBS Custom CSS
 - เพิ่ม Source Health Check: URL, skin, preset, connection/manual mode, contract pass, debug flag, GitHub Pages readiness
 
+## Phase 2.4 Production UI Polish
+- ปรับ Template Gallery ให้ค้นหาและกรอง template ได้ง่ายขึ้น
+- ปรับ Template Card ให้เด่นขึ้นสำหรับงาน broadcast จริง
+- ปรับ Preview Panel ให้เห็น current skin, sport/type, source preset และ quick actions ชัดขึ้น
+- ปรับ Theme Editor ให้จัดกลุ่มตามการใช้งานและเลือก preset ได้ง่าย
+- ปรับ OBS Source Manager ให้เป็น manual-first และอ่านง่ายใน OBS Dock แคบ
+
+## วิธีใช้ Template Search/Filter
+1. พิมพ์คำค้นในช่อง `Search templates`
+2. ใช้ filter chips เพื่อกรองตาม `Favorites`, `Recently Used`, `Football`, `Basketball`, `Live`, `Summary` และ style tags
+3. ดูจำนวน template ที่เหลือใน gallery header
+4. ถ้าไม่เจอ template ให้ลองล้าง filter หรือเปลี่ยน keyword
+
+## วิธีเลือก Skin
+1. คลิกที่ template card เพื่อ preview
+2. กด `Use Skin` เพื่อใช้งาน skin นั้น
+3. กด `Favorite` เพื่อปักหมุด template ที่ใช้บ่อย
+4. ใช้ `Copy URL` จาก card หรือจาก preview panel เพื่อส่งเข้า OBS
+
+## วิธีใช้ Preview Tools
+1. เลือก Background Test Mode เพื่อจำลองฉากหลัง
+2. เลือก Safe Area Preview เพื่อเช็กขอบเฟรม
+3. เลือก Slot Inspector และ Visual QA Mode เพื่อดู slot / overflow
+4. ดู `Current Preview` panel เพื่อเช็ก skin ปัจจุบันและ source preset
+
+## วิธีใช้ Theme Preset
+1. กด preset card ใน Theme Editor เพื่อ apply ทันที
+2. ใช้ `Reset Theme` เพื่อกลับค่าเริ่มต้น
+3. ปรับสี / depth / animation ด้วย control เดิมที่มีอยู่
+4. ดู `Current Preset` เพื่อรู้ว่าตอนนี้กำลังใช้ preset ไหนอยู่
+
+## วิธีใช้ OBS Source Manager แบบเร็ว
+1. ถ้า OBS พร้อม ให้กรอก host/port/password แล้วกด `Connect OBS`
+2. ถ้าเชื่อมไม่ได้ ให้ใช้ Manual Mode และกด `Copy Live Production URL` หรือ `Copy Summary Production URL`
+3. ถ้าต้องการติดตั้งหลาย source ให้ใช้ `Add Both Sources`
+4. ถ้าต้อง refresh ให้ใช้ `Regenerate URL` แล้ว `Copy Fresh URL` หรือ `Force Refresh Source`
+
 ## วิธีใช้แบบ Manual
 1. เลือก template และ preset ที่ต้องการ
 2. กด `Copy Live Production URL` หรือ `Copy Summary Production URL`

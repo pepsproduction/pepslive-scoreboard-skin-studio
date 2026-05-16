@@ -63,7 +63,9 @@ const state = {
   obsLivePreset: "live-compact",
   obsSummaryPreset: "summary-fhd",
   obsUrlVersion: Date.now(),
-  obsLastHealthResult: null
+  obsLastHealthResult: null,
+  messageTimer: null,
+  lastStableMessage: "Ready: choose template and use skin"
 };
 
 const OBS_CUSTOM_CSS = "body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }";
@@ -88,8 +90,50 @@ function notify(message, level = "info") {
   if (!ui.message) {
     return;
   }
+  if (state.messageTimer) {
+    window.clearTimeout(state.messageTimer);
+    state.messageTimer = null;
+  }
   ui.message.textContent = message;
   ui.message.dataset.level = level;
+  state.lastStableMessage = message;
+}
+
+function flashMessage(message, level = "info", duration = 1400) {
+  if (!ui.message) {
+    return;
+  }
+  if (state.messageTimer) {
+    window.clearTimeout(state.messageTimer);
+  }
+  ui.message.textContent = message;
+  ui.message.dataset.level = level;
+  state.messageTimer = window.setTimeout(() => {
+    if (!ui.message) {
+      return;
+    }
+    ui.message.textContent = state.lastStableMessage;
+    ui.message.dataset.level = "info";
+    state.messageTimer = null;
+  }, duration);
+}
+
+function flashCopyButton(button) {
+  if (!button) {
+    return;
+  }
+  if (button._copyTimer) {
+    window.clearTimeout(button._copyTimer);
+  }
+  const originalLabel = button.dataset.originalLabel || button.textContent;
+  button.dataset.originalLabel = originalLabel;
+  button.textContent = "Copied";
+  button.classList.add("is-copying");
+  button._copyTimer = window.setTimeout(() => {
+    button.textContent = originalLabel;
+    button.classList.remove("is-copying");
+    button._copyTimer = null;
+  }, 1100);
 }
 
 function updateCurrentSkinLabel() {
@@ -97,6 +141,19 @@ function updateCurrentSkinLabel() {
     return;
   }
   ui.currentSkinLabel.textContent = `${state.selectedTemplate.id} - ${state.selectedTemplate.name}`;
+}
+
+function updatePreviewSummary(template = state.selectedTemplate) {
+  if (ui.previewSkinText) {
+    ui.previewSkinText.textContent = template ? `${template.id} - ${template.name}` : "-";
+  }
+  if (ui.previewSportTypeText) {
+    ui.previewSportTypeText.textContent = template ? `${template.sport} / ${template.type}` : "-";
+  }
+  if (ui.previewSourceSizeText) {
+    const sourcePreset = template ? getSourcePreset(template.type) : null;
+    ui.previewSourceSizeText.textContent = sourcePreset ? sourcePreset.label : "-";
+  }
 }
 
 function getSourcePreset(type) {
@@ -328,6 +385,8 @@ async function applyTemplate(template, options = {}) {
   ui.slotInspectorSelect.value = state.slotInspectorMode;
   ui.visualQaModeSelect.value = state.visualQaMode;
   updateCurrentSkinLabel();
+  updatePreviewSummary(template);
+  gallery?.setSelectedTemplateId?.(template.id);
   refreshObsUrlsPanel();
   saveSkinState();
 
@@ -441,13 +500,27 @@ async function loadSamplePayload(path) {
   return response.json();
 }
 
-async function copyCurrentOverlayUrl(template = state.selectedTemplate) {
+async function copyOverlayUrlForTemplate(template, { debug = false, feedbackButton = null, fallbackTarget = ui.skinJsonArea } = {}) {
   if (!template || !previewEngine) {
-    return;
+    return false;
   }
-  const url = buildOverlayUrlByType(template.type, { debug: false, cacheBust: true, forceVersion: Date.now() });
-  const copied = await copyText(url, ui.skinJsonArea);
-  notify(copied ? "Copied Browser Source URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+  const url = buildOverlayUrlByType(template.type, { debug, cacheBust: true, forceVersion: Date.now() });
+  const copied = await copyText(url, fallbackTarget);
+  if (copied) {
+    flashCopyButton(feedbackButton);
+    flashMessage(`Copied ${debug ? "Debug" : "Production"} URL`, "info");
+  } else {
+    notify("Clipboard unavailable. URL written to JSON area", "warn");
+  }
+  return copied;
+}
+
+async function copyCurrentOverlayUrl(template = state.selectedTemplate, options = {}) {
+  return copyOverlayUrlForTemplate(template, { ...options, debug: false });
+}
+
+async function copyCurrentOverlayDebugUrl(template = state.selectedTemplate, options = {}) {
+  return copyOverlayUrlForTemplate(template, { ...options, debug: true });
 }
 
 async function addSourceToObs(template = state.selectedTemplate) {
@@ -519,10 +592,22 @@ function bindSidebarFilters() {
 
 function bindTopActions() {
   ui.copyUrlBtn.addEventListener("click", () => {
-    copyCurrentOverlayUrl();
+    copyCurrentOverlayUrl(undefined, { feedbackButton: ui.copyUrlBtn });
   });
 
   ui.addSourceBtn.addEventListener("click", () => {
+    addSourceToObs();
+  });
+
+  ui.previewCopyProductionBtn?.addEventListener("click", () => {
+    copyCurrentOverlayUrl(undefined, { feedbackButton: ui.previewCopyProductionBtn });
+  });
+
+  ui.previewCopyDebugBtn?.addEventListener("click", () => {
+    copyCurrentOverlayDebugUrl(undefined, { feedbackButton: ui.previewCopyDebugBtn });
+  });
+
+  ui.previewAddSourceBtn?.addEventListener("click", () => {
     addSourceToObs();
   });
 }
@@ -924,48 +1009,88 @@ function bindObsPanel() {
     const selectedType = ui.obsRefreshTargetSelect.value || "live";
     const url = selectedType === "summary" ? urls.summaryProd : urls.liveProd;
     const copied = await copyText(url, ui.skinJsonArea);
-    notify(copied ? "Copied fresh URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+    if (copied) {
+      flashCopyButton(ui.copyFreshUrlBtn);
+      flashMessage("Copied fresh URL", "info");
+    } else {
+      notify("Clipboard unavailable. URL written to JSON area", "warn");
+    }
   });
 
   ui.copyLiveProductionUrlBtn.addEventListener("click", async () => {
     const urls = refreshObsUrlsPanel();
     const copied = await copyText(urls.liveProd, ui.skinJsonArea);
-    notify(copied ? "Copied Live Production URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+    if (copied) {
+      flashCopyButton(ui.copyLiveProductionUrlBtn);
+      flashMessage("Copied Live Production URL", "info");
+    } else {
+      notify("Clipboard unavailable. URL written to JSON area", "warn");
+    }
   });
 
   ui.copyLiveDebugUrlBtn.addEventListener("click", async () => {
     const urls = refreshObsUrlsPanel();
     const copied = await copyText(urls.liveDebug, ui.skinJsonArea);
-    notify(copied ? "Copied Live Debug URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+    if (copied) {
+      flashCopyButton(ui.copyLiveDebugUrlBtn);
+      flashMessage("Copied Live Debug URL", "info");
+    } else {
+      notify("Clipboard unavailable. URL written to JSON area", "warn");
+    }
   });
 
   ui.copySummaryProductionUrlBtn.addEventListener("click", async () => {
     const urls = refreshObsUrlsPanel();
     const copied = await copyText(urls.summaryProd, ui.skinJsonArea);
-    notify(copied ? "Copied Summary Production URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+    if (copied) {
+      flashCopyButton(ui.copySummaryProductionUrlBtn);
+      flashMessage("Copied Summary Production URL", "info");
+    } else {
+      notify("Clipboard unavailable. URL written to JSON area", "warn");
+    }
   });
 
   ui.copySummaryDebugUrlBtn.addEventListener("click", async () => {
     const urls = refreshObsUrlsPanel();
     const copied = await copyText(urls.summaryDebug, ui.skinJsonArea);
-    notify(copied ? "Copied Summary Debug URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+    if (copied) {
+      flashCopyButton(ui.copySummaryDebugUrlBtn);
+      flashMessage("Copied Summary Debug URL", "info");
+    } else {
+      notify("Clipboard unavailable. URL written to JSON area", "warn");
+    }
   });
 
   ui.copyObsCssBtn.addEventListener("click", async () => {
     const copied = await copyText(OBS_CUSTOM_CSS, ui.skinJsonArea);
-    notify(copied ? "Copied OBS Custom CSS" : "Clipboard unavailable. CSS written to JSON area", copied ? "info" : "warn");
+    if (copied) {
+      flashCopyButton(ui.copyObsCssBtn);
+      flashMessage("Copied OBS Custom CSS", "info");
+    } else {
+      notify("Clipboard unavailable. CSS written to JSON area", "warn");
+    }
   });
 
   ui.copyLiveUrlBtn.addEventListener("click", async () => {
     const urls = refreshObsUrlsPanel();
     const copied = await copyText(urls.liveProd, ui.skinJsonArea);
-    notify(copied ? "Copied Live URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+    if (copied) {
+      flashCopyButton(ui.copyLiveUrlBtn);
+      flashMessage("Copied Live URL", "info");
+    } else {
+      notify("Clipboard unavailable. URL written to JSON area", "warn");
+    }
   });
 
   ui.copySummaryUrlBtn.addEventListener("click", async () => {
     const urls = refreshObsUrlsPanel();
     const copied = await copyText(urls.summaryProd, ui.skinJsonArea);
-    notify(copied ? "Copied Summary URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+    if (copied) {
+      flashCopyButton(ui.copySummaryUrlBtn);
+      flashMessage("Copied Summary URL", "info");
+    } else {
+      notify("Clipboard unavailable. URL written to JSON area", "warn");
+    }
   });
 
   ui.obsHealthBtn.addEventListener("click", async () => {
@@ -1121,6 +1246,12 @@ function cacheElements() {
   ui.galleryRoot = document.getElementById("templateGalleryRoot");
   ui.themeEditorRoot = document.getElementById("themeEditorRoot");
   ui.previewStatus = document.getElementById("previewStatusText");
+  ui.previewSkinText = document.getElementById("previewSkinText");
+  ui.previewSportTypeText = document.getElementById("previewSportTypeText");
+  ui.previewSourceSizeText = document.getElementById("previewSourceSizeText");
+  ui.previewCopyProductionBtn = document.getElementById("previewCopyProductionBtn");
+  ui.previewCopyDebugBtn = document.getElementById("previewCopyDebugBtn");
+  ui.previewAddSourceBtn = document.getElementById("previewAddSourceBtn");
   ui.previewFrame = document.getElementById("overlayPreviewFrame");
   ui.previewStage = document.getElementById("previewStage");
   ui.safeArea = document.getElementById("safeAreaOverlay");
@@ -1235,9 +1366,9 @@ function initGallery() {
       gallery.setCollections({ favorites: state.favorites, recentlyUsed: state.recentlyUsed });
       notify(`Favorite updated: ${template.id}`);
     },
-    onCopyUrl: async (template) => {
+    onCopyUrl: async (template, feedbackButton = null) => {
       await applyTemplate(template, { markRecent: false, broadcast: false, forceMock: false });
-      await copyCurrentOverlayUrl(template);
+      await copyCurrentOverlayUrl(template, { feedbackButton });
     },
     onAddSource: async (template) => {
       await applyTemplate(template, { markRecent: false, broadcast: false, forceMock: false });

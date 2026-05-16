@@ -29,6 +29,14 @@ const FONT_OPTIONS = [
   "'Barlow Condensed', 'Segoe UI', sans-serif"
 ];
 
+const THEME_GROUPS = [
+  { title: "Brand Colors", keys: ["primaryColor", "secondaryColor", "accentColor"] },
+  { title: "Team Colors", keys: ["homeColor", "awayColor"] },
+  { title: "Text & Contrast", keys: ["textColor", "backgroundOpacity"] },
+  { title: "Shape & Depth", keys: ["borderRadius", "borderWidth", "glassBlur", "shadowIntensity", "glowIntensity"] },
+  { title: "Animation", keys: ["scoreboardScale", "logoSlotSize", "fontFamily", "animationStyle"] }
+];
+
 const CONTROL_CONFIG = [
   { key: "primaryColor", label: "Primary Color", type: "color" },
   { key: "secondaryColor", label: "Secondary Color", type: "color" },
@@ -59,6 +67,39 @@ function prettyValue(type, value) {
   return `${number.toFixed(2)}`;
 }
 
+function isHexColor(value) {
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value);
+}
+
+function normalizeHexColor(value) {
+  if (!isHexColor(value)) {
+    return null;
+  }
+  if (value.length === 4) {
+    const [hash, r, g, b] = value;
+    return `${hash}${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  return value.toLowerCase();
+}
+
+function getThemePresetName(theme, presets) {
+  const target = theme || {};
+  const match = (presets || []).find((preset) => {
+    const presetTheme = preset.theme || {};
+    const presetKeys = Object.keys(presetTheme);
+    const targetKeys = Object.keys(target);
+    if (presetKeys.length !== targetKeys.length) {
+      return false;
+    }
+    return presetKeys.every((key) => target[key] === presetTheme[key]);
+  });
+  return match?.name || "Custom";
+}
+
+function getControlConfig(key) {
+  return CONTROL_CONFIG.find((control) => control.key === key) || null;
+}
+
 export class ThemeEditor {
   constructor({ root, theme, presets, onThemeChange, onPresetChange }) {
     this.root = root;
@@ -73,117 +114,194 @@ export class ThemeEditor {
       return;
     }
 
+    const currentPresetName = getThemePresetName(this.theme, this.presets);
     this.root.innerHTML = `
-      <div class="editor-presets">
-        <label class="editor-label" for="presetSelect">Theme Preset</label>
-        <div class="inline-row">
-          <select id="presetSelect" class="ui-select">
-            <option value="">Custom</option>
-            ${this.presets.map((preset) => `<option value="${preset.name}">${preset.name}</option>`).join("")}
-          </select>
-          <button type="button" class="capsule-btn secondary" id="resetThemeBtn">Reset</button>
+      <section class="editor-shell">
+        <div class="editor-topbar">
+          <div>
+            <div class="editor-label">Current Preset</div>
+            <div class="preset-current">${currentPresetName}</div>
+          </div>
+          <button type="button" class="capsule-btn secondary" id="resetThemeBtn">Reset Theme</button>
         </div>
-      </div>
-      <div class="theme-grid" id="themeControlGrid"></div>
+
+        <div class="preset-grid" id="themePresetGrid">
+          ${
+            this.presets.length === 0
+              ? `<div class="empty-state compact">No theme presets loaded.</div>`
+              : this.presets
+                  .map((preset) => {
+                    const isActive = preset.name === currentPresetName;
+                    const theme = preset.theme || {};
+                    const swatchGradient = `linear-gradient(90deg, ${theme.primaryColor || "#ff7a18"}, ${theme.homeColor || "#101827"}, ${theme.awayColor || "#3b82f6"}, ${theme.accentColor || "#fb923c"})`;
+                    return `
+                      <button
+                        type="button"
+                        class="preset-card ${isActive ? "is-active" : ""}"
+                        data-preset-name="${preset.name}"
+                        style="--preset-preview:${swatchGradient}"
+                      >
+                        <span class="preset-card-head">
+                          <strong>${preset.name}</strong>
+                          <span>${isActive ? "Active" : "Apply"}</span>
+                        </span>
+                        <span class="preset-card-swatches"></span>
+                        <span class="preset-card-copy">One-click theme preset for fast setup.</span>
+                      </button>
+                    `;
+                  })
+                  .join("")
+          }
+        </div>
+
+        <div class="theme-group-list">
+          ${THEME_GROUPS.map((group) => this.renderGroup(group)).join("")}
+        </div>
+      </section>
     `;
-
-    const grid = this.root.querySelector("#themeControlGrid");
-    if (!grid) {
-      return;
-    }
-
-    CONTROL_CONFIG.forEach((control) => {
-      const wrapper = document.createElement("label");
-      wrapper.className = "control-block";
-      wrapper.innerHTML = `
-        <span class="editor-label">${control.label}</span>
-        <div class="control-row"></div>
-      `;
-      const controlRow = wrapper.querySelector(".control-row");
-      const value = this.theme[control.key];
-
-      if (control.type === "color") {
-        controlRow.innerHTML = `
-          <input type="color" data-theme-key="${control.key}" value="${value}" />
-          <code>${value}</code>
-        `;
-      } else if (control.type === "range") {
-        controlRow.innerHTML = `
-          <input
-            type="range"
-            data-theme-key="${control.key}"
-            min="${control.min}"
-            max="${control.max}"
-            step="${control.step}"
-            value="${value}"
-          />
-          <code>${prettyValue(control.type, value)}</code>
-        `;
-      } else if (control.type === "select") {
-        controlRow.innerHTML = `
-          <select class="ui-select" data-theme-key="${control.key}">
-            ${control.options.map((option) => `<option value="${option}" ${option === value ? "selected" : ""}>${option}</option>`).join("")}
-          </select>
-        `;
-      }
-
-      grid.append(wrapper);
-    });
 
     this.bindEvents();
   }
 
+  renderGroup(group) {
+    const controls = group.keys
+      .map((key) => this.renderControl(getControlConfig(key)))
+      .join("");
+    return `
+      <section class="theme-group">
+        <div class="theme-group-head">
+          <h3>${group.title}</h3>
+        </div>
+        <div class="theme-grid">${controls}</div>
+      </section>
+    `;
+  }
+
+  renderControl(control) {
+    if (!control) {
+      return "";
+    }
+
+    const value = this.theme[control.key];
+    if (control.type === "color") {
+      const hexValue = normalizeHexColor(String(value || "#ffffff")) || "#ffffff";
+      return `
+        <label class="control-block control-block-color">
+          <span class="editor-label">${control.label}</span>
+          <div class="control-row control-row-color">
+            <input type="color" data-theme-key="${control.key}" data-theme-role="color" value="${hexValue}" />
+            <input type="text" class="hex-input" data-theme-key="${control.key}" data-theme-role="hex" value="${hexValue}" />
+          </div>
+        </label>
+      `;
+    }
+
+    if (control.type === "range") {
+      return `
+        <label class="control-block">
+          <span class="editor-label">${control.label}</span>
+          <div class="control-row">
+            <input
+              type="range"
+              data-theme-key="${control.key}"
+              data-theme-role="range"
+              min="${control.min}"
+              max="${control.max}"
+              step="${control.step}"
+              value="${value}"
+            />
+            <code>${prettyValue(control.type, value)}</code>
+          </div>
+        </label>
+      `;
+    }
+
+    if (control.type === "select") {
+      return `
+        <label class="control-block">
+          <span class="editor-label">${control.label}</span>
+          <select class="ui-select" data-theme-key="${control.key}" data-theme-role="select">
+            ${control.options.map((option) => `<option value="${option}" ${option === value ? "selected" : ""}>${option}</option>`).join("")}
+          </select>
+        </label>
+      `;
+    }
+
+    return "";
+  }
+
   bindEvents() {
-    const themeInputs = this.root.querySelectorAll("[data-theme-key]");
-    themeInputs.forEach((input) => {
-      const eventName = input.tagName === "SELECT" ? "change" : "input";
-      input.addEventListener(eventName, () => {
-        const key = input.dataset.themeKey;
-        let nextValue = input.value;
-
-        const rangeConfig = CONTROL_CONFIG.find((control) => control.key === key && control.type === "range");
-        if (rangeConfig) {
-          nextValue = clamp(Number(nextValue), rangeConfig.min, rangeConfig.max);
-          const code = input.parentElement?.querySelector("code");
-          if (code) {
-            code.textContent = prettyValue("range", nextValue);
-          }
+    const presetCards = this.root.querySelectorAll("[data-preset-name]");
+    presetCards.forEach((card) => {
+      card.addEventListener("click", () => {
+        const selected = this.presets.find((preset) => preset.name === card.dataset.presetName);
+        if (!selected) {
+          return;
         }
-
-        if (key === "borderRadius" || key === "logoSlotSize") {
-          nextValue = Math.round(Number(nextValue));
-        }
-
-        if (key === "borderWidth" || key === "backgroundOpacity" || key === "shadowIntensity" || key === "glowIntensity" || key === "scoreboardScale") {
-          nextValue = Number(nextValue);
-        }
-
-        this.theme = { ...this.theme, [key]: nextValue };
-        if (input.type === "color") {
-          const code = input.parentElement?.querySelector("code");
-          if (code) {
-            code.textContent = String(nextValue);
-          }
-        }
-        this.onThemeChange?.(this.theme, key);
+        this.setTheme(selected.theme);
+        this.onPresetChange?.(selected);
       });
-    });
-
-    const presetSelect = this.root.querySelector("#presetSelect");
-    presetSelect?.addEventListener("change", () => {
-      const selected = this.presets.find((preset) => preset.name === presetSelect.value);
-      if (!selected) {
-        return;
-      }
-      this.setTheme(selected.theme);
-      this.onPresetChange?.(selected);
     });
 
     const resetBtn = this.root.querySelector("#resetThemeBtn");
     resetBtn?.addEventListener("click", () => {
       this.setTheme(DEFAULT_THEME);
-      presetSelect.value = "";
     });
+
+    const themeInputs = this.root.querySelectorAll("[data-theme-key]");
+    themeInputs.forEach((input) => {
+      const eventName = input.tagName === "SELECT" ? "change" : "input";
+      input.addEventListener(eventName, () => {
+        this.handleInputChange(input);
+      });
+    });
+  }
+
+  handleInputChange(input) {
+    const key = input.dataset.themeKey;
+    const control = getControlConfig(key);
+    if (!control) {
+      return;
+    }
+
+    let nextValue = input.value;
+
+    if (control.type === "range") {
+      nextValue = clamp(Number(nextValue), control.min, control.max);
+      const code = input.parentElement?.querySelector("code");
+      if (code) {
+        code.textContent = prettyValue("range", nextValue);
+      }
+      if (key === "borderRadius" || key === "logoSlotSize") {
+        nextValue = Math.round(Number(nextValue));
+      }
+      if (key === "borderWidth" || key === "backgroundOpacity" || key === "shadowIntensity" || key === "glowIntensity" || key === "scoreboardScale") {
+        nextValue = Number(nextValue);
+      }
+    }
+
+    if (control.type === "color") {
+      const normalized = normalizeHexColor(nextValue);
+      if (!normalized) {
+        return;
+      }
+      nextValue = normalized;
+      const colorInput = this.root.querySelector(`input[data-theme-role="color"][data-theme-key="${key}"]`);
+      const hexInput = this.root.querySelector(`input[data-theme-role="hex"][data-theme-key="${key}"]`);
+      if (colorInput && colorInput.value !== normalized) {
+        colorInput.value = normalized;
+      }
+      if (hexInput && hexInput.value !== normalized) {
+        hexInput.value = normalized;
+      }
+    }
+
+    if (control.type === "select") {
+      nextValue = input.value;
+    }
+
+    this.theme = { ...this.theme, [key]: nextValue };
+    this.onThemeChange?.(this.theme, key);
   }
 
   setTheme(nextTheme, options = { silent: false }) {

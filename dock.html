@@ -25,7 +25,7 @@
             <strong id="currentSkinLabel">-</strong>
           </div>
           <div class="header-actions">
-            <button type="button" class="capsule-btn" id="copyUrlBtn">Copy URL</button>
+            <button type="button" class="capsule-btn" id="copyUrlBtn" data-copy-feedback="true">Copy Production URL</button>
             <button type="button" class="capsule-btn primary" id="addSourceBtn">Add Source</button>
           </div>
         </div>
@@ -74,15 +74,28 @@
 
         <aside class="right-panel glass-panel">
           <section class="panel-block">
-            <div class="block-head">
-              <h2>Large Live Preview</h2>
+            <div class="preview-head">
+              <div>
+                <h2>Current Preview</h2>
+                <p class="tiny-note preview-copy">Preview the active skin with real overlay data before sending it to OBS.</p>
+              </div>
               <small id="previewStatusText">-</small>
+            </div>
+            <div class="preview-meta-bar">
+              <div><strong>Current Skin:</strong> <span id="previewSkinText">-</span></div>
+              <div><strong>Sport/Type:</strong> <span id="previewSportTypeText">-</span></div>
+              <div><strong>Source Preset:</strong> <span id="previewSourceSizeText">-</span></div>
+            </div>
+            <div class="inline-row preview-actions">
+              <button type="button" class="capsule-btn primary" id="previewCopyProductionBtn" data-copy-feedback="true">Copy Production URL</button>
+              <button type="button" class="capsule-btn" id="previewCopyDebugBtn" data-copy-feedback="true">Copy Debug URL</button>
+              <button type="button" class="capsule-btn" id="previewAddSourceBtn">Add Source</button>
             </div>
             <div id="previewStage" class="preview-stage bg-transparent-grid">
               <iframe id="overlayPreviewFrame" title="Overlay Preview" loading="eager" allowtransparency="true"></iframe>
               <div id="safeAreaOverlay" class="safe-layer safe-off"></div>
             </div>
-            <div class="inline-grid">
+            <div class="preview-controls">
               <label>
                 <span>Background Test Mode</span>
                 <select id="backgroundModeSelect" class="ui-select"></select>
@@ -120,6 +133,16 @@
 
           <section class="panel-block">
             <h2>OBS Source Manager</h2>
+            <div class="obs-mode-grid">
+              <div class="obs-mode-card">
+                <div class="obs-mode-title">WebSocket Mode</div>
+                <div class="tiny-note">Connect to OBS if the websocket bridge is available.</div>
+              </div>
+              <div class="obs-mode-card">
+                <div class="obs-mode-title">Manual Mode</div>
+                <div class="tiny-note">Copy the Production URL and add a Browser Source manually.</div>
+              </div>
+            </div>
             <div class="obs-form">
               <label>
                 <span>Host</span>
@@ -187,16 +210,16 @@
               <textarea id="liveProductionUrlText" class="json-area small" readonly></textarea>
             </label>
             <div class="inline-row">
-              <button type="button" class="capsule-btn" id="copyLiveProductionUrlBtn">Copy Live Production URL</button>
-              <button type="button" class="capsule-btn" id="copyLiveDebugUrlBtn">Copy Live Debug URL</button>
+              <button type="button" class="capsule-btn" id="copyLiveProductionUrlBtn" data-copy-feedback="true">Copy Live Production URL</button>
+              <button type="button" class="capsule-btn" id="copyLiveDebugUrlBtn" data-copy-feedback="true">Copy Live Debug URL</button>
             </div>
             <label>
               <span>Summary Production URL</span>
               <textarea id="summaryProductionUrlText" class="json-area small" readonly></textarea>
             </label>
             <div class="inline-row">
-              <button type="button" class="capsule-btn" id="copySummaryProductionUrlBtn">Copy Summary Production URL</button>
-              <button type="button" class="capsule-btn" id="copySummaryDebugUrlBtn">Copy Summary Debug URL</button>
+              <button type="button" class="capsule-btn" id="copySummaryProductionUrlBtn" data-copy-feedback="true">Copy Summary Production URL</button>
+              <button type="button" class="capsule-btn" id="copySummaryDebugUrlBtn" data-copy-feedback="true">Copy Summary Debug URL</button>
             </div>
 
             <h3 class="mini-title">Recommended OBS Settings</h3>
@@ -209,9 +232,9 @@
               <textarea id="obsCustomCssText" class="json-area small" readonly>body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }</textarea>
             </label>
             <div class="inline-row">
-              <button type="button" class="capsule-btn" id="copyObsCssBtn">Copy OBS Custom CSS</button>
-              <button type="button" class="capsule-btn" id="copyLiveUrlBtn">Copy Live URL</button>
-              <button type="button" class="capsule-btn" id="copySummaryUrlBtn">Copy Summary URL</button>
+              <button type="button" class="capsule-btn" id="copyObsCssBtn" data-copy-feedback="true">Copy OBS Custom CSS</button>
+              <button type="button" class="capsule-btn" id="copyLiveUrlBtn" data-copy-feedback="true">Copy Live URL</button>
+              <button type="button" class="capsule-btn" id="copySummaryUrlBtn" data-copy-feedback="true">Copy Summary URL</button>
             </div>
 
             <h3 class="mini-title">Health Check</h3>
@@ -220,7 +243,7 @@
 
             <h3 class="mini-title">Manual Setup Guide</h3>
             <div class="tiny-note" id="obsManualGuideText">
-              หากเชื่อม OBS ไม่ได้ ให้คัดลอก Production URL ด้านบนไปวางใน Browser Source และตั้งขนาดตาม preset ที่เลือกไว้
+              If OBS WebSocket is unavailable, copy the Production URL above into OBS Browser Source and use the selected preset size.
             </div>
           </section>
 
