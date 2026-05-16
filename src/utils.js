@@ -52,6 +52,22 @@ export function getProjectBasePath() {
   return lastSlash >= 0 ? path.slice(0, lastSlash + 1) : "/";
 }
 
+export function getProjectRootPath() {
+  const path = window.location.pathname || "/";
+  const markers = ["/overlays/", "/src/", "/styles/", "/templates/", "/data/"];
+  const markerIndex = markers
+    .map((marker) => path.indexOf(marker))
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0];
+
+  if (markerIndex >= 0) {
+    return `${path.slice(0, markerIndex + 1)}`;
+  }
+
+  const cleaned = path.endsWith("/") ? path : path.slice(0, path.lastIndexOf("/") + 1);
+  return cleaned || "/";
+}
+
 export function stringifyTheme(theme) {
   return encodeURIComponent(JSON.stringify(theme));
 }
@@ -67,10 +83,19 @@ export function parseThemeString(value) {
   }
 }
 
-export function generateOverlayUrl({ skinId, type, animationStyle, theme, cacheBust = true, absolute = true }) {
+export function generateOverlayUrl({
+  skinId,
+  type,
+  animationStyle,
+  theme,
+  cacheBust = true,
+  absolute = true,
+  debug = false,
+  stateKey = ""
+}) {
   const overlayFile = type === "summary" ? "overlays/summary.html" : "overlays/live.html";
-  const basePath = getProjectBasePath();
-  const url = new URL(`${basePath}${overlayFile}`, window.location.origin);
+  const basePath = getProjectRootPath();
+  const url = new URL(`${basePath}${overlayFile}`, window.location.href);
   url.searchParams.set("skin", skinId);
 
   if (animationStyle) {
@@ -79,6 +104,14 @@ export function generateOverlayUrl({ skinId, type, animationStyle, theme, cacheB
 
   if (theme && Object.keys(theme).length > 0) {
     url.searchParams.set("theme", stringifyTheme(theme));
+  }
+
+  if (debug) {
+    url.searchParams.set("debug", "1");
+  }
+
+  if (stateKey) {
+    url.searchParams.set("stateKey", stateKey);
   }
 
   if (cacheBust) {

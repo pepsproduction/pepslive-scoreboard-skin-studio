@@ -132,6 +132,12 @@ body {
   outline-offset: 2px;
 }
 
+.capsule-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .capsule-btn.primary {
   background: linear-gradient(120deg, rgba(255, 122, 24, 0.94), rgba(249, 115, 22, 0.88));
   color: #18181b;
@@ -401,6 +407,15 @@ body {
   margin-top: 8px;
 }
 
+.inline-label {
+  min-width: 220px;
+  flex: 1 1 220px;
+}
+
+.obs-preset-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
 label {
   display: grid;
   gap: 5px;
@@ -486,6 +501,13 @@ textarea:focus {
 
 .json-area.small {
   min-height: 110px;
+}
+
+#liveProductionUrlText,
+#summaryProductionUrlText,
+#obsCustomCssText,
+#obsHealthResultArea {
+  min-height: 88px;
 }
 
 .contract-summary {

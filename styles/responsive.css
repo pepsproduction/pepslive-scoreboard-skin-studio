@@ -63,6 +63,10 @@
   .obs-form {
     grid-template-columns: 1fr;
   }
+
+  .obs-preset-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 560px) {
@@ -76,5 +80,9 @@
   .inline-row {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .inline-label {
+    min-width: 100%;
   }
 }

@@ -203,3 +203,62 @@ Checklist ที่ใช้ตรวจรอบ Visual QA + Overlay Smoke Test
 - [x] ตรวจ GitHub Pages path (`/pepslive-scoreboard-skin-studio/...`)
 - [x] ทดสอบ sample payload 4 ไฟล์ (validate + ingest)
 - [x] ทดสอบ OBS Browser Source manual URL (Copy URL / fallback)
+
+## Phase 2.3 OBS Browser Source Integration
+- เพิ่ม OBS Connection Panel: host/port/password, connect/disconnect/test, status, current scene, error message
+- เพิ่ม Source Actions: Add Live, Add Summary, Add Both, Refresh Selected Source, Force Refresh
+- เพิ่ม URL tools: Regenerate URL, Copy Fresh URL, Copy Live/Summary Production URL, Copy Live/Summary Debug URL
+- เพิ่ม Source Size Presets:
+  - Live: Compact 900x180, Wide 1280x220, Full HD Transparent Canvas 1920x1080
+  - Summary: Full HD 1920x1080, Vertical 1080x1920, Square 1080x1080
+- เพิ่ม Recommended OBS Settings + ปุ่ม Copy OBS Custom CSS
+- เพิ่ม Source Health Check: URL, skin, preset, connection/manual mode, contract pass, debug flag, GitHub Pages readiness
+
+## วิธีใช้แบบ Manual
+1. เลือก template และ preset ที่ต้องการ
+2. กด `Copy Live Production URL` หรือ `Copy Summary Production URL`
+3. ใน OBS เพิ่ม `Browser Source` แล้ววาง URL
+4. ตั้ง Width/Height ตาม preset ที่เลือก
+5. ตั้งค่า:
+   - Shutdown source when not visible: Off
+   - Refresh browser when scene becomes active: On
+   - Custom CSS: `body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }`
+
+## วิธีใช้แบบ OBS WebSocket
+1. กรอก Host/Port/Password ใน OBS Source Manager
+2. กด `Connect OBS` แล้ว `Test Connection`
+3. เลือก preset สำหรับ Live/Summary
+4. กด `Add Live Source`, `Add Summary Source` หรือ `Add Both Sources`
+5. ใช้ `Refresh Selected Source` หรือ `Force Refresh Source` เมื่อต้องการรีโหลด
+
+## Production URL vs Debug URL
+- Production URL: ใช้งานจริงใน OBS (ไม่มี `debug=1`)
+- Debug URL: ใช้ตรวจสถานะ protocol/render (`debug=1`)
+- แนะนำให้ใช้ Production URL ตอนถ่ายทอดจริงเสมอ
+
+## วิธีแก้ OBS ไม่ refresh
+1. กด `Regenerate URL` แล้ว `Copy Fresh URL`
+2. ถ้าเชื่อม OBS ได้ ให้กด `Force Refresh Source`
+3. ถ้า Manual mode ให้เปิด Browser Source properties แล้วกด refresh cache ของหน้า
+
+## Troubleshooting
+- URL เปิดไม่ขึ้น:
+  - ตรวจ path ว่าเป็น `.../overlays/live.html` หรือ `.../overlays/summary.html`
+  - ตรวจว่าไม่ใช่ path แบบ `/src/...`
+- Overlay ไม่โปร่งใส:
+  - ตั้ง Custom CSS ตามค่าที่ระบบให้
+  - ตรวจว่า overlay page ใช้พื้นหลัง `transparent`
+- OBS ไม่อัปเดตหลังเปลี่ยน skin:
+  - ลอง `Regenerate URL` + `Force Refresh Source`
+  - ตรวจ `Source Health Check` ว่า URL ตรงกับ expected หรือไม่
+- Debug box โผล่ตอนใช้งานจริง:
+  - ใช้ Production URL (ไม่มี `debug=1`)
+- Source size ผิด:
+  - เปลี่ยน preset ให้ตรง use case แล้ว add/refresh source ใหม่
+
+## วิธีใช้งานบน GitHub Pages
+- รองรับ URL รูปแบบ:
+  - `https://USERNAME.github.io/pepslive-scoreboard-skin-studio/dock.html`
+  - `https://USERNAME.github.io/pepslive-scoreboard-skin-studio/overlays/live.html?skin=FB-LIVE-01`
+  - `https://USERNAME.github.io/pepslive-scoreboard-skin-studio/overlays/summary.html?skin=FB-SUM-01`
+- ระบบ generate URL ใช้ base path อัตโนมัติให้ไม่พังบน GitHub Pages

@@ -37,6 +37,7 @@ import {
   STYLE_TAGS,
   VISUAL_QA_MODES,
   downloadJson,
+  generateOverlayUrl,
   nowIso,
   setButtonGroupActive
 } from "./utils.js";
@@ -58,7 +59,23 @@ const state = {
   applyingRemote: false,
   lastProtocolPayload: null,
   slotInspectorMode: SLOT_INSPECTOR_MODES[0],
-  visualQaMode: VISUAL_QA_MODES[0]
+  visualQaMode: VISUAL_QA_MODES[0],
+  obsLivePreset: "live-compact",
+  obsSummaryPreset: "summary-fhd",
+  obsUrlVersion: Date.now(),
+  obsLastHealthResult: null
+};
+
+const OBS_CUSTOM_CSS = "body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }";
+const LIVE_SOURCE_PRESETS = {
+  "live-compact": { label: "Compact 900x180", width: 900, height: 180 },
+  "live-wide": { label: "Wide 1280x220", width: 1280, height: 220 },
+  "live-fhd-canvas": { label: "Full HD Transparent Canvas 1920x1080", width: 1920, height: 1080 }
+};
+const SUMMARY_SOURCE_PRESETS = {
+  "summary-fhd": { label: "Full HD 1920x1080", width: 1920, height: 1080 },
+  "summary-vertical": { label: "Vertical 1080x1920", width: 1080, height: 1920 },
+  "summary-square": { label: "Square 1080x1080", width: 1080, height: 1080 }
 };
 
 const ui = {};
@@ -80,6 +97,85 @@ function updateCurrentSkinLabel() {
     return;
   }
   ui.currentSkinLabel.textContent = `${state.selectedTemplate.id} - ${state.selectedTemplate.name}`;
+}
+
+function getSourcePreset(type) {
+  if (type === "summary") {
+    return SUMMARY_SOURCE_PRESETS[state.obsSummaryPreset] || SUMMARY_SOURCE_PRESETS["summary-fhd"];
+  }
+  return LIVE_SOURCE_PRESETS[state.obsLivePreset] || LIVE_SOURCE_PRESETS["live-compact"];
+}
+
+function resolveTemplateForObsType(type) {
+  if (state.selectedTemplate?.type === type) {
+    return state.selectedTemplate;
+  }
+  const preferredSport = state.selectedTemplate?.sport || state.currentSkin?.sport || "football";
+  return (
+    TEMPLATE_REGISTRY.find((item) => item.type === type && item.sport === preferredSport) ||
+    TEMPLATE_REGISTRY.find((item) => item.type === type) ||
+    TEMPLATE_REGISTRY[0]
+  );
+}
+
+function buildOverlayUrlByType(type, { debug = false, cacheBust = false, forceVersion = null } = {}) {
+  const template = resolveTemplateForObsType(type);
+  const versionValue = forceVersion ?? state.obsUrlVersion;
+  return generateOverlayUrl({
+    skinId: template.id,
+    type,
+    animationStyle: state.animationStyle,
+    theme: state.currentTheme,
+    cacheBust,
+    absolute: true,
+    debug,
+    stateKey: versionValue ? `obs-${versionValue}` : ""
+  });
+}
+
+function refreshObsUrlsPanel() {
+  const liveProd = buildOverlayUrlByType("live", { debug: false, cacheBust: false });
+  const liveDebug = buildOverlayUrlByType("live", { debug: true, cacheBust: false });
+  const summaryProd = buildOverlayUrlByType("summary", { debug: false, cacheBust: false });
+  const summaryDebug = buildOverlayUrlByType("summary", { debug: true, cacheBust: false });
+
+  if (ui.liveProductionUrlText) {
+    ui.liveProductionUrlText.value = liveProd;
+  }
+  if (ui.summaryProductionUrlText) {
+    ui.summaryProductionUrlText.value = summaryProd;
+  }
+  if (ui.obsSelectedSkinText) {
+    ui.obsSelectedSkinText.textContent = state.selectedTemplate ? `${state.selectedTemplate.id} - ${state.selectedTemplate.name}` : "-";
+  }
+  if (ui.obsSelectedLivePresetText) {
+    ui.obsSelectedLivePresetText.textContent = getSourcePreset("live").label;
+  }
+  if (ui.obsSelectedSummaryPresetText) {
+    ui.obsSelectedSummaryPresetText.textContent = getSourcePreset("summary").label;
+  }
+
+  return {
+    liveProd,
+    liveDebug,
+    summaryProd,
+    summaryDebug
+  };
+}
+
+async function copyText(value, fallbackTarget = null) {
+  if (!value) {
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch (_error) {
+    if (fallbackTarget) {
+      fallbackTarget.value = value;
+    }
+    return false;
+  }
 }
 
 function updateBridgeStatus(message, level = "ok") {
@@ -232,6 +328,7 @@ async function applyTemplate(template, options = {}) {
   ui.slotInspectorSelect.value = state.slotInspectorMode;
   ui.visualQaModeSelect.value = state.visualQaMode;
   updateCurrentSkinLabel();
+  refreshObsUrlsPanel();
   saveSkinState();
 
   state.activeMatchData = matchDataOverride || (await resolveMatchDataForTemplate(template, { forceMock }));
@@ -348,14 +445,9 @@ async function copyCurrentOverlayUrl(template = state.selectedTemplate) {
   if (!template || !previewEngine) {
     return;
   }
-  const url = previewEngine.getOverlayUrl({ cacheBust: true, absolute: true });
-  try {
-    await navigator.clipboard.writeText(url);
-    notify("Copied Browser Source URL");
-  } catch (_error) {
-    ui.skinJsonArea.value = url;
-    notify("Clipboard unavailable. URL written to JSON area", "warn");
-  }
+  const url = buildOverlayUrlByType(template.type, { debug: false, cacheBust: true, forceVersion: Date.now() });
+  const copied = await copyText(url, ui.skinJsonArea);
+  notify(copied ? "Copied Browser Source URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
 }
 
 async function addSourceToObs(template = state.selectedTemplate) {
@@ -363,16 +455,12 @@ async function addSourceToObs(template = state.selectedTemplate) {
     return;
   }
 
-  const url = previewEngine.getOverlayUrl({ cacheBust: true, absolute: true });
-  const source = template.recommendedSource;
+  const preset = getSourcePreset(template.type);
+  const url = buildOverlayUrlByType(template.type, { debug: false, cacheBust: true, forceVersion: Date.now() });
 
   if (!obsManager.connected) {
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch (_error) {
-      ui.skinJsonArea.value = url;
-    }
-    notify("OBS disconnected. Manual mode + URL copy fallback", "warn");
+    await copyText(url, ui.skinJsonArea);
+    notify("OBS disconnected. Manual mode: copy URL and add Browser Source manually", "warn");
     return;
   }
 
@@ -380,16 +468,13 @@ async function addSourceToObs(template = state.selectedTemplate) {
     const result = await obsManager.addBrowserSource({
       type: template.type,
       url,
-      width: source.width,
-      height: source.height
+      width: preset.width,
+      height: preset.height
     });
     notify(`Add Source success (${result.inputName})`);
+    await obsManager.refreshConnectionInfo();
   } catch (error) {
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch (_error) {
-      ui.skinJsonArea.value = url;
-    }
+    await copyText(url, ui.skinJsonArea);
     notify(`Add Source failed: ${error.message}`, "error");
   }
 }
@@ -546,65 +631,349 @@ function bindSkinJsonActions() {
   });
 }
 
-function updateObsStatus(connected) {
-  ui.obsStatusText.textContent = connected ? "Connected" : "Disconnected";
-  ui.obsStatusText.classList.toggle("connected", connected);
-  ui.obsStatusText.classList.toggle("disconnected", !connected);
-  ui.obsConnectBtn.textContent = connected ? "Disconnect OBS" : "Connect OBS";
+function updateObsStatus(statusInput) {
+  const status = typeof statusInput === "boolean" ? { connected: statusInput } : statusInput || {};
+  const connected = !!status.connected;
+  const errorMessage = status.errorMessage || "";
+  const sceneName = status.sceneName || "-";
+
+  if (ui.obsStatusText) {
+    ui.obsStatusText.textContent = connected ? "Connected" : "Disconnected";
+    ui.obsStatusText.classList.toggle("connected", connected);
+    ui.obsStatusText.classList.toggle("disconnected", !connected);
+  }
+
+  if (ui.obsPanelStatusText) {
+    if (connected) {
+      ui.obsPanelStatusText.textContent = `connected ${status.endpoint || ""}`.trim();
+      ui.obsPanelStatusText.dataset.state = "ok";
+    } else if (status.available === false) {
+      ui.obsPanelStatusText.textContent = "websocket unavailable";
+      ui.obsPanelStatusText.dataset.state = "error";
+    } else {
+      ui.obsPanelStatusText.textContent = "manual mode";
+      ui.obsPanelStatusText.dataset.state = "warn";
+    }
+  }
+
+  if (ui.obsCurrentSceneText) {
+    ui.obsCurrentSceneText.textContent = sceneName;
+  }
+  if (ui.obsConnectionErrorText) {
+    ui.obsConnectionErrorText.textContent = errorMessage || "-";
+  }
+
+  if (ui.obsConnectBtn) {
+    ui.obsConnectBtn.disabled = connected;
+  }
+  if (ui.obsDisconnectBtn) {
+    ui.obsDisconnectBtn.disabled = !connected;
+  }
+
+  if (ui.obsManualGuideText) {
+    ui.obsManualGuideText.textContent = connected
+      ? "OBS connected. You can add or refresh Browser Sources directly from this panel."
+      : "OBS disconnected. Use Manual Mode: copy Production URL and add Browser Source in OBS with the recommended width/height.";
+  }
+}
+
+function evaluateObsHealthReport({ urls, liveHealth, summaryHealth }) {
+  const items = [];
+  const templateExists = !!(state.selectedTemplate && TEMPLATE_REGISTRY.some((item) => item.id === state.selectedTemplate.id));
+  const livePreset = getSourcePreset("live");
+  const summaryPreset = getSourcePreset("summary");
+  const contractPass = (ui.contractStatusText?.textContent || "").toUpperCase().includes("PASS");
+
+  const pushItem = (level, text) => items.push({ level, text });
+
+  const isValidUrl = (value) => {
+    try {
+      return !!new URL(value);
+    } catch (_error) {
+      return false;
+    }
+  };
+
+  pushItem(isValidUrl(urls.liveProd) && isValidUrl(urls.summaryProd) ? "ok" : "error", "Overlay URL valid");
+  pushItem(templateExists ? "ok" : "error", "Selected skin exists");
+  pushItem(livePreset && summaryPreset ? "ok" : "error", "Source size preset selected");
+  pushItem(obsManager.connected ? "ok" : "warning", obsManager.connected ? "OBS connected" : "OBS manual mode");
+  pushItem(contractPass ? "ok" : "warning", "Current template contract status");
+  pushItem("ok", "Transparent background reminder: keep OBS source CSS transparent");
+  pushItem(urls.liveProd.includes("debug=1") || urls.summaryProd.includes("debug=1") ? "warning" : "ok", "Debug mode off for production URL");
+  const githubReady =
+    urls.liveProd.includes("/overlays/live.html") &&
+    urls.summaryProd.includes("/overlays/summary.html") &&
+    !urls.liveProd.includes("/src/") &&
+    !urls.summaryProd.includes("/src/");
+  pushItem(githubReady ? "ok" : "error", "GitHub Pages URL ready");
+
+  if (obsManager.connected) {
+    pushItem(liveHealth?.sourceExists ? "ok" : "warning", `Live source: ${liveHealth?.sourceExists ? "found" : "not found"}`);
+    pushItem(summaryHealth?.sourceExists ? "ok" : "warning", `Summary source: ${summaryHealth?.sourceExists ? "found" : "not found"}`);
+    if (liveHealth && !liveHealth.urlMatch) {
+      pushItem("warning", "Live source URL mismatch");
+    }
+    if (summaryHealth && !summaryHealth.urlMatch) {
+      pushItem("warning", "Summary source URL mismatch");
+    }
+  }
+
+  const severity = items.some((item) => item.level === "error")
+    ? "error"
+    : items.some((item) => item.level === "warning")
+      ? "warn"
+      : "ok";
+  const summaryText = severity === "error" ? "Health status: Error" : severity === "warn" ? "Health status: Warning" : "Health status: OK";
+
+  return { severity, summaryText, items };
+}
+
+function renderObsHealthReport(report) {
+  state.obsLastHealthResult = report;
+  if (ui.obsHealthStatusText) {
+    ui.obsHealthStatusText.textContent = report.summaryText;
+    ui.obsHealthStatusText.dataset.state = report.severity;
+  }
+  if (ui.obsHealthResultArea) {
+    ui.obsHealthResultArea.value = report.items
+      .map((item) => {
+        const tag = item.level === "ok" ? "OK" : item.level === "warning" ? "Warning" : "Error";
+        return `[${tag}] ${item.text}`;
+      })
+      .join("\n");
+  }
+}
+
+async function runObsHealthCheck() {
+  const urls = refreshObsUrlsPanel();
+  let liveHealth = null;
+  let summaryHealth = null;
+  if (obsManager.connected) {
+    liveHealth = await obsManager.healthCheck({ type: "live", expectedUrl: urls.liveProd });
+    summaryHealth = await obsManager.healthCheck({ type: "summary", expectedUrl: urls.summaryProd });
+  }
+  const report = evaluateObsHealthReport({ urls, liveHealth, summaryHealth });
+  renderObsHealthReport(report);
+  notify(report.summaryText, report.severity === "error" ? "error" : report.severity === "warn" ? "warn" : "info");
+}
+
+async function addObsSourceForType(type) {
+  const template = resolveTemplateForObsType(type);
+  const preset = getSourcePreset(type);
+  const url = buildOverlayUrlByType(type, { debug: false, cacheBust: true, forceVersion: Date.now() });
+  if (!obsManager.connected) {
+    await copyText(url, ui.skinJsonArea);
+    notify(`OBS disconnected. Manual mode: copy ${type} URL and add Browser Source manually`, "warn");
+    return;
+  }
+  const result = await obsManager.addBrowserSource({
+    type,
+    url,
+    width: preset.width,
+    height: preset.height
+  });
+  notify(`Add ${type} source success (${result.inputName})`);
+  await obsManager.refreshConnectionInfo();
+  refreshObsUrlsPanel();
 }
 
 function bindObsPanel() {
+  const requiredObsNodes = [
+    ui.obsHost,
+    ui.obsPort,
+    ui.obsPassword,
+    ui.obsConnectBtn,
+    ui.obsDisconnectBtn,
+    ui.obsTestBtn,
+    ui.livePresetSelect,
+    ui.summaryPresetSelect,
+    ui.obsRefreshTargetSelect,
+    ui.refreshSelectedSourceBtn,
+    ui.forceRefreshSourceBtn,
+    ui.regenerateUrlBtn,
+    ui.copyFreshUrlBtn,
+    ui.obsHealthBtn
+  ];
+  if (requiredObsNodes.some((node) => !node)) {
+    notify("OBS Source Manager UI missing some elements. Manual URL copy is still available.", "warn");
+    return;
+  }
+
   const obsConfig = getObsConfig();
   ui.obsHost.value = obsConfig.host;
   ui.obsPort.value = obsConfig.port;
   ui.obsPassword.value = obsConfig.password;
+  ui.obsCustomCssText.value = OBS_CUSTOM_CSS;
+  ui.livePresetSelect.innerHTML = Object.entries(LIVE_SOURCE_PRESETS)
+    .map(([key, item]) => `<option value="${key}">${item.label}</option>`)
+    .join("");
+  ui.summaryPresetSelect.innerHTML = Object.entries(SUMMARY_SOURCE_PRESETS)
+    .map(([key, item]) => `<option value="${key}">${item.label}</option>`)
+    .join("");
+  ui.livePresetSelect.value = state.obsLivePreset;
+  ui.summaryPresetSelect.value = state.obsSummaryPreset;
+  refreshObsUrlsPanel();
+  updateObsStatus({ connected: false, errorMessage: "" });
 
   ui.obsConnectBtn.addEventListener("click", async () => {
-    if (obsManager.connected) {
-      await obsManager.disconnect();
-      updateObsStatus(false);
-      return;
-    }
     const connected = await obsManager.connect({
       host: ui.obsHost.value.trim() || "localhost",
       port: ui.obsPort.value.trim() || "4455",
       password: ui.obsPassword.value
     });
-    updateObsStatus(connected);
-    notify(connected ? "OBS connected" : "OBS disconnected: manual mode");
+    if (connected) {
+      await obsManager.refreshConnectionInfo();
+    }
+    updateObsStatus(obsManager.statusSnapshot());
+    notify(connected ? "OBS connected" : "OBS connect failed: manual mode", connected ? "info" : "warn");
+  });
+
+  ui.obsDisconnectBtn.addEventListener("click", async () => {
+    await obsManager.disconnect();
+    updateObsStatus(obsManager.statusSnapshot());
+    notify("OBS disconnected. Manual mode enabled", "warn");
   });
 
   ui.obsTestBtn.addEventListener("click", async () => {
     try {
       const version = await obsManager.testConnection();
-      notify(`OBS OK | ${version.obsVersion || "unknown"}`);
+      await obsManager.getCurrentSceneName().catch(() => "");
+      updateObsStatus(obsManager.statusSnapshot());
+      notify(`OBS test OK | ${version.obsVersion || "unknown"}`);
     } catch (error) {
+      updateObsStatus({ ...obsManager.statusSnapshot(), errorMessage: error.message });
       notify(`OBS test failed: ${error.message}`, "error");
     }
   });
 
-  ui.obsRefreshBtn.addEventListener("click", async () => {
+  ui.livePresetSelect.addEventListener("change", () => {
+    state.obsLivePreset = ui.livePresetSelect.value;
+    refreshObsUrlsPanel();
+  });
+
+  ui.summaryPresetSelect.addEventListener("change", () => {
+    state.obsSummaryPreset = ui.summaryPresetSelect.value;
+    refreshObsUrlsPanel();
+  });
+
+  ui.addLiveSourceBtn.addEventListener("click", async () => {
     try {
-      const type = state.selectedTemplate?.type || "live";
-      await obsManager.refreshBrowserSource(type);
-      notify("Refresh Browser Source success");
+      await addObsSourceForType("live");
     } catch (error) {
-      notify(`Refresh failed: ${error.message}`, "error");
+      notify(`Add live source failed: ${error.message}`, "error");
     }
   });
 
+  ui.addSummarySourceBtn.addEventListener("click", async () => {
+    try {
+      await addObsSourceForType("summary");
+    } catch (error) {
+      notify(`Add summary source failed: ${error.message}`, "error");
+    }
+  });
+
+  ui.addBothSourcesBtn.addEventListener("click", async () => {
+    try {
+      await addObsSourceForType("live");
+      await addObsSourceForType("summary");
+    } catch (error) {
+      notify(`Add both sources failed: ${error.message}`, "error");
+    }
+  });
+
+  ui.refreshSelectedSourceBtn.addEventListener("click", async () => {
+    const selectedType = ui.obsRefreshTargetSelect.value || "live";
+    if (!obsManager.connected) {
+      notify("OBS disconnected. Please refresh source cache manually in OBS", "warn");
+      return;
+    }
+    try {
+      await obsManager.refreshBrowserSource(selectedType);
+      notify(`Refresh ${selectedType} source success`);
+    } catch (error) {
+      notify(`Refresh ${selectedType} source failed: ${error.message}`, "error");
+    }
+  });
+
+  ui.forceRefreshSourceBtn.addEventListener("click", async () => {
+    const selectedType = ui.obsRefreshTargetSelect.value || "live";
+    if (!obsManager.connected) {
+      notify("OBS disconnected. Use OBS Browser Source 'Refresh cache of current page'", "warn");
+      return;
+    }
+    try {
+      await obsManager.refreshBrowserSource(selectedType);
+      state.obsUrlVersion = Date.now();
+      refreshObsUrlsPanel();
+      notify(`Force refresh ${selectedType} source success`);
+    } catch (error) {
+      notify(`Force refresh failed: ${error.message}`, "error");
+    }
+  });
+
+  ui.regenerateUrlBtn.addEventListener("click", () => {
+    state.obsUrlVersion = Date.now();
+    refreshObsUrlsPanel();
+    notify("Regenerated URL with fresh cache buster");
+  });
+
+  ui.copyFreshUrlBtn.addEventListener("click", async () => {
+    state.obsUrlVersion = Date.now();
+    const urls = refreshObsUrlsPanel();
+    const selectedType = ui.obsRefreshTargetSelect.value || "live";
+    const url = selectedType === "summary" ? urls.summaryProd : urls.liveProd;
+    const copied = await copyText(url, ui.skinJsonArea);
+    notify(copied ? "Copied fresh URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+  });
+
+  ui.copyLiveProductionUrlBtn.addEventListener("click", async () => {
+    const urls = refreshObsUrlsPanel();
+    const copied = await copyText(urls.liveProd, ui.skinJsonArea);
+    notify(copied ? "Copied Live Production URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+  });
+
+  ui.copyLiveDebugUrlBtn.addEventListener("click", async () => {
+    const urls = refreshObsUrlsPanel();
+    const copied = await copyText(urls.liveDebug, ui.skinJsonArea);
+    notify(copied ? "Copied Live Debug URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+  });
+
+  ui.copySummaryProductionUrlBtn.addEventListener("click", async () => {
+    const urls = refreshObsUrlsPanel();
+    const copied = await copyText(urls.summaryProd, ui.skinJsonArea);
+    notify(copied ? "Copied Summary Production URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+  });
+
+  ui.copySummaryDebugUrlBtn.addEventListener("click", async () => {
+    const urls = refreshObsUrlsPanel();
+    const copied = await copyText(urls.summaryDebug, ui.skinJsonArea);
+    notify(copied ? "Copied Summary Debug URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+  });
+
+  ui.copyObsCssBtn.addEventListener("click", async () => {
+    const copied = await copyText(OBS_CUSTOM_CSS, ui.skinJsonArea);
+    notify(copied ? "Copied OBS Custom CSS" : "Clipboard unavailable. CSS written to JSON area", copied ? "info" : "warn");
+  });
+
+  ui.copyLiveUrlBtn.addEventListener("click", async () => {
+    const urls = refreshObsUrlsPanel();
+    const copied = await copyText(urls.liveProd, ui.skinJsonArea);
+    notify(copied ? "Copied Live URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+  });
+
+  ui.copySummaryUrlBtn.addEventListener("click", async () => {
+    const urls = refreshObsUrlsPanel();
+    const copied = await copyText(urls.summaryProd, ui.skinJsonArea);
+    notify(copied ? "Copied Summary URL" : "Clipboard unavailable. URL written to JSON area", copied ? "info" : "warn");
+  });
+
   ui.obsHealthBtn.addEventListener("click", async () => {
-    const expected = previewEngine.getOverlayUrl({ cacheBust: false, absolute: true });
-    const type = state.selectedTemplate?.type || "live";
-    const report = await obsManager.healthCheck({ type, expectedUrl: expected });
-    const statusText = report.connected
-      ? report.sourceExists
-        ? report.urlMatch
-          ? "Health Check: OK"
-          : "Health Check: URL mismatch"
-        : "Health Check: Source not found"
-      : "Health Check: OBS disconnected";
-    notify(statusText, report.urlMatch ? "info" : "warn");
+    try {
+      await runObsHealthCheck();
+    } catch (error) {
+      notify(`Health Check failed: ${error.message}`, "error");
+    }
   });
 }
 
@@ -778,10 +1147,39 @@ function cacheElements() {
   ui.obsHost = document.getElementById("obsHost");
   ui.obsPort = document.getElementById("obsPort");
   ui.obsPassword = document.getElementById("obsPassword");
+  ui.obsPanelStatusText = document.getElementById("obsPanelStatusText");
+  ui.obsCurrentSceneText = document.getElementById("obsCurrentSceneText");
+  ui.obsConnectionErrorText = document.getElementById("obsConnectionErrorText");
   ui.obsConnectBtn = document.getElementById("obsConnectBtn");
+  ui.obsDisconnectBtn = document.getElementById("obsDisconnectBtn");
   ui.obsTestBtn = document.getElementById("obsTestBtn");
-  ui.obsRefreshBtn = document.getElementById("obsRefreshBtn");
+  ui.addLiveSourceBtn = document.getElementById("addLiveSourceBtn");
+  ui.addSummarySourceBtn = document.getElementById("addSummarySourceBtn");
+  ui.addBothSourcesBtn = document.getElementById("addBothSourcesBtn");
+  ui.obsRefreshTargetSelect = document.getElementById("obsRefreshTargetSelect");
+  ui.refreshSelectedSourceBtn = document.getElementById("refreshSelectedSourceBtn");
+  ui.forceRefreshSourceBtn = document.getElementById("forceRefreshSourceBtn");
+  ui.regenerateUrlBtn = document.getElementById("regenerateUrlBtn");
+  ui.copyFreshUrlBtn = document.getElementById("copyFreshUrlBtn");
   ui.obsHealthBtn = document.getElementById("obsHealthBtn");
+  ui.livePresetSelect = document.getElementById("livePresetSelect");
+  ui.summaryPresetSelect = document.getElementById("summaryPresetSelect");
+  ui.obsSelectedSkinText = document.getElementById("obsSelectedSkinText");
+  ui.obsSelectedLivePresetText = document.getElementById("obsSelectedLivePresetText");
+  ui.obsSelectedSummaryPresetText = document.getElementById("obsSelectedSummaryPresetText");
+  ui.liveProductionUrlText = document.getElementById("liveProductionUrlText");
+  ui.summaryProductionUrlText = document.getElementById("summaryProductionUrlText");
+  ui.copyLiveProductionUrlBtn = document.getElementById("copyLiveProductionUrlBtn");
+  ui.copyLiveDebugUrlBtn = document.getElementById("copyLiveDebugUrlBtn");
+  ui.copySummaryProductionUrlBtn = document.getElementById("copySummaryProductionUrlBtn");
+  ui.copySummaryDebugUrlBtn = document.getElementById("copySummaryDebugUrlBtn");
+  ui.obsCustomCssText = document.getElementById("obsCustomCssText");
+  ui.copyObsCssBtn = document.getElementById("copyObsCssBtn");
+  ui.copyLiveUrlBtn = document.getElementById("copyLiveUrlBtn");
+  ui.copySummaryUrlBtn = document.getElementById("copySummaryUrlBtn");
+  ui.obsHealthStatusText = document.getElementById("obsHealthStatusText");
+  ui.obsHealthResultArea = document.getElementById("obsHealthResultArea");
+  ui.obsManualGuideText = document.getElementById("obsManualGuideText");
 
   ui.bridgeStatusText = document.getElementById("bridgeStatusText");
   ui.externalPayloadArea = document.getElementById("externalPayloadArea");
@@ -896,8 +1294,8 @@ function initThemeEditor() {
 
 function initObsManager() {
   obsManager = new ObsSourceManager({
-    onStatusChange: ({ connected }) => {
-      updateObsStatus(connected);
+    onStatusChange: (status) => {
+      updateObsStatus(status);
     },
     onLog: ({ message, level }) => {
       if (level === "error") {
