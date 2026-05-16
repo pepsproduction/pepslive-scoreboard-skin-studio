@@ -61,6 +61,16 @@ python -m http.server 8080
 3. กด `Add Source` (บน header หรือการ์ด template)
 4. ถ้าเชื่อมต่อ OBS ไม่ได้ ระบบจะเข้า **Manual Mode** และให้ Copy URL แทน
 
+## วิธีใช้ Phase 2 Data Bridge
+1. เปิด `dock.html` มากกว่า 1 หน้าหรือเปิดพร้อมกับ overlay ใน origin เดียวกัน
+2. ระบบจะ sync ผ่าน `BroadcastChannel` อัตโนมัติ
+3. ถ้า Browser ไม่รองรับ ระบบ fallback ไปที่ `localStorage shared state`
+4. สามารถวาง payload JSON ใน `Phase 2 Data Bridge` เพื่อทดสอบ feed จากภายนอกได้
+
+คีย์ shared state ที่ใช้:
+- `pepslive:sharedOverlayState`
+- channel: `pepslive-overlay-sync-v1`
+
 ## วิธี Copy Overlay URL
 - ใช้ปุ่ม `Copy URL` ได้ทั้ง:
   - บน Header (template ที่กำลังเลือก)
@@ -115,13 +125,13 @@ pepslive-scoreboard-skin-studio/
 
 ## Roadmap
 ### Phase 2 (planned)
-- เชื่อมข้อมูลจาก PepsLive Dock UI เดิม
-- รองรับ BroadcastChannel
-- รองรับ localStorage shared state
-- รองรับ Google Sheet / Tournament Manager integration
-- รองรับ Lower Third
-- รองรับ Goal Frame
-- รองรับ Player Card
-- รองรับ Sponsor Board
-- รองรับ Countdown Overlay
-- รองรับ Skin Marketplace
+- เชื่อมข้อมูลจาก PepsLive Dock UI เดิม (โครง hook พร้อมใช้งาน)
+- รองรับ BroadcastChannel (เสร็จแล้ว)
+- รองรับ localStorage shared state (เสร็จแล้ว)
+- รองรับ Google Sheet / Tournament Manager integration (stub adapter)
+- รองรับ Lower Third (planned module)
+- รองรับ Goal Frame (planned module)
+- รองรับ Player Card (planned module)
+- รองรับ Sponsor Board (planned module)
+- รองรับ Countdown Overlay (planned module)
+- รองรับ Skin Marketplace (planned module)

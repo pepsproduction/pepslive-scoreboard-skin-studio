@@ -1,5 +1,8 @@
 import { getTemplateById, TEMPLATE_REGISTRY } from "../templates/template-registry.js";
+import { buildGoogleSheetAdapter, buildPepsLiveDockHook, buildTournamentManagerAdapter, normalizeExternalMatchPayload } from "./external-data-adapters.js";
+import { getMockDataBySport } from "./mock-data.js";
 import { ObsSourceManager } from "./obs-source-manager.js";
+import { OVERLAY_MODULE_REGISTRY } from "./overlay-module-registry.js";
 import { PreviewEngine } from "./preview-engine.js";
 import {
   duplicateSkin,
@@ -15,9 +18,12 @@ import {
   setThemeBySkinId,
   toggleFavorite
 } from "./skin-storage.js";
+import { SharedStateBridge, getSharedOverlayState } from "./shared-state-bridge.js";
 import { TemplateGallery } from "./template-gallery.js";
 import { DEFAULT_THEME, ThemeEditor } from "./theme-editor.js";
 import { ANIMATION_PRESETS, BACKGROUND_MODES, SAFE_AREA_MODES, STYLE_TAGS, downloadJson, setButtonGroupActive } from "./utils.js";
+
+const adapters = [buildPepsLiveDockHook(), buildGoogleSheetAdapter(), buildTournamentManagerAdapter()];
 
 const state = {
   selectedTemplate: null,
@@ -26,7 +32,9 @@ const state = {
   favorites: getFavorites(),
   recentlyUsed: getRecentlyUsed(),
   presets: [],
-  currentSkin: getCurrentSkin()
+  currentSkin: getCurrentSkin(),
+  activeMatchData: null,
+  bridge: null
 };
 
 const ui = {};
@@ -50,6 +58,29 @@ function updateCurrentSkinLabel() {
   ui.currentSkinLabel.textContent = `${state.selectedTemplate.id} - ${state.selectedTemplate.name}`;
 }
 
+function updateBridgeStatus(message, level = "ok") {
+  if (!ui.bridgeStatusText) {
+    return;
+  }
+  ui.bridgeStatusText.textContent = message;
+  ui.bridgeStatusText.dataset.state = level;
+}
+
+function publishCurrentSkinToBridge() {
+  if (!state.bridge || !state.selectedTemplate) {
+    return;
+  }
+  state.bridge.publishSkin({
+    skinId: state.selectedTemplate.id,
+    sport: state.selectedTemplate.sport,
+    type: state.selectedTemplate.type,
+    theme: state.currentTheme,
+    animation: {
+      style: state.animationStyle
+    }
+  });
+}
+
 async function copyCurrentOverlayUrl(template = state.selectedTemplate) {
   if (!template || !previewEngine) {
     return;
@@ -60,7 +91,7 @@ async function copyCurrentOverlayUrl(template = state.selectedTemplate) {
     notify("คัดลอก Browser Source URL แล้ว");
   } catch (_error) {
     ui.skinJsonArea.value = url;
-    notify("ไม่สามารถคัดลอกอัตโนมัติได้ วาง URL ไว้ในกล่อง JSON แล้ว", "warn");
+    notify("ไม่สามารถคัดลอกอัตโนมัติได้ ระบบวาง URL ในช่องข้อความแทนแล้ว", "warn");
   }
 }
 
@@ -80,21 +111,45 @@ function saveSkinState() {
   state.currentSkin = payload;
 }
 
-function applyTemplate(template, options = { markRecent: false }) {
+async function resolveMatchDataForTemplate(template, options = { forceMock: false }) {
+  const sharedState = getSharedOverlayState();
+  const sharedMatch = sharedState.matchData;
+  if (!options.forceMock && sharedMatch && sharedMatch.sport === template.sport) {
+    return sharedMatch;
+  }
+  return getMockDataBySport(template.sport);
+}
+
+async function syncMatchDataForTemplate(template, options = { broadcast: true, forceMock: false }) {
+  const matchData = await resolveMatchDataForTemplate(template, options);
+  state.activeMatchData = matchData;
+  previewEngine.setMatchData(matchData);
+
+  if (options.broadcast && state.bridge) {
+    state.bridge.publishMatchData(matchData);
+  }
+}
+
+async function applyTemplate(template, options = { markRecent: false, broadcast: true, forceMock: false }) {
   state.selectedTemplate = template;
   state.currentTheme = getThemeBySkinId(template.id) || state.currentTheme || DEFAULT_THEME;
   state.animationStyle = state.currentTheme.animationStyle || state.animationStyle;
   previewEngine.setTemplate(template);
   previewEngine.setTheme(state.currentTheme);
   previewEngine.setAnimation(state.animationStyle);
-  themeEditor.setTheme(state.currentTheme);
+  themeEditor.setTheme(state.currentTheme, { silent: true });
   ui.animationPreset.value = state.animationStyle;
   updateCurrentSkinLabel();
   saveSkinState();
+  await syncMatchDataForTemplate(template, { broadcast: options.broadcast, forceMock: options.forceMock });
 
   if (options.markRecent) {
     state.recentlyUsed = pushRecentlyUsed(template.id);
     gallery.setCollections({ favorites: state.favorites, recentlyUsed: state.recentlyUsed });
+  }
+
+  if (options.broadcast) {
+    publishCurrentSkinToBridge();
   }
 }
 
@@ -112,7 +167,7 @@ async function addSourceToObs(template = state.selectedTemplate) {
     } catch (_error) {
       ui.skinJsonArea.value = url;
     }
-    notify("OBS ไม่ได้เชื่อมต่อ ระบบอยู่ใน Manual Mode (คัดลอก URL ให้แล้ว)", "warn");
+    notify("OBS ไม่ได้เชื่อมต่อ ระบบอยู่ใน Manual Mode และคัดลอก URL ให้แล้ว", "warn");
     return;
   }
 
@@ -198,6 +253,7 @@ function bindPreviewTools() {
     previewEngine.setTheme(state.currentTheme);
     setThemeBySkinId(state.selectedTemplate.id, state.currentTheme);
     saveSkinState();
+    publishCurrentSkinToBridge();
   });
 }
 
@@ -221,7 +277,7 @@ function bindSkinJsonActions() {
     notify("Export Current Skin JSON เรียบร้อย");
   });
 
-  ui.importJsonBtn.addEventListener("click", () => {
+  ui.importJsonBtn.addEventListener("click", async () => {
     const raw = ui.skinJsonArea.value.trim();
     if (!raw) {
       notify("วาง Skin JSON ก่อน import", "warn");
@@ -233,14 +289,14 @@ function bindSkinJsonActions() {
       state.currentTheme = { ...DEFAULT_THEME, ...(parsed.theme || {}) };
       state.animationStyle = parsed.animation?.style || state.currentTheme.animationStyle || "smooth-broadcast";
       setThemeBySkinId(template.id, state.currentTheme);
-      applyTemplate(template, { markRecent: true });
+      await applyTemplate(template, { markRecent: true, broadcast: true, forceMock: false });
       notify(`Import Skin สำเร็จ: ${template.id}`);
     } catch (error) {
       notify(`Import JSON ไม่สำเร็จ: ${error.message}`, "error");
     }
   });
 
-  ui.resetSkinBtn.addEventListener("click", () => {
+  ui.resetSkinBtn.addEventListener("click", async () => {
     if (!state.selectedTemplate) {
       return;
     }
@@ -255,7 +311,7 @@ function bindSkinJsonActions() {
     state.currentTheme = { ...DEFAULT_THEME };
     state.animationStyle = DEFAULT_THEME.animationStyle;
     setThemeBySkinId(state.selectedTemplate.id, state.currentTheme);
-    applyTemplate(state.selectedTemplate, { markRecent: false });
+    await applyTemplate(state.selectedTemplate, { markRecent: false, broadcast: true, forceMock: false });
     notify("Reset Skin เรียบร้อย");
   });
 
@@ -332,6 +388,104 @@ function bindObsPanel() {
   });
 }
 
+function renderPhase2Roadmap() {
+  if (!ui.moduleRoadmapList || !ui.hookStatusList) {
+    return;
+  }
+  ui.moduleRoadmapList.innerHTML = OVERLAY_MODULE_REGISTRY.map(
+    (item) => `
+      <li>
+        <strong>${item.name}</strong>
+        <span>${item.description}</span>
+      </li>
+    `
+  ).join("");
+
+  ui.hookStatusList.innerHTML = adapters
+    .map(
+      (adapter) => `
+      <li>
+        <strong>${adapter.source}</strong>
+        <span class="hook-${adapter.status}">${adapter.status}</span>
+      </li>
+    `
+    )
+    .join("");
+}
+
+async function ingestExternalPayload(rawPayload, sourceLabel = "manual", options = { broadcast: true }) {
+  const normalized = normalizeExternalMatchPayload(rawPayload);
+  if (!normalized) {
+    notify("Payload ไม่ถูกต้องหรือไม่พบข้อมูลที่นำเข้าได้", "warn");
+    return;
+  }
+
+  if (normalized.sport && state.selectedTemplate && normalized.sport !== state.selectedTemplate.sport) {
+    const fallbackTemplate =
+      TEMPLATE_REGISTRY.find((item) => item.sport === normalized.sport && item.type === state.selectedTemplate.type) ||
+      TEMPLATE_REGISTRY.find((item) => item.sport === normalized.sport) ||
+      state.selectedTemplate;
+    await applyTemplate(fallbackTemplate, { markRecent: false, broadcast: true, forceMock: false });
+  }
+
+  state.activeMatchData = normalized;
+  previewEngine.setMatchData(normalized);
+  if (options.broadcast) {
+    state.bridge?.publishMatchData(normalized);
+  }
+  notify(`รับข้อมูลภายนอกแล้ว (${sourceLabel})`);
+}
+
+function bindPhase2Panel() {
+  ui.ingestPayloadBtn.addEventListener("click", async () => {
+    const raw = ui.externalPayloadArea.value.trim();
+    if (!raw) {
+      notify("วาง JSON payload ก่อน ingest", "warn");
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      await ingestExternalPayload(parsed, "manual-json");
+    } catch (error) {
+      notify(`JSON parse ไม่สำเร็จ: ${error.message}`, "error");
+    }
+  });
+
+  ui.clearPayloadBtn.addEventListener("click", async () => {
+    ui.externalPayloadArea.value = "";
+    if (state.selectedTemplate) {
+      await syncMatchDataForTemplate(state.selectedTemplate, { broadcast: true, forceMock: true });
+    }
+    notify("ล้าง payload แล้วและรีเซ็ตกลับ mock data");
+  });
+}
+
+function initSharedBridge() {
+  state.bridge = new SharedStateBridge({
+    role: "dock",
+    onRemoteEvent: async (envelope, transport) => {
+      if (envelope.type === "skin:update" && envelope.payload?.skinId) {
+        const remoteTemplate = getTemplateById(envelope.payload.skinId);
+        state.currentTheme = { ...DEFAULT_THEME, ...(envelope.payload.theme || state.currentTheme) };
+        state.animationStyle = envelope.payload.animation?.style || state.animationStyle;
+        await applyTemplate(remoteTemplate, { markRecent: false, broadcast: false, forceMock: false });
+      }
+
+      if (envelope.type === "match:update" && envelope.payload) {
+      await ingestExternalPayload(envelope.payload, `bridge:${transport}`, { broadcast: false });
+      }
+
+      updateBridgeStatus(`Sync active via ${transport}`, "ok");
+    },
+    onStateChange: (sharedState, mode) => {
+      updateBridgeStatus(`State ${mode} @ ${sharedState.updatedAt || "-"}`, "ok");
+    }
+  });
+
+  state.bridge.start();
+  updateBridgeStatus("BroadcastChannel + localStorage sync ready", "ok");
+}
+
 function cacheElements() {
   ui.message = document.getElementById("dockMessage");
   ui.currentSkinLabel = document.getElementById("currentSkinLabel");
@@ -367,6 +521,13 @@ function cacheElements() {
   ui.obsTestBtn = document.getElementById("obsTestBtn");
   ui.obsRefreshBtn = document.getElementById("obsRefreshBtn");
   ui.obsHealthBtn = document.getElementById("obsHealthBtn");
+
+  ui.bridgeStatusText = document.getElementById("bridgeStatusText");
+  ui.externalPayloadArea = document.getElementById("externalPayloadArea");
+  ui.ingestPayloadBtn = document.getElementById("ingestPayloadBtn");
+  ui.clearPayloadBtn = document.getElementById("clearPayloadBtn");
+  ui.moduleRoadmapList = document.getElementById("moduleRoadmapList");
+  ui.hookStatusList = document.getElementById("hookStatusList");
 }
 
 function renderStaticOptions() {
@@ -397,9 +558,9 @@ function initGallery() {
   gallery = new TemplateGallery({
     root: ui.galleryRoot,
     templates: TEMPLATE_REGISTRY,
-    onPreview: (template) => applyTemplate(template, { markRecent: false }),
-    onUse: (template) => {
-      applyTemplate(template, { markRecent: true });
+    onPreview: async (template) => applyTemplate(template, { markRecent: false, broadcast: false, forceMock: false }),
+    onUse: async (template) => {
+      await applyTemplate(template, { markRecent: true, broadcast: true, forceMock: false });
       notify(`กำลังใช้สกิน ${template.id}`);
     },
     onFavorite: (template) => {
@@ -408,11 +569,11 @@ function initGallery() {
       notify(`Favorite updated: ${template.id}`);
     },
     onCopyUrl: async (template) => {
-      applyTemplate(template, { markRecent: false });
+      await applyTemplate(template, { markRecent: false, broadcast: false, forceMock: false });
       await copyCurrentOverlayUrl(template);
     },
     onAddSource: async (template) => {
-      applyTemplate(template, { markRecent: false });
+      await applyTemplate(template, { markRecent: false, broadcast: false, forceMock: false });
       await addSourceToObs(template);
     }
   });
@@ -446,6 +607,7 @@ function initThemeEditor() {
       if (state.selectedTemplate) {
         setThemeBySkinId(state.selectedTemplate.id, theme);
         saveSkinState();
+        publishCurrentSkinToBridge();
       }
     },
     onPresetChange: (preset) => {
@@ -475,33 +637,40 @@ async function initApp() {
   await loadThemePresets();
   initPreview();
   initObsManager();
+  initSharedBridge();
   initGallery();
   initThemeEditor();
+  renderPhase2Roadmap();
 
   bindSidebarFilters();
   bindTopActions();
   bindPreviewTools();
   bindSkinJsonActions();
   bindObsPanel();
+  bindPhase2Panel();
 
   setButtonGroupActive(ui.sportFilter, "all");
   setButtonGroupActive(ui.typeFilter, "all");
   setButtonGroupActive(ui.listFilter, "All");
 
-  const initialTemplate = state.currentSkin?.skinId ? getTemplateById(state.currentSkin.skinId) : TEMPLATE_REGISTRY[0];
-  const initialTheme = getThemeBySkinId(initialTemplate.id) || state.currentSkin?.theme || DEFAULT_THEME;
+  const sharedState = getSharedOverlayState();
+  const initialTemplate = state.currentSkin?.skinId
+    ? getTemplateById(state.currentSkin.skinId)
+    : sharedState.currentSkin?.skinId
+      ? getTemplateById(sharedState.currentSkin.skinId)
+      : TEMPLATE_REGISTRY[0];
+
+  const initialTheme = getThemeBySkinId(initialTemplate.id) || sharedState.currentSkin?.theme || state.currentSkin?.theme || DEFAULT_THEME;
   state.currentTheme = { ...DEFAULT_THEME, ...initialTheme };
-  applyTemplate(initialTemplate, { markRecent: false });
+  state.animationStyle = sharedState.currentSkin?.animation?.style || state.currentTheme.animationStyle || DEFAULT_THEME.animationStyle;
+  await applyTemplate(initialTemplate, { markRecent: false, broadcast: true, forceMock: false });
   notify("พร้อมใช้งาน: เลือก template แล้วกด Use Skin");
 }
+
+window.addEventListener("beforeunload", () => {
+  state.bridge?.stop();
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   initApp();
 });
-
-// Phase 2 placeholders:
-// - BroadcastChannel bridge for PepsLive Dock UI shared state
-// - localStorage shared state synchronization module
-// - Google Sheet / Tournament Manager connector hooks
-// - Lower Third / Goal Frame / Player Card / Sponsor Board / Countdown overlay modules
-// - Skin Marketplace catalog API adapter

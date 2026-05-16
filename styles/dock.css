@@ -481,6 +481,65 @@ textarea:focus {
   resize: vertical;
 }
 
+.tiny-note {
+  margin: 0 0 8px;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.status-chip {
+  margin: 8px 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(2, 6, 23, 0.6);
+}
+
+.status-chip[data-state="ok"] {
+  color: #86efac;
+  border-color: rgba(134, 239, 172, 0.45);
+}
+
+.status-chip[data-state="warn"] {
+  color: #fde68a;
+  border-color: rgba(253, 230, 138, 0.45);
+}
+
+.mini-title {
+  margin: 10px 0 6px;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mini-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 5px;
+}
+
+.mini-list li {
+  display: grid;
+  gap: 2px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.mini-list li strong {
+  color: var(--text-primary);
+}
+
+.hook-ready {
+  color: #86efac;
+}
+
+.hook-stub {
+  color: #fcd34d;
+}
+
 .empty-state {
   grid-column: 1 / -1;
   border-radius: 12px;

@@ -1,4 +1,5 @@
 import { getTemplateById } from "../templates/template-registry.js";
+import { SharedStateBridge, getSharedOverlayState } from "../src/shared-state-bridge.js";
 
 const DEFAULT_THEME = {
   primaryColor: "#ff7a18",
@@ -123,11 +124,12 @@ let currentSkinId = null;
 let currentTheme = { ...DEFAULT_THEME };
 let currentAnimation = DEFAULT_THEME.animationStyle;
 let currentData = null;
+let sharedBridge = null;
 
 function parseQueryParams() {
   const params = new URLSearchParams(window.location.search);
   return {
-    skinId: params.get("skin") || "FB-LIVE-01",
+    skinId: params.get("skin"),
     animationStyle: params.get("animation") || null,
     themeRaw: params.get("theme")
   };
@@ -287,6 +289,12 @@ async function loadMockData() {
 }
 
 async function resolveMatchData(template) {
+  const sharedState = getSharedOverlayState();
+  if (sharedState.matchData && sharedState.matchData.sport === template.sport) {
+    currentData = { ...sharedState.matchData };
+    return currentData;
+  }
+
   const mockData = await loadMockData();
   const bySport = mockData[template.sport];
   if (!bySport) {
@@ -315,18 +323,34 @@ function setupPostMessageBridge() {
 
     if (payload.type === "pepslive:update-theme" && payload.theme) {
       applyTheme(payload.theme);
+      sharedBridge?.publishSkin({
+        skinId: currentSkinId,
+        theme: payload.theme,
+        animation: { style: currentAnimation }
+      });
     }
 
     if (payload.type === "pepslive:update-animation" && payload.animationStyle) {
       currentAnimation = payload.animationStyle;
+      sharedBridge?.publishSkin({
+        skinId: currentSkinId,
+        theme: currentTheme,
+        animation: { style: currentAnimation }
+      });
     }
 
     if (payload.type === "pepslive:update-skin" && payload.skinId) {
       currentSkinId = payload.skinId;
+      sharedBridge?.publishSkin({
+        skinId: currentSkinId,
+        theme: currentTheme,
+        animation: { style: currentAnimation }
+      });
     }
 
     if (payload.type === "pepslive:update-data" && payload.data && typeof payload.data === "object") {
       currentData = { ...currentData, ...payload.data };
+      sharedBridge?.publishMatchData(currentData);
     }
 
     const template = getTemplateById(currentSkinId || "FB-LIVE-01");
@@ -336,14 +360,51 @@ function setupPostMessageBridge() {
   });
 }
 
+function setupSharedStateBridge() {
+  sharedBridge = new SharedStateBridge({
+    role: "overlay",
+    onRemoteEvent: async (envelope) => {
+      if (envelope.type === "skin:update") {
+        const skinPayload = envelope.payload || {};
+        if (skinPayload.skinId) {
+          currentSkinId = skinPayload.skinId;
+        }
+        if (skinPayload.theme) {
+          applyTheme(skinPayload.theme);
+        }
+        if (skinPayload.animation?.style) {
+          currentAnimation = skinPayload.animation.style;
+        }
+      }
+
+      if (envelope.type === "match:update") {
+        currentData = {
+          ...(currentData || {}),
+          ...(envelope.payload || {})
+        };
+      }
+
+      const template = getTemplateById(currentSkinId || "FB-LIVE-01");
+      const mode = inferModeByDocument();
+      const data = currentData || (await resolveMatchData(template));
+      renderScoreboard(template, data, mode);
+    }
+  });
+  sharedBridge.start();
+}
+
 async function initOverlay() {
   const { skinId, animationStyle, themeRaw } = parseQueryParams();
-  currentSkinId = skinId;
-  currentAnimation = animationStyle || currentAnimation;
+  const sharedState = getSharedOverlayState();
+  currentSkinId = skinId || sharedState.currentSkin?.skinId || "FB-LIVE-01";
+  currentAnimation = animationStyle || sharedState.currentSkin?.animation?.style || currentAnimation;
   const queryTheme = parseThemeFromQuery(themeRaw);
-  const storedTheme = getStoredTheme(skinId);
-  applyTheme({ ...storedTheme, ...queryTheme });
-  await renderBySkin(skinId);
+  const storedTheme = getStoredTheme(currentSkinId);
+  const sharedTheme = sharedState.currentSkin?.theme || {};
+  applyTheme({ ...storedTheme, ...sharedTheme, ...queryTheme });
+  currentData = sharedState.matchData || null;
+  await renderBySkin(currentSkinId);
+  setupSharedStateBridge();
   setupPostMessageBridge();
 }
 

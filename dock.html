@@ -135,6 +135,30 @@
           </section>
 
           <section class="panel-block">
+            <h2>Phase 2 Data Bridge</h2>
+            <p class="tiny-note">
+              รองรับการ sync state ระหว่าง Dock UI กับ Overlay ผ่าน BroadcastChannel และ localStorage shared state
+            </p>
+            <div class="status-chip" id="bridgeStatusText" data-state="ok">initializing...</div>
+            <label>
+              <span>External Payload JSON (PepsLive Dock / Adapter Feed)</span>
+              <textarea
+                id="externalPayloadArea"
+                class="json-area"
+                placeholder='{"sport":"football","eventName":"PEPS LIVE CUP","homeName":"Dragon FC","awayName":"Tiger FC","homeScore":2,"awayScore":1}'
+              ></textarea>
+            </label>
+            <div class="inline-row">
+              <button type="button" class="capsule-btn" id="ingestPayloadBtn">Ingest Payload</button>
+              <button type="button" class="capsule-btn" id="clearPayloadBtn">Clear Payload</button>
+            </div>
+            <h3 class="mini-title">Adapter Hooks</h3>
+            <ul id="hookStatusList" class="mini-list"></ul>
+            <h3 class="mini-title">Future Overlay Modules</h3>
+            <ul id="moduleRoadmapList" class="mini-list"></ul>
+          </section>
+
+          <section class="panel-block">
             <h2>Import / Export Skin JSON</h2>
             <div class="inline-row">
               <button type="button" class="capsule-btn" id="exportJsonBtn">Export Current Skin JSON</button>

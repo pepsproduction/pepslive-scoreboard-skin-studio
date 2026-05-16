@@ -28,6 +28,7 @@ export class PreviewEngine {
     this.state = {
       template: null,
       theme: {},
+      matchData: null,
       animationStyle: "smooth-broadcast",
       backgroundMode: BACKGROUND_MODES[0],
       safeAreaMode: SAFE_AREA_MODES[0]
@@ -54,6 +55,14 @@ export class PreviewEngine {
   setAnimation(animationStyle) {
     this.state.animationStyle = animationStyle;
     this.postMessage({ type: "pepslive:update-animation", animationStyle });
+  }
+
+  setMatchData(matchData) {
+    this.state.matchData = matchData ? { ...matchData } : null;
+    this.postMessage({
+      type: "pepslive:update-data",
+      data: this.state.matchData
+    });
   }
 
   setBackgroundMode(mode) {
@@ -126,6 +135,12 @@ export class PreviewEngine {
       type: "pepslive:update-skin",
       skinId: this.state.template.id
     });
+    if (this.state.matchData) {
+      this.postMessage({
+        type: "pepslive:update-data",
+        data: this.state.matchData
+      });
+    }
   }
 
   updateStatus(message) {

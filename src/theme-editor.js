@@ -186,10 +186,12 @@ export class ThemeEditor {
     });
   }
 
-  setTheme(nextTheme) {
+  setTheme(nextTheme, options = { silent: false }) {
     this.theme = { ...DEFAULT_THEME, ...(nextTheme || {}) };
     this.render();
-    this.onThemeChange?.(this.theme, "all");
+    if (!options.silent) {
+      this.onThemeChange?.(this.theme, "all");
+    }
   }
 
   getTheme() {
