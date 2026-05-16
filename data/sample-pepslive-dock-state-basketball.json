@@ -1,0 +1,18 @@
+{
+  "sport": "basketball",
+  "eventTitle": "PEPS HOOPS",
+  "teamAName": "Orange Wolves",
+  "teamBName": "Blue Hawks",
+  "teamAScore": 78,
+  "teamBScore": 74,
+  "teamALogo": "",
+  "teamBLogo": "",
+  "matchTime": "02:18",
+  "quarter": "Q4",
+  "shotClock": "14",
+  "teamAFouls": 4,
+  "teamBFouls": 3,
+  "teamATimeouts": 2,
+  "teamBTimeouts": 1,
+  "matchStatus": "LIVE"
+}

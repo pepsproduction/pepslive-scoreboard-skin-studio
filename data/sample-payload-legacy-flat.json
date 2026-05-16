@@ -1,0 +1,19 @@
+{
+  "source": "legacy-flat",
+  "timestamp": "2026-05-16T10:03:00.000Z",
+  "sport": "football",
+  "skinId": "FB-SUM-01",
+  "type": "summary",
+  "eventName": "PEPS LIVE CUP",
+  "homeName": "Dragon FC",
+  "awayName": "Tiger FC",
+  "homeShortName": "DRA",
+  "awayShortName": "TIG",
+  "homeScore": "3",
+  "awayScore": "2",
+  "gameClock": "FT",
+  "periodLabel": "FULL TIME",
+  "statusLabel": "ENDED",
+  "goalScorerList": "12' Aran, 39' Krit, 74' Moss",
+  "cardInfo": "DRA 2Y | TIG 3Y"
+}

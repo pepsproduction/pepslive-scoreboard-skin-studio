@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PepsLive Protocol Test Harness</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: "Segoe UI", sans-serif;
+        background: #0b1220;
+        color: #e2e8f0;
+      }
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        gap: 12px;
+      }
+      .card {
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 12px;
+        padding: 12px;
+        background: rgba(15, 23, 42, 0.7);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      button {
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(15, 23, 42, 0.85);
+        color: #f8fafc;
+        border-radius: 999px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      textarea {
+        width: 100%;
+        min-height: 180px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: #020617;
+        color: #f8fafc;
+        padding: 10px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      textarea.small {
+        min-height: 120px;
+      }
+      .status {
+        font-size: 0.9rem;
+        color: #93c5fd;
+      }
+      h1,
+      h2 {
+        margin: 0 0 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>Protocol Test Harness</h1>
+        <p class="status">Dev-only page for payload validation and broadcast publish test</p>
+      </div>
+
+      <div class="card">
+        <h2>Payload Input</h2>
+        <div class="row">
+          <button type="button" id="loadFootballBtn">Load Sample Football</button>
+          <button type="button" id="loadBasketballBtn">Load Sample Basketball</button>
+          <button type="button" id="loadLegacyFlatBtn">Load Sample Legacy Flat</button>
+          <button type="button" id="loadLegacyNestedBtn">Load Sample Legacy Nested</button>
+        </div>
+        <div class="row">
+          <button type="button" id="validateBtn">Validate</button>
+          <button type="button" id="publishBtn">Publish To BroadcastChannel</button>
+        </div>
+        <textarea id="payloadInput" placeholder="Paste payload JSON here"></textarea>
+      </div>
+
+      <div class="card">
+        <h2>PepsLive Dock Compatibility Test</h2>
+        <div class="row">
+          <button type="button" id="loadDockFootballBtn">Load Sample PepsLive Football State</button>
+          <button type="button" id="loadDockBasketballBtn">Load Sample PepsLive Basketball State</button>
+        </div>
+        <div class="row">
+          <button type="button" id="normalizeDockBtn">Normalize Dock State</button>
+          <button type="button" id="publishDockBtn">Publish Dock State To Bridge</button>
+        </div>
+        <textarea id="dockNormalizedOutput" class="small" readonly placeholder="Normalized dock payload output"></textarea>
+      </div>
+
+      <div class="card">
+        <h2>Validation Output</h2>
+        <textarea id="validationOutput" class="small" readonly></textarea>
+      </div>
+
+      <div class="card">
+        <h2>Normalized Payload</h2>
+        <textarea id="normalizedOutput" readonly></textarea>
+      </div>
+    </div>
+
+    <script type="module">
+      import { PepsLiveDockAdapter } from "./src/external-data-adapters.js";
+      import { publishPepsLiveDockState } from "./src/pepslive-dock-bridge.js";
+      import { validateIncomingPayload } from "./src/payload-validator.js";
+      import { SharedStateBridge } from "./src/shared-state-bridge.js";
+      import { PEPSLIVE_MESSAGE_TYPES } from "./src/pepslive-payload-protocol.js";
+
+      const adapter = new PepsLiveDockAdapter();
+      const bridge = new SharedStateBridge({ role: "test-harness" });
+      bridge.start();
+
+      const input = document.getElementById("payloadInput");
+      const validationOutput = document.getElementById("validationOutput");
+      const normalizedOutput = document.getElementById("normalizedOutput");
+      const dockNormalizedOutput = document.getElementById("dockNormalizedOutput");
+      let latestValidPayload = null;
+
+      async function loadSample(path) {
+        const response = await fetch(path);
+        if (!response.ok) {
+          throw new Error(`Cannot load ${path}`);
+        }
+        const json = await response.json();
+        input.value = JSON.stringify(json, null, 2);
+      }
+
+      function renderValidation(result) {
+        const lines = [];
+        lines.push(result.isValid ? "VALIDATION: PASS" : "VALIDATION: FAIL");
+        lines.push(`Compatible: ${result.isCompatible ? "yes" : "no"}`);
+        if (result.shape) lines.push(`Shape: ${result.shape}`);
+        if (result.errors?.length) {
+          lines.push("Errors:");
+          result.errors.forEach((err) => lines.push(`- ${err}`));
+        }
+        if (result.warnings?.length) {
+          lines.push("Warnings:");
+          result.warnings.forEach((warn) => lines.push(`- ${warn}`));
+        }
+        validationOutput.value = lines.join("\n");
+      }
+
+      async function validateInput() {
+        latestValidPayload = null;
+        try {
+          const raw = JSON.parse(input.value);
+          const adapted = await adapter.ingest(raw);
+          if (!adapted.accepted || !adapted.payload) {
+            renderValidation({
+              isValid: false,
+              isCompatible: false,
+              errors: adapted.errors || ["Adapter rejected payload"],
+              warnings: adapted.warnings || [],
+              shape: adapted.shape
+            });
+            normalizedOutput.value = "";
+            return;
+          }
+          const validation = await validateIncomingPayload(adapted.payload);
+          renderValidation({
+            ...validation,
+            shape: adapted.shape,
+            warnings: [...new Set([...(adapted.warnings || []), ...(validation.warnings || [])])],
+            errors: [...new Set([...(adapted.errors || []), ...(validation.errors || [])])]
+          });
+          normalizedOutput.value = validation.normalizedPayload ? JSON.stringify(validation.normalizedPayload, null, 2) : "";
+          if (validation.isValid && validation.normalizedPayload) {
+            latestValidPayload = validation.normalizedPayload;
+          }
+        } catch (error) {
+          renderValidation({
+            isValid: false,
+            isCompatible: false,
+            errors: [`JSON parse error: ${error.message}`],
+            warnings: []
+          });
+          normalizedOutput.value = "";
+        }
+      }
+
+      async function normalizeDockInput() {
+        try {
+          const raw = JSON.parse(input.value);
+          const adapted = await adapter.ingest(raw);
+          if (!adapted.accepted || !adapted.payload) {
+            dockNormalizedOutput.value = "";
+            renderValidation({
+              isValid: false,
+              isCompatible: false,
+              errors: adapted.errors || ["Adapter rejected payload"],
+              warnings: adapted.warnings || [],
+              shape: adapted.shape
+            });
+            return null;
+          }
+
+          const validation = await validateIncomingPayload(adapted.payload);
+          renderValidation({
+            ...validation,
+            shape: adapted.shape,
+            warnings: [...new Set([...(adapted.warnings || []), ...(validation.warnings || [])])],
+            errors: [...new Set([...(adapted.errors || []), ...(validation.errors || [])])]
+          });
+          dockNormalizedOutput.value = JSON.stringify(adapted.payload, null, 2);
+          normalizedOutput.value = validation.normalizedPayload ? JSON.stringify(validation.normalizedPayload, null, 2) : "";
+          latestValidPayload = validation.isValid ? validation.normalizedPayload : null;
+          return adapted.payload;
+        } catch (error) {
+          renderValidation({
+            isValid: false,
+            isCompatible: false,
+            errors: [`JSON parse error: ${error.message}`],
+            warnings: []
+          });
+          dockNormalizedOutput.value = "";
+          return null;
+        }
+      }
+
+      document.getElementById("loadFootballBtn").addEventListener("click", () => loadSample("./data/sample-payload-football.json"));
+      document.getElementById("loadBasketballBtn").addEventListener("click", () => loadSample("./data/sample-payload-basketball.json"));
+      document.getElementById("loadLegacyFlatBtn").addEventListener("click", () => loadSample("./data/sample-payload-legacy-flat.json"));
+      document.getElementById("loadLegacyNestedBtn").addEventListener("click", () => loadSample("./data/sample-payload-legacy-nested.json"));
+      document.getElementById("loadDockFootballBtn").addEventListener("click", () => loadSample("./data/sample-pepslive-dock-state-football.json"));
+      document.getElementById("loadDockBasketballBtn").addEventListener("click", () => loadSample("./data/sample-pepslive-dock-state-basketball.json"));
+      document.getElementById("validateBtn").addEventListener("click", () => validateInput());
+      document.getElementById("normalizeDockBtn").addEventListener("click", () => normalizeDockInput());
+      document.getElementById("publishBtn").addEventListener("click", async () => {
+        await validateInput();
+        if (!latestValidPayload) {
+          return;
+        }
+        bridge.emit(PEPSLIVE_MESSAGE_TYPES.STATE_UPDATE, latestValidPayload);
+      });
+      document.getElementById("publishDockBtn").addEventListener("click", async () => {
+        const normalizedPayload = await normalizeDockInput();
+        if (!normalizedPayload) {
+          return;
+        }
+        await publishPepsLiveDockState(JSON.parse(input.value));
+      });
+    </script>
+  </body>
+</html>

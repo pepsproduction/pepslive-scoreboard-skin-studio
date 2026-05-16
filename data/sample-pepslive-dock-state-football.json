@@ -1,0 +1,14 @@
+{
+  "sport": "football",
+  "eventTitle": "PEPS LIVE CUP",
+  "teamAName": "Dragon FC",
+  "teamBName": "Tiger FC",
+  "teamAScore": 2,
+  "teamBScore": 1,
+  "teamALogo": "",
+  "teamBLogo": "",
+  "matchTime": "45:00",
+  "half": "1H",
+  "addedTime": "+2",
+  "matchStatus": "LIVE"
+}

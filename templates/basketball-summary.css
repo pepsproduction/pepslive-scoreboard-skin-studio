@@ -1,0 +1,127 @@
+.skin-BB-SUM-01 .scoreboard-shell {
+  border-radius: 24px;
+  width: min(92vw, 1260px);
+}
+
+.skin-BB-SUM-01 .score-values {
+  font-size: clamp(3.8rem, 10vw, 8.8rem);
+}
+
+.skin-BB-SUM-02 .scoreboard-shell {
+  border-width: 2px;
+  border-style: dashed;
+}
+
+.skin-BB-SUM-02 .extra-row {
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+}
+
+.skin-BB-SUM-03 .scoreboard-shell {
+  width: min(90vw, 980px);
+  min-height: 480px;
+  justify-content: center;
+}
+
+.skin-BB-SUM-03 .teams-row {
+  grid-template-columns: 1fr;
+}
+
+.skin-BB-SUM-03 .team-block {
+  justify-content: center;
+}
+
+.skin-BB-SUM-03 .extra-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.skin-BB-SUM-04 .scoreboard-shell {
+  background:
+    linear-gradient(120deg, rgba(2, 6, 23, 0.9), rgba(30, 58, 138, 0.74)),
+    radial-gradient(circle at 20% 20%, rgba(250, 204, 21, 0.23), transparent 50%);
+}
+
+.skin-BB-SUM-04 .extra-item:last-child {
+  grid-column: 1 / -1;
+  border-color: color-mix(in srgb, var(--accent-color) 50%, transparent);
+}
+
+.skin-BB-SUM-05 .scoreboard-shell {
+  border-left-width: 10px;
+  border-left-color: var(--home-color);
+  border-right-width: 10px;
+  border-right-color: var(--away-color);
+}
+
+.skin-BB-SUM-05 .extra-row {
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+}
+
+.skin-BB-SUM-06 .scoreboard-shell {
+  border-color: color-mix(in srgb, #22c55e 70%, transparent);
+  box-shadow:
+    0 0 22px color-mix(in srgb, #22c55e 40%, transparent),
+    0 0 44px color-mix(in srgb, #0ea5e9 30%, transparent);
+}
+
+.skin-BB-SUM-06 .score-values {
+  text-shadow: 0 0 10px color-mix(in srgb, #22c55e 70%, transparent);
+}
+
+.skin-BB-SUM-07 .scoreboard-shell {
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.86);
+}
+
+.skin-BB-SUM-07 .status-badge {
+  border-radius: 5px;
+}
+
+.skin-BB-SUM-08 .scoreboard-shell {
+  padding-top: 54px;
+}
+
+.skin-BB-SUM-08 .scoreboard-shell::before {
+  content: "SPONSOR";
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  opacity: 0.72;
+}
+
+.skin-BB-SUM-09 .score-values {
+  font-size: clamp(4rem, 13vw, 10rem);
+  font-weight: 900;
+}
+
+.skin-BB-SUM-09 .team-name {
+  font-size: 1.65rem;
+}
+
+.skin-BB-SUM-09 .extra-row {
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+}
+
+.skin-BB-SUM-10 .scoreboard-shell {
+  width: min(90vw, 880px);
+  min-height: 540px;
+  border-radius: 26px;
+}
+
+.skin-BB-SUM-10 .event-row {
+  justify-content: center;
+}
+
+.skin-BB-SUM-10 .teams-row {
+  grid-template-columns: 1fr;
+}
+
+.skin-BB-SUM-10 .score-block {
+  min-width: 100%;
+}
+
+.skin-BB-SUM-10 .extra-row {
+  grid-template-columns: 1fr;
+}
