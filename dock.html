@@ -248,6 +248,31 @@
           </section>
 
           <section class="panel-block">
+            <h2>PepsLive Dock Integration</h2>
+            <p class="tiny-note">Monitor/debug panel only. Match control stays in the original PepsLive Dock UI.</p>
+            <label>
+              <span>Integration Mode</span>
+              <select id="integrationModeSelect" class="ui-select">
+                <option value="Off">Off</option>
+                <option value="Listen Only" selected>Listen Only</option>
+                <option value="Manual Test">Manual Test</option>
+              </select>
+            </label>
+            <div class="status-chip" id="integrationPayloadStatusText" data-state="ok">Payload Status: waiting</div>
+            <div class="meta-grid">
+              <div><strong>Current Data Source:</strong> <span id="integrationDataSourceText">Mock Data</span></div>
+              <div><strong>Last Dock Update:</strong> <span id="integrationLastDockUpdateText">-</span></div>
+              <div><strong>Last Payload Source:</strong> <span id="integrationLastPayloadSourceText">-</span></div>
+              <div><strong>Current Sport:</strong> <span id="integrationCurrentSportText">-</span></div>
+              <div><strong>Current Skin:</strong> <span id="integrationCurrentSkinText">-</span></div>
+            </div>
+            <label>
+              <span>Current Match Preview</span>
+              <textarea id="integrationCurrentMatchPreviewArea" class="json-area small" readonly></textarea>
+            </label>
+          </section>
+
+          <section class="panel-block">
             <h2>Phase 2.1 Data Bridge</h2>
             <p class="tiny-note">Data ingest/debug only. This panel does not provide score control or timer control.</p>
             <div class="status-chip" id="bridgeStatusText" data-state="ok">initializing...</div>

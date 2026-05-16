@@ -87,6 +87,19 @@
       </div>
 
       <div class="card">
+        <h2>PepsLive Dock Compatibility Test</h2>
+        <div class="row">
+          <button type="button" id="loadDockFootballBtn">Load Sample PepsLive Football State</button>
+          <button type="button" id="loadDockBasketballBtn">Load Sample PepsLive Basketball State</button>
+        </div>
+        <div class="row">
+          <button type="button" id="normalizeDockBtn">Normalize Dock State</button>
+          <button type="button" id="publishDockBtn">Publish Dock State To Bridge</button>
+        </div>
+        <textarea id="dockNormalizedOutput" class="small" readonly placeholder="Normalized dock payload output"></textarea>
+      </div>
+
+      <div class="card">
         <h2>Validation Output</h2>
         <textarea id="validationOutput" class="small" readonly></textarea>
       </div>
@@ -99,6 +112,7 @@
 
     <script type="module">
       import { PepsLiveDockAdapter } from "./src/external-data-adapters.js";
+      import { publishPepsLiveDockState } from "./src/pepslive-dock-bridge.js";
       import { validateIncomingPayload } from "./src/payload-validator.js";
       import { SharedStateBridge } from "./src/shared-state-bridge.js";
       import { PEPSLIVE_MESSAGE_TYPES } from "./src/pepslive-payload-protocol.js";
@@ -110,6 +124,7 @@
       const input = document.getElementById("payloadInput");
       const validationOutput = document.getElementById("validationOutput");
       const normalizedOutput = document.getElementById("normalizedOutput");
+      const dockNormalizedOutput = document.getElementById("dockNormalizedOutput");
       let latestValidPayload = null;
 
       async function loadSample(path) {
@@ -170,17 +185,61 @@
         }
       }
 
+      async function normalizeDockInput() {
+        try {
+          const raw = JSON.parse(input.value);
+          const adapted = await adapter.ingest(raw);
+          if (!adapted.accepted || !adapted.payload) {
+            dockNormalizedOutput.value = "";
+            renderValidation({
+              isValid: false,
+              isCompatible: false,
+              errors: adapted.errors || ["Adapter rejected payload"],
+              warnings: adapted.warnings || [],
+              shape: adapted.shape
+            });
+            return null;
+          }
+
+          const validation = await validateIncomingPayload(adapted.payload);
+          renderValidation({ ...validation, shape: adapted.shape });
+          dockNormalizedOutput.value = JSON.stringify(adapted.payload, null, 2);
+          normalizedOutput.value = validation.normalizedPayload ? JSON.stringify(validation.normalizedPayload, null, 2) : "";
+          latestValidPayload = validation.isValid ? validation.normalizedPayload : null;
+          return adapted.payload;
+        } catch (error) {
+          renderValidation({
+            isValid: false,
+            isCompatible: false,
+            errors: [`JSON parse error: ${error.message}`],
+            warnings: []
+          });
+          dockNormalizedOutput.value = "";
+          return null;
+        }
+      }
+
       document.getElementById("loadFootballBtn").addEventListener("click", () => loadSample("./data/sample-payload-football.json"));
       document.getElementById("loadBasketballBtn").addEventListener("click", () => loadSample("./data/sample-payload-basketball.json"));
       document.getElementById("loadLegacyFlatBtn").addEventListener("click", () => loadSample("./data/sample-payload-legacy-flat.json"));
       document.getElementById("loadLegacyNestedBtn").addEventListener("click", () => loadSample("./data/sample-payload-legacy-nested.json"));
+      document.getElementById("loadDockFootballBtn").addEventListener("click", () => loadSample("./data/sample-pepslive-dock-state-football.json"));
+      document.getElementById("loadDockBasketballBtn").addEventListener("click", () => loadSample("./data/sample-pepslive-dock-state-basketball.json"));
       document.getElementById("validateBtn").addEventListener("click", () => validateInput());
+      document.getElementById("normalizeDockBtn").addEventListener("click", () => normalizeDockInput());
       document.getElementById("publishBtn").addEventListener("click", async () => {
         await validateInput();
         if (!latestValidPayload) {
           return;
         }
         bridge.emit(PEPSLIVE_MESSAGE_TYPES.STATE_UPDATE, latestValidPayload);
+      });
+      document.getElementById("publishDockBtn").addEventListener("click", async () => {
+        const normalizedPayload = await normalizeDockInput();
+        if (!normalizedPayload) {
+          return;
+        }
+        await publishPepsLiveDockState(JSON.parse(input.value));
       });
     </script>
   </body>

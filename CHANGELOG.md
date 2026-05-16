@@ -35,3 +35,34 @@
 - โปรเจกต์นี้ยังไม่มีระบบจัดการทีม/ทัวร์นาเมนต์
 - ข้อมูลจริงต้องมาจาก PepsLive Dock UI เดิม หรือ shared payload protocol
 - การใช้งาน OBS WebSocket ต้องตั้งค่าฝั่ง OBS ให้ถูกต้องก่อน (host/port/password/permissions)
+
+## Phase 3.0 - PepsLive Dock UI Integration
+
+### Dock bridge helper
+- Added `src/pepslive-dock-bridge.js` for publish/normalize/write state helper functions
+- Exported helper API:
+  - `publishPepsLiveDockState(state)`
+  - `normalizePepsLiveDockState(state)`
+  - `createPepsLivePayloadFromDockState(state)`
+  - `sendPepsLiveStateUpdate(state)`
+  - `writePepsLiveStateToLocalStorage(state)`
+
+### PepsLive Dock adapter mapping
+- Expanded `PepsLiveDockAdapter` with explicit public methods:
+  - `detectFormat`, `fromLegacyFlat`, `fromLegacyNested`, `fromPepsLiveDockState`, `normalize`, `ingest`
+- Added mapping coverage for legacy flat, legacy nested, and PepsLive Dock style fields
+
+### Sample dock state payload
+- Added:
+  - `data/sample-pepslive-dock-state-football.json`
+  - `data/sample-pepslive-dock-state-basketball.json`
+
+### Integration test harness
+- Updated `test-protocol.html` with PepsLive Dock compatibility section:
+  - load dock-style samples
+  - normalize dock state
+  - publish to bridge
+  - inspect normalized payload and validation
+
+### Documentation
+- Added Phase 3.0 integration docs in README with field mapping table and usage examples

@@ -359,3 +359,104 @@ body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }
   - ถ้าใช้ WebSocket ให้กด `Force Refresh Source`
 - Debug box โผล่ในงานจริง:
   - ใช้ Production URL ที่ไม่มี `debug=1`
+
+## Phase 3.0 PepsLive Dock UI Integration
+แนวคิดการเชื่อม:
+- Skin Studio รับข้อมูลสถานะการแข่งขันจาก Dock UI เดิมผ่าน shared payload protocol เท่านั้น
+- Skin Studio ยังทำหน้าที่เลือก/preview skin และจัดการ theme/overlay URL
+- Dock UI เดิมยังเป็นแหล่งควบคุมคะแนน, เวลา, ทีม, และสถานะแมตช์
+
+สิ่งที่ Skin Studio ทำ:
+- normalize payload จากหลาย format
+- validate payload ก่อน render
+- publish/consume state ผ่าน BroadcastChannel และ localStorage fallback
+
+สิ่งที่ Dock UI เดิมทำ:
+- อัปเดต score/time/team/status จาก workflow จริง
+- ส่ง state มาที่ Skin Studio ผ่าน `pepslive-dock-bridge.js` หรือ protocol เดิม
+
+### Field Mapping (Dock -> Protocol matchData)
+| Dock UI Field (examples) | Protocol Field |
+|---|---|
+| `eventTitle`, `tournamentName`, `leagueName` | `eventName` |
+| `teamAName`, `homeTeamName`, `homeTeam.name` | `homeName` |
+| `teamBName`, `awayTeamName`, `awayTeam.name` | `awayName` |
+| `teamAScore`, `scoreA`, `homeTeam.score` | `homeScore` |
+| `teamBScore`, `scoreB`, `awayTeam.score` | `awayScore` |
+| `teamALogo`, `homeTeam.logo` | `homeLogo` |
+| `teamBLogo`, `awayTeam.logo` | `awayLogo` |
+| `matchTime`, `timer`, `clockText`, `clock.time` | `gameClock` |
+| `period`, `half`, `quarter`, `clock.period` | `periodLabel` |
+| `matchStatus`, `status`, `clock.status` | `statusLabel` |
+
+### Example: Flat payload
+```json
+{
+  "sport": "football",
+  "homeName": "Dragon FC",
+  "awayName": "Tiger FC",
+  "homeScore": 2,
+  "awayScore": 1,
+  "gameClock": "45:00",
+  "periodLabel": "1H",
+  "statusLabel": "LIVE"
+}
+```
+
+### Example: Nested payload
+```json
+{
+  "event": { "name": "PEPS LIVE CUP", "logo": "" },
+  "teams": {
+    "home": { "name": "Dragon FC", "shortName": "DRA", "score": 2, "logo": "" },
+    "away": { "name": "Tiger FC", "shortName": "TIG", "score": 1, "logo": "" }
+  },
+  "clock": { "time": "45:00", "period": "1H", "status": "LIVE" }
+}
+```
+
+### Example: PepsLive Dock style payload
+```json
+{
+  "sport": "football",
+  "eventTitle": "PEPS LIVE CUP",
+  "teamAName": "Dragon FC",
+  "teamBName": "Tiger FC",
+  "teamAScore": 2,
+  "teamBScore": 1,
+  "matchTime": "45:00",
+  "half": "1H",
+  "matchStatus": "LIVE"
+}
+```
+
+### Using `pepslive-dock-bridge.js`
+```js
+import { publishPepsLiveDockState } from "./src/pepslive-dock-bridge.js";
+
+publishPepsLiveDockState({
+  teamAName: "Dragon FC",
+  teamBName: "Tiger FC",
+  teamAScore: 2,
+  teamBScore: 1,
+  matchTime: "45:00",
+  half: "1H",
+  matchStatus: "LIVE"
+});
+```
+
+### Test with `test-protocol.html`
+1. เปิด `test-protocol.html`
+2. โหลด sample แบบ `PepsLive Football/Basketball State`
+3. กด `Normalize Dock State`
+4. กด `Publish Dock State To Bridge`
+5. เปิด overlay ด้วย `debug=1` เพื่อตรวจ source/validation
+
+### Overlay debug mode
+- Live: `overlays/live.html?skin=FB-LIVE-01&debug=1`
+- Summary: `overlays/summary.html?skin=FB-SUM-01&debug=1`
+- Debug box จะแสดง source และสถานะ validation ล่าสุด
+
+คำเตือน:
+- โปรเจกต์นี้ไม่ควบคุมคะแนนหรือเวลาเอง
+- หากต้องการเปลี่ยนคะแนน/เวลา ให้เปลี่ยนจาก Dock UI เดิม แล้วส่ง payload มา

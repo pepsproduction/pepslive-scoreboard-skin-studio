@@ -118,6 +118,7 @@ let debugElement = null;
 let slotInspectorMode = "Off";
 let visualQaMode = "Off";
 let lastContractReport = null;
+let currentSourceLabel = "Mock Data";
 
 function parseQueryParams() {
   const params = new URLSearchParams(window.location.search);
@@ -346,6 +347,7 @@ function updateDebugBox({ protocolStatus, validationStatus, updateTime, template
   const missingCritical = lastContractReport?.missingCritical?.length || 0;
   debugElement.innerHTML = `
     <div><strong>Protocol:</strong> ${protocolStatus}</div>
+    <div><strong>Source:</strong> ${currentSourceLabel}</div>
     <div><strong>Validation:</strong> ${validationStatus}</div>
     <div><strong>Last Update:</strong> ${updateTime || "-"}</div>
     <div><strong>Skin:</strong> ${template?.id || "-"}</div>
@@ -355,10 +357,31 @@ function updateDebugBox({ protocolStatus, validationStatus, updateTime, template
   `;
 }
 
+function resolveSourceLabel(sourceValue = "") {
+  const source = String(sourceValue || "").toLowerCase();
+  if (source.includes("dock")) {
+    return "PepsLive Dock";
+  }
+  if (source.includes("storage")) {
+    return "LocalStorage Fallback";
+  }
+  if (source.includes("bridge")) {
+    return "BroadcastChannel";
+  }
+  if (source.includes("postmessage")) {
+    return "PostMessage";
+  }
+  if (source.includes("overlay-local") || source.includes("initial")) {
+    return "Mock Data";
+  }
+  return sourceValue || "Unknown";
+}
+
 async function fallbackRender(reason) {
   const template = getTemplateById(currentSkinId || "FB-LIVE-01");
   const mock = await getMockBySport(template.sport);
   currentData = mock;
+  currentSourceLabel = "Mock Data";
   renderScoreboard(template, currentData);
   updateDebugBox({
     protocolStatus: PEPSLIVE_SCOREBOARD_PROTOCOL,
@@ -373,11 +396,13 @@ async function fallbackRender(reason) {
 async function applyProtocolPayload(rawPayload, sourceLabel = "unknown") {
   const validation = await validateIncomingPayload(rawPayload);
   if (!validation.isValid || !validation.normalizedPayload) {
+    currentSourceLabel = resolveSourceLabel(rawPayload?.source || sourceLabel);
     await fallbackRender(`invalid payload via ${sourceLabel}`);
     return;
   }
 
   const payload = validation.normalizedPayload;
+  currentSourceLabel = resolveSourceLabel(payload.source || sourceLabel);
   currentSkinId = payload.skinId;
   currentAnimation = payload.animation?.style || currentAnimation;
   applyTheme(payload.theme || {});

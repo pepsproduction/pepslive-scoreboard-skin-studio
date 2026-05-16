@@ -44,6 +44,13 @@ import {
 
 const adapters = createDefaultAdapters();
 const dockAdapter = adapters.find((item) => item.source === "pepslive-dock");
+const INTEGRATION_MODES = ["Off", "Listen Only", "Manual Test"];
+const INTEGRATION_DATA_SOURCES = {
+  MOCK: "Mock Data",
+  DOCK: "PepsLive Dock",
+  LOCALSTORAGE: "LocalStorage Fallback",
+  BROADCAST: "BroadcastChannel"
+};
 
 const state = {
   selectedTemplate: null,
@@ -65,7 +72,12 @@ const state = {
   obsUrlVersion: Date.now(),
   obsLastHealthResult: null,
   messageTimer: null,
-  lastStableMessage: "Ready: choose template and use skin"
+  lastStableMessage: "Ready: choose template and use skin",
+  integrationMode: "Listen Only",
+  integrationDataSource: INTEGRATION_DATA_SOURCES.MOCK,
+  integrationLastDockUpdate: "",
+  integrationLastPayloadSource: "",
+  integrationPayloadStatus: "Payload Status: waiting"
 };
 
 const OBS_CUSTOM_CSS = "body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }";
@@ -263,6 +275,70 @@ function updateProtocolMeta(payload = null, syncTime = null) {
   }
 }
 
+function setIntegrationPayloadStatus(text, level = "ok") {
+  state.integrationPayloadStatus = text;
+  if (!ui.integrationPayloadStatusText) {
+    return;
+  }
+  ui.integrationPayloadStatusText.textContent = text;
+  ui.integrationPayloadStatusText.dataset.state = level;
+}
+
+function resolveIntegrationDataSource(sourceLabel = "", transport = "") {
+  const source = String(sourceLabel || "").toLowerCase();
+  const channel = String(transport || "").toLowerCase();
+
+  if (source.includes("dock")) {
+    return INTEGRATION_DATA_SOURCES.DOCK;
+  }
+  if (channel.includes("storage")) {
+    return INTEGRATION_DATA_SOURCES.LOCALSTORAGE;
+  }
+  if (channel.includes("broadcast")) {
+    return INTEGRATION_DATA_SOURCES.BROADCAST;
+  }
+  if (source.includes("manual") || source.includes("sample")) {
+    return INTEGRATION_DATA_SOURCES.MOCK;
+  }
+  return state.integrationDataSource || INTEGRATION_DATA_SOURCES.MOCK;
+}
+
+function updateIntegrationPanel(payload = null, options = {}) {
+  const dataSource = options.dataSource || state.integrationDataSource || INTEGRATION_DATA_SOURCES.MOCK;
+  const payloadSource = payload?.source || options.payloadSource || state.integrationLastPayloadSource || "-";
+  const lastUpdate = options.lastUpdate || payload?.timestamp || state.integrationLastDockUpdate || "-";
+  const sport = payload?.sport || state.selectedTemplate?.sport || "-";
+  const skin = payload?.skinId || (state.selectedTemplate ? `${state.selectedTemplate.id} - ${state.selectedTemplate.name}` : "-");
+  const matchPreview = payload?.matchData || state.activeMatchData || {};
+
+  state.integrationDataSource = dataSource;
+  state.integrationLastPayloadSource = payloadSource;
+  state.integrationLastDockUpdate = lastUpdate;
+
+  if (ui.integrationDataSourceText) {
+    ui.integrationDataSourceText.textContent = dataSource;
+  }
+  if (ui.integrationLastDockUpdateText) {
+    ui.integrationLastDockUpdateText.textContent = lastUpdate;
+  }
+  if (ui.integrationLastPayloadSourceText) {
+    ui.integrationLastPayloadSourceText.textContent = payloadSource;
+  }
+  if (ui.integrationCurrentSportText) {
+    ui.integrationCurrentSportText.textContent = sport;
+  }
+  if (ui.integrationCurrentSkinText) {
+    ui.integrationCurrentSkinText.textContent = skin;
+  }
+  if (ui.integrationCurrentMatchPreviewArea) {
+    ui.integrationCurrentMatchPreviewArea.value = JSON.stringify(matchPreview, null, 2);
+  }
+}
+
+function shouldListenRemoteUpdates() {
+  return state.integrationMode !== "Off";
+}
+
 function renderValidationResult(result) {
   state.lastValidation = result;
   if (!ui.payloadValidationResult) {
@@ -392,6 +468,11 @@ async function applyTemplate(template, options = {}) {
 
   state.activeMatchData = matchDataOverride || (await resolveMatchDataForTemplate(template, { forceMock }));
   previewEngine.setMatchData(state.activeMatchData);
+  updateIntegrationPanel(buildProtocolPayloadFromState(), {
+    dataSource: matchDataOverride ? state.integrationDataSource : INTEGRATION_DATA_SOURCES.MOCK,
+    payloadSource: matchDataOverride ? state.integrationLastPayloadSource || "external" : "mock-data",
+    lastUpdate: nowIso()
+  });
   const contract = getRenderContractByTemplateId(template.id);
   renderContractReport({
     templateId: contract.id,
@@ -421,7 +502,7 @@ async function applyTemplate(template, options = {}) {
 }
 
 async function applyNormalizedProtocolPayload(protocolPayload, sourceLabel, options = {}) {
-  const { broadcast = true } = options;
+  const { broadcast = true, dataSource = "", payloadSource = "" } = options;
 
   const template = getTemplateById(protocolPayload.skinId);
   state.currentTheme = { ...DEFAULT_THEME, ...(protocolPayload.theme || {}) };
@@ -436,6 +517,12 @@ async function applyNormalizedProtocolPayload(protocolPayload, sourceLabel, opti
   });
 
   updateProtocolMeta(protocolPayload, protocolPayload.timestamp);
+  updateIntegrationPanel(protocolPayload, {
+    dataSource: dataSource || resolveIntegrationDataSource(sourceLabel),
+    payloadSource: payloadSource || protocolPayload.source || sourceLabel,
+    lastUpdate: protocolPayload.timestamp
+  });
+  setIntegrationPayloadStatus("Payload Status: synced", "ok");
   notify(`Payload applied (${sourceLabel})`);
 }
 
@@ -484,11 +571,14 @@ async function handlePayloadValidation(rawPayload) {
 async function handlePayloadIngest(rawPayload, sourceLabel, options = {}) {
   const validation = await handlePayloadValidation(rawPayload);
   if (!validation.isValid || !validation.normalizedPayload) {
+    setIntegrationPayloadStatus("Payload Status: rejected", "warn");
     notify(`Payload rejected (${sourceLabel})`, "warn");
     return;
   }
   await applyNormalizedProtocolPayload(validation.normalizedPayload, sourceLabel, {
-    broadcast: options.broadcast ?? true
+    broadcast: options.broadcast ?? true,
+    dataSource: options.dataSource || resolveIntegrationDataSource(sourceLabel, options.transport || ""),
+    payloadSource: validation.normalizedPayload.source || sourceLabel
   });
 }
 
@@ -1188,8 +1278,15 @@ function bindBridgeListeners() {
   window.addEventListener(PEPSLIVE_CUSTOM_EVENT_UPDATED, (event) => {
     const detail = event.detail || {};
     const stateSnapshot = detail.state || {};
+    const message = detail.message || {};
+    const transport = detail.transport || "";
     if (stateSnapshot.lastSyncTime) {
       updateProtocolMeta(stateSnapshot.currentPayload, stateSnapshot.lastSyncTime);
+      updateIntegrationPanel(stateSnapshot.currentPayload, {
+        dataSource: resolveIntegrationDataSource(message?.payload?.source || stateSnapshot.currentPayload?.source, transport),
+        payloadSource: stateSnapshot.currentPayload?.source || message?.payload?.source || "-",
+        lastUpdate: stateSnapshot.lastSyncTime
+      });
     }
   });
 }
@@ -1202,6 +1299,11 @@ function initSharedBridge() {
         return;
       }
       if (!message || !message.payload) {
+        return;
+      }
+      if (!shouldListenRemoteUpdates()) {
+        setIntegrationPayloadStatus("Payload Status: integration is Off", "warn");
+        updateBridgeStatus(`Remote update ignored (${transport})`, "warn");
         return;
       }
       if (message.type === PEPSLIVE_MESSAGE_TYPES.PING || message.type === PEPSLIVE_MESSAGE_TYPES.PONG) {
@@ -1220,7 +1322,11 @@ function initSharedBridge() {
 
       state.applyingRemote = true;
       try {
-        await handlePayloadIngest(snapshotPayload, `bridge-${transport}`, { broadcast: false });
+        await handlePayloadIngest(snapshotPayload, `bridge-${transport}`, {
+          broadcast: false,
+          transport,
+          dataSource: resolveIntegrationDataSource(snapshotPayload.source, transport)
+        });
       } finally {
         state.applyingRemote = false;
       }
@@ -1229,12 +1335,40 @@ function initSharedBridge() {
     onStateChange: (sharedState, mode) => {
       if (sharedState.lastSyncTime) {
         updateProtocolMeta(sharedState.currentPayload, sharedState.lastSyncTime);
+        updateIntegrationPanel(sharedState.currentPayload, {
+          dataSource: resolveIntegrationDataSource(sharedState.currentPayload?.source, mode),
+          payloadSource: sharedState.currentPayload?.source || "-",
+          lastUpdate: sharedState.lastSyncTime
+        });
       }
       updateBridgeStatus(`State sync ${mode}`, "ok");
     }
   });
   state.bridge.start();
   updateBridgeStatus("Bridge ready: BroadcastChannel + localStorage fallback", "ok");
+}
+
+function bindIntegrationPanel() {
+  if (!ui.integrationModeSelect) {
+    return;
+  }
+  ui.integrationModeSelect.innerHTML = INTEGRATION_MODES.map((mode) => `<option value="${mode}">${mode}</option>`).join("");
+  ui.integrationModeSelect.value = state.integrationMode;
+  ui.integrationModeSelect.addEventListener("change", () => {
+    state.integrationMode = ui.integrationModeSelect.value;
+    if (state.integrationMode === "Off") {
+      setIntegrationPayloadStatus("Payload Status: integration is Off", "warn");
+      updateBridgeStatus("Integration mode Off: monitoring paused", "warn");
+      return;
+    }
+    if (state.integrationMode === "Manual Test") {
+      setIntegrationPayloadStatus("Payload Status: manual test mode", "ok");
+      updateBridgeStatus("Integration mode Manual Test: local ingest enabled", "ok");
+      return;
+    }
+    setIntegrationPayloadStatus("Payload Status: listening", "ok");
+    updateBridgeStatus("Integration mode Listen Only: waiting Dock updates", "ok");
+  });
 }
 
 function cacheElements() {
@@ -1311,6 +1445,15 @@ function cacheElements() {
   ui.obsHealthStatusText = document.getElementById("obsHealthStatusText");
   ui.obsHealthResultArea = document.getElementById("obsHealthResultArea");
   ui.obsManualGuideText = document.getElementById("obsManualGuideText");
+
+  ui.integrationModeSelect = document.getElementById("integrationModeSelect");
+  ui.integrationDataSourceText = document.getElementById("integrationDataSourceText");
+  ui.integrationLastDockUpdateText = document.getElementById("integrationLastDockUpdateText");
+  ui.integrationLastPayloadSourceText = document.getElementById("integrationLastPayloadSourceText");
+  ui.integrationPayloadStatusText = document.getElementById("integrationPayloadStatusText");
+  ui.integrationCurrentSportText = document.getElementById("integrationCurrentSportText");
+  ui.integrationCurrentSkinText = document.getElementById("integrationCurrentSkinText");
+  ui.integrationCurrentMatchPreviewArea = document.getElementById("integrationCurrentMatchPreviewArea");
 
   ui.bridgeStatusText = document.getElementById("bridgeStatusText");
   ui.externalPayloadArea = document.getElementById("externalPayloadArea");
@@ -1462,6 +1605,7 @@ async function initApp() {
   bindPreviewTools();
   bindSkinJsonActions();
   bindObsPanel();
+  bindIntegrationPanel();
   bindDataBridgePanel();
 
   setButtonGroupActive(ui.sportFilter, "all");
@@ -1488,6 +1632,16 @@ async function initApp() {
   });
 
   updateProtocolMeta(sharedPayload || buildProtocolPayloadFromState(), sharedState.lastSyncTime || nowIso());
+  updateIntegrationPanel(sharedPayload || buildProtocolPayloadFromState(), {
+    dataSource: sharedPayload ? resolveIntegrationDataSource(sharedPayload.source, "storage") : INTEGRATION_DATA_SOURCES.MOCK,
+    payloadSource: sharedPayload?.source || "mock-data",
+    lastUpdate: sharedState.lastSyncTime || nowIso()
+  });
+  if (state.integrationMode === "Off") {
+    setIntegrationPayloadStatus("Payload Status: integration is Off", "warn");
+  } else {
+    setIntegrationPayloadStatus("Payload Status: listening", "ok");
+  }
   notify("Ready: choose template and use skin");
 }
 
