@@ -217,10 +217,16 @@ export async function normalizeIncomingPayload(payload) {
 
   const fallbackTemplate = getFallbackTemplate(sport, type);
   let skinId = payload.skinId || fallbackTemplate.id;
-  const skin = getTemplateById(skinId);
-  if (skin.sport !== sport || skin.type !== type) {
-    warnings.push(`Skin ${skinId} is not compatible with ${sport}/${type}, fallback to ${fallbackTemplate.id}`);
+  const skinExists = TEMPLATE_REGISTRY.some((item) => item.id === skinId);
+  if (!skinExists) {
+    warnings.push(`Skin ${skinId} was not found, fallback to ${fallbackTemplate.id}`);
     skinId = fallbackTemplate.id;
+  } else {
+    const skin = getTemplateById(skinId);
+    if (skin.sport !== sport || skin.type !== type) {
+      warnings.push(`Skin ${skinId} is not compatible with ${sport}/${type}, fallback to ${fallbackTemplate.id}`);
+      skinId = fallbackTemplate.id;
+    }
   }
 
   if (!isPlainObject(payload.matchData)) {

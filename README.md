@@ -378,16 +378,23 @@ body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }
 ### Field Mapping (Dock -> Protocol matchData)
 | Dock UI Field (examples) | Protocol Field |
 |---|---|
-| `eventTitle`, `tournamentName`, `leagueName` | `eventName` |
-| `teamAName`, `homeTeamName`, `homeTeam.name` | `homeName` |
-| `teamBName`, `awayTeamName`, `awayTeam.name` | `awayName` |
-| `teamAScore`, `scoreA`, `homeTeam.score` | `homeScore` |
-| `teamBScore`, `scoreB`, `awayTeam.score` | `awayScore` |
-| `teamALogo`, `homeTeam.logo` | `homeLogo` |
-| `teamBLogo`, `awayTeam.logo` | `awayLogo` |
+| `eventTitle`, `tournamentName`, `leagueName`, `event.name` | `eventName` |
+| `event.logo` | `eventLogo` |
+| `teamAName`, `homeTeam.name`, `teams.home.name` | `homeName` |
+| `teamBName`, `awayTeam.name`, `teams.away.name` | `awayName` |
+| `teamAScore`, `scoreA`, `homeTeam.score`, `teams.home.score` | `homeScore` |
+| `teamBScore`, `scoreB`, `awayTeam.score`, `teams.away.score` | `awayScore` |
+| `teamALogo`, `homeTeam.logo`, `teams.home.logo` | `homeLogo` |
+| `teamBLogo`, `awayTeam.logo`, `teams.away.logo` | `awayLogo` |
+| `teamAColor`, `homeTeam.color`, `teams.home.color` | `theme.homeColor` |
+| `teamBColor`, `awayTeam.color`, `teams.away.color` | `theme.awayColor` |
 | `matchTime`, `timer`, `clockText`, `clock.time` | `gameClock` |
 | `period`, `half`, `quarter`, `clock.period` | `periodLabel` |
 | `matchStatus`, `status`, `clock.status` | `statusLabel` |
+| `teamAFouls`, `homeTeam.fouls`, `teams.home.fouls` | `homeFouls` |
+| `teamBFouls`, `awayTeam.fouls`, `teams.away.fouls` | `awayFouls` |
+| `teamATimeouts`, `homeTeam.timeouts`, `teams.home.timeouts` | `homeTimeouts` |
+| `teamBTimeouts`, `awayTeam.timeouts`, `teams.away.timeouts` | `awayTimeouts` |
 
 ### Example: Flat payload
 ```json

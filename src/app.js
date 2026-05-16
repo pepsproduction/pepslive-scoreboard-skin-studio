@@ -551,8 +551,12 @@ async function validateRawPayload(rawPayload) {
   }
 
   const validation = await validateIncomingPayload(adapterResult.payload);
+  const mergedWarnings = [...new Set([...(adapterResult.warnings || []), ...(validation.warnings || [])])];
+  const mergedErrors = [...new Set([...(adapterResult.errors || []), ...(validation.errors || [])])];
   return {
     ...validation,
+    warnings: mergedWarnings,
+    errors: mergedErrors,
     shape: adapterResult.shape
   };
 }

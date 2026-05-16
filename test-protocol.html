@@ -169,7 +169,12 @@
             return;
           }
           const validation = await validateIncomingPayload(adapted.payload);
-          renderValidation({ ...validation, shape: adapted.shape });
+          renderValidation({
+            ...validation,
+            shape: adapted.shape,
+            warnings: [...new Set([...(adapted.warnings || []), ...(validation.warnings || [])])],
+            errors: [...new Set([...(adapted.errors || []), ...(validation.errors || [])])]
+          });
           normalizedOutput.value = validation.normalizedPayload ? JSON.stringify(validation.normalizedPayload, null, 2) : "";
           if (validation.isValid && validation.normalizedPayload) {
             latestValidPayload = validation.normalizedPayload;
@@ -202,7 +207,12 @@
           }
 
           const validation = await validateIncomingPayload(adapted.payload);
-          renderValidation({ ...validation, shape: adapted.shape });
+          renderValidation({
+            ...validation,
+            shape: adapted.shape,
+            warnings: [...new Set([...(adapted.warnings || []), ...(validation.warnings || [])])],
+            errors: [...new Set([...(adapted.errors || []), ...(validation.errors || [])])]
+          });
           dockNormalizedOutput.value = JSON.stringify(adapted.payload, null, 2);
           normalizedOutput.value = validation.normalizedPayload ? JSON.stringify(validation.normalizedPayload, null, 2) : "";
           latestValidPayload = validation.isValid ? validation.normalizedPayload : null;

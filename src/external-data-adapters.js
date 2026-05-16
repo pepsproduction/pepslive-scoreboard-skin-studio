@@ -17,13 +17,19 @@ function pickFirst(source, keys, fallback = undefined) {
 
 function mapLegacyFlatToProtocol(payload) {
   const safe = isPlainObject(payload) ? payload : {};
+  const mappedHomeColor = pickFirst(safe, ["homeColor", "teamAColor"]);
+  const mappedAwayColor = pickFirst(safe, ["awayColor", "teamBColor"]);
   return createProtocolPayload({
     source: safe.source || "legacy-flat",
     timestamp: safe.timestamp,
     sport: safe.sport,
     skinId: safe.skinId,
     type: safe.type,
-    theme: safe.theme || {},
+    theme: {
+      ...(safe.theme || {}),
+      ...(mappedHomeColor ? { homeColor: mappedHomeColor } : {}),
+      ...(mappedAwayColor ? { awayColor: mappedAwayColor } : {})
+    },
     animation: safe.animation || {},
     matchData: {
       eventName: safe.eventName,
@@ -65,6 +71,8 @@ function mapLegacyNestedToProtocol(payload) {
   const away = teams.away || safe.away || {};
   const clock = safe.clock || {};
   const stats = safe.stats || {};
+  const mappedHomeColor = pickFirst(safe, ["homeColor", "teamAColor"]) || home.color;
+  const mappedAwayColor = pickFirst(safe, ["awayColor", "teamBColor"]) || away.color;
 
   return createProtocolPayload({
     source: safe.source || "legacy-nested",
@@ -72,7 +80,11 @@ function mapLegacyNestedToProtocol(payload) {
     sport: safe.sport || safe.match?.sport,
     skinId: safe.skinId,
     type: safe.type,
-    theme: safe.theme || {},
+    theme: {
+      ...(safe.theme || {}),
+      ...(mappedHomeColor ? { homeColor: mappedHomeColor } : {}),
+      ...(mappedAwayColor ? { awayColor: mappedAwayColor } : {})
+    },
     animation: safe.animation || {},
     matchData: {
       eventName: event.name || safe.eventName,
@@ -83,8 +95,8 @@ function mapLegacyNestedToProtocol(payload) {
       awayName: away.name || safe.awayName,
       homeShortName: home.shortName || safe.homeShortName,
       awayShortName: away.shortName || safe.awayShortName,
-      homeScore: home.score ?? safe.homeScore,
-      awayScore: away.score ?? safe.awayScore,
+      homeScore: home.score ?? safe.homeScore ?? safe.scoreA,
+      awayScore: away.score ?? safe.awayScore ?? safe.scoreB,
       gameClock: clock.time || clock.display || clock.value || safe.gameClock,
       periodLabel: clock.period || safe.periodLabel,
       statusLabel: safe.statusLabel || clock.status || safe.status,
@@ -94,10 +106,10 @@ function mapLegacyNestedToProtocol(payload) {
       goalScorerList: stats.goalScorerList || safe.goalScorerList,
       cardInfo: stats.cardInfo || safe.cardInfo,
       shotClock: clock.shotClock || stats.shotClock || safe.shotClock,
-      homeFouls: stats.homeFouls ?? safe.homeFouls,
-      awayFouls: stats.awayFouls ?? safe.awayFouls,
-      homeTimeouts: stats.homeTimeouts ?? safe.homeTimeouts,
-      awayTimeouts: stats.awayTimeouts ?? safe.awayTimeouts,
+      homeFouls: stats.homeFouls ?? safe.homeFouls ?? home.fouls,
+      awayFouls: stats.awayFouls ?? safe.awayFouls ?? away.fouls,
+      homeTimeouts: stats.homeTimeouts ?? safe.homeTimeouts ?? home.timeouts,
+      awayTimeouts: stats.awayTimeouts ?? safe.awayTimeouts ?? away.timeouts,
       possession: stats.possession || safe.possession,
       bonus: stats.bonus || safe.bonus,
       quarterBreakdown: stats.quarterBreakdown || safe.quarterBreakdown,
@@ -110,6 +122,11 @@ function mapPepsLiveDockStateToProtocol(payload) {
   const safe = isPlainObject(payload) ? payload : {};
   const homeTeam = safe.homeTeam || safe.teamA || {};
   const awayTeam = safe.awayTeam || safe.teamB || {};
+  const teams = safe.teams || {};
+  const nestedHome = teams.home || {};
+  const nestedAway = teams.away || {};
+  const mappedHomeColor = pickFirst(safe, ["teamAColor", "homeColor"]) || homeTeam.color || nestedHome.color;
+  const mappedAwayColor = pickFirst(safe, ["teamBColor", "awayColor"]) || awayTeam.color || nestedAway.color;
 
   return createProtocolPayload({
     source: safe.source || "pepslive-dock",
@@ -117,32 +134,36 @@ function mapPepsLiveDockStateToProtocol(payload) {
     sport: pickFirst(safe, ["sport", "gameSport", "matchSport"]),
     skinId: safe.skinId,
     type: safe.type,
-    theme: safe.theme || {},
+    theme: {
+      ...(safe.theme || {}),
+      ...(mappedHomeColor ? { homeColor: mappedHomeColor } : {}),
+      ...(mappedAwayColor ? { awayColor: mappedAwayColor } : {})
+    },
     animation: safe.animation || {},
     matchData: {
-      eventName: pickFirst(safe, ["eventTitle", "tournamentName", "leagueName", "eventName"]),
-      eventLogo: pickFirst(safe, ["eventLogo", "leagueLogo", "tournamentLogo"]),
-      homeLogo: pickFirst(safe, ["teamALogo", "homeLogo", "logoA"]) || homeTeam.logo,
-      awayLogo: pickFirst(safe, ["teamBLogo", "awayLogo", "logoB"]) || awayTeam.logo,
-      homeName: pickFirst(safe, ["teamAName", "homeName", "teamNameA", "homeTeamName"]) || homeTeam.name,
-      awayName: pickFirst(safe, ["teamBName", "awayName", "teamNameB", "awayTeamName"]) || awayTeam.name,
-      homeShortName: pickFirst(safe, ["teamAShortName", "homeShortName", "teamAShort"]) || homeTeam.shortName,
-      awayShortName: pickFirst(safe, ["teamBShortName", "awayShortName", "teamBShort"]) || awayTeam.shortName,
-      homeScore: pickFirst(safe, ["teamAScore", "homeScore", "scoreA", "homeTeamScore"]) ?? homeTeam.score,
-      awayScore: pickFirst(safe, ["teamBScore", "awayScore", "scoreB", "awayTeamScore"]) ?? awayTeam.score,
-      gameClock: pickFirst(safe, ["matchTime", "timer", "clockText", "gameClock", "clock"]),
-      periodLabel: pickFirst(safe, ["period", "half", "quarter", "periodLabel"]),
-      statusLabel: pickFirst(safe, ["matchStatus", "status", "statusLabel"]),
+      eventName: pickFirst(safe, ["eventTitle", "tournamentName", "leagueName", "eventName"]) || safe.event?.name,
+      eventLogo: pickFirst(safe, ["eventLogo", "leagueLogo", "tournamentLogo"]) || safe.event?.logo,
+      homeLogo: pickFirst(safe, ["teamALogo", "homeLogo", "logoA"]) || homeTeam.logo || nestedHome.logo,
+      awayLogo: pickFirst(safe, ["teamBLogo", "awayLogo", "logoB"]) || awayTeam.logo || nestedAway.logo,
+      homeName: pickFirst(safe, ["teamAName", "homeName", "teamNameA", "homeTeamName"]) || homeTeam.name || nestedHome.name,
+      awayName: pickFirst(safe, ["teamBName", "awayName", "teamNameB", "awayTeamName"]) || awayTeam.name || nestedAway.name,
+      homeShortName: pickFirst(safe, ["teamAShortName", "homeShortName", "teamAShort"]) || homeTeam.shortName || nestedHome.shortName,
+      awayShortName: pickFirst(safe, ["teamBShortName", "awayShortName", "teamBShort"]) || awayTeam.shortName || nestedAway.shortName,
+      homeScore: pickFirst(safe, ["teamAScore", "homeScore", "scoreA", "homeTeamScore"]) ?? homeTeam.score ?? nestedHome.score,
+      awayScore: pickFirst(safe, ["teamBScore", "awayScore", "scoreB", "awayTeamScore"]) ?? awayTeam.score ?? nestedAway.score,
+      gameClock: pickFirst(safe, ["matchTime", "timer", "clockText", "gameClock", "clock"]) || safe.clock?.time,
+      periodLabel: pickFirst(safe, ["period", "half", "quarter", "periodLabel"]) || safe.clock?.period,
+      statusLabel: pickFirst(safe, ["matchStatus", "status", "statusLabel"]) || safe.clock?.status,
       addedTime: pickFirst(safe, ["addedTime"]),
       aggregateScore: pickFirst(safe, ["aggregateScore"]),
       penaltyScore: pickFirst(safe, ["penaltyScore"]),
       goalScorerList: pickFirst(safe, ["goalScorerList", "scorers"]),
       cardInfo: pickFirst(safe, ["cardInfo", "cards"]),
       shotClock: pickFirst(safe, ["shotClock"]),
-      homeFouls: pickFirst(safe, ["teamAFouls", "homeFouls"]),
-      awayFouls: pickFirst(safe, ["teamBFouls", "awayFouls"]),
-      homeTimeouts: pickFirst(safe, ["teamATimeouts", "homeTimeouts"]),
-      awayTimeouts: pickFirst(safe, ["teamBTimeouts", "awayTimeouts"]),
+      homeFouls: pickFirst(safe, ["teamAFouls", "homeFouls"]) ?? homeTeam.fouls ?? nestedHome.fouls,
+      awayFouls: pickFirst(safe, ["teamBFouls", "awayFouls"]) ?? awayTeam.fouls ?? nestedAway.fouls,
+      homeTimeouts: pickFirst(safe, ["teamATimeouts", "homeTimeouts"]) ?? homeTeam.timeouts ?? nestedHome.timeouts,
+      awayTimeouts: pickFirst(safe, ["teamBTimeouts", "awayTimeouts"]) ?? awayTeam.timeouts ?? nestedAway.timeouts,
       possession: pickFirst(safe, ["possession"]),
       bonus: pickFirst(safe, ["bonus"]),
       quarterBreakdown: pickFirst(safe, ["quarterBreakdown"]),
@@ -190,7 +211,21 @@ export class PepsLiveDockAdapter {
     }
     if (
       isPlainObject(input) &&
-      (input.teamAName || input.teamBName || input.teamAScore !== undefined || input.teamBScore !== undefined || input.eventTitle || input.matchTime || input.timer)
+      (
+        input.teamAName ||
+        input.teamBName ||
+        input.teamAScore !== undefined ||
+        input.teamBScore !== undefined ||
+        input.homeTeam ||
+        input.awayTeam ||
+        input.teamA ||
+        input.teamB ||
+        input.scoreA !== undefined ||
+        input.scoreB !== undefined ||
+        input.eventTitle ||
+        input.matchTime ||
+        input.timer
+      )
     ) {
       return "pepslive-dock-state";
     }
