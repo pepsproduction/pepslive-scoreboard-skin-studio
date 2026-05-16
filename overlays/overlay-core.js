@@ -1,4 +1,6 @@
 import { getTemplateById } from "../templates/template-registry.js";
+import { validateIncomingPayload } from "../src/payload-validator.js";
+import { PEPSLIVE_MESSAGE_TYPES, PEPSLIVE_SCOREBOARD_PROTOCOL, createProtocolPayload } from "../src/pepslive-payload-protocol.js";
 import { SharedStateBridge, getSharedOverlayState } from "../src/shared-state-bridge.js";
 
 const DEFAULT_THEME = {
@@ -20,44 +22,12 @@ const DEFAULT_THEME = {
   animationStyle: "smooth-broadcast"
 };
 
-const SLOT_FIELDS = {
-  common: [
-    "eventLogo",
-    "eventName",
-    "homeLogo",
-    "awayLogo",
-    "homeName",
-    "awayName",
-    "homeShortName",
-    "awayShortName",
-    "homeScore",
-    "awayScore",
-    "gameClock",
-    "periodLabel",
-    "statusLabel"
-  ],
-  football: ["addedTime", "aggregateScore", "penaltyScore", "goalScorerList", "cardInfo"],
-  basketball: [
-    "quarterLabel",
-    "shotClock",
-    "homeFouls",
-    "awayFouls",
-    "homeTimeouts",
-    "awayTimeouts",
-    "possession",
-    "bonus",
-    "quarterBreakdown",
-    "topScorer"
-  ]
-};
-
 const EXTRA_LABELS = {
   addedTime: "Added Time",
   aggregateScore: "Aggregate",
   penaltyScore: "Penalty",
   goalScorerList: "Goal Scorers",
   cardInfo: "Card Info",
-  quarterLabel: "Quarter",
   shotClock: "Shot Clock",
   homeFouls: "Home Fouls",
   awayFouls: "Away Fouls",
@@ -67,6 +37,11 @@ const EXTRA_LABELS = {
   bonus: "Bonus",
   quarterBreakdown: "Quarter Breakdown",
   topScorer: "Top Scorer"
+};
+
+const SPORT_EXTRAS = {
+  football: ["addedTime", "aggregateScore", "penaltyScore", "goalScorerList", "cardInfo"],
+  basketball: ["shotClock", "homeFouls", "awayFouls", "homeTimeouts", "awayTimeouts", "possession", "bonus", "quarterBreakdown", "topScorer"]
 };
 
 const FALLBACK_MOCK = {
@@ -103,7 +78,6 @@ const FALLBACK_MOCK = {
     gameClock: "02:18",
     periodLabel: "Q4",
     statusLabel: "LIVE",
-    quarterLabel: "Q4",
     shotClock: "14",
     homeFouls: 4,
     awayFouls: 3,
@@ -119,19 +93,22 @@ const FALLBACK_MOCK = {
   }
 };
 
-let mockDataPromise = null;
-let currentSkinId = null;
-let currentTheme = { ...DEFAULT_THEME };
-let currentAnimation = DEFAULT_THEME.animationStyle;
-let currentData = null;
+let mockDataCache = null;
 let sharedBridge = null;
+let currentSkinId = "FB-LIVE-01";
+let currentAnimation = "smooth-broadcast";
+let currentTheme = { ...DEFAULT_THEME };
+let currentData = null;
+let debugEnabled = false;
+let debugElement = null;
 
 function parseQueryParams() {
   const params = new URLSearchParams(window.location.search);
   return {
     skinId: params.get("skin"),
-    animationStyle: params.get("animation") || null,
-    themeRaw: params.get("theme")
+    animationStyle: params.get("animation"),
+    themeRaw: params.get("theme"),
+    debug: params.get("debug") === "1"
   };
 }
 
@@ -140,9 +117,7 @@ function parseThemeFromQuery(themeRaw) {
     return null;
   }
   try {
-    const decoded = decodeURIComponent(themeRaw);
-    const parsed = JSON.parse(decoded);
-    return parsed && typeof parsed === "object" ? parsed : null;
+    return JSON.parse(decodeURIComponent(themeRaw));
   } catch (_error) {
     return null;
   }
@@ -150,19 +125,15 @@ function parseThemeFromQuery(themeRaw) {
 
 function getStoredTheme(skinId) {
   try {
-    const raw = localStorage.getItem("pepslive:customThemes");
-    if (!raw) {
-      return null;
-    }
-    const parsed = JSON.parse(raw);
-    return parsed && parsed[skinId] ? parsed[skinId] : null;
+    const parsed = JSON.parse(localStorage.getItem("pepslive:customThemes") || "{}");
+    return parsed[skinId] || null;
   } catch (_error) {
     return null;
   }
 }
 
 function applyTheme(theme) {
-  const merged = { ...DEFAULT_THEME, ...theme };
+  const merged = { ...DEFAULT_THEME, ...(theme || {}) };
   const root = document.documentElement;
   root.style.setProperty("--primary-color", merged.primaryColor);
   root.style.setProperty("--secondary-color", merged.secondaryColor);
@@ -182,7 +153,7 @@ function applyTheme(theme) {
   currentTheme = merged;
 }
 
-function inferModeByDocument() {
+function modeFromBody() {
   return document.body.dataset.overlayMode || "live";
 }
 
@@ -194,16 +165,24 @@ function textOrFallback(value, fallback = "-") {
 }
 
 function createLogoMarkup(value, fallbackText) {
-  const safeFallback = textOrFallback(fallbackText, "--");
   if (value) {
-    return `<span class="logo-slot"><img src="${value}" alt="${safeFallback}" /></span>`;
+    return `<span class="logo-slot"><img src="${value}" alt="${fallbackText}" /></span>`;
   }
-  return `<span class="logo-slot">${safeFallback}</span>`;
+  return `<span class="logo-slot">${fallbackText}</span>`;
 }
 
-function extraItemsForSport(sport, data) {
-  const sportFields = SLOT_FIELDS[sport] || [];
-  return sportFields
+function getLogoFallback(data, which) {
+  if (which === "homeLogo") {
+    return textOrFallback(data.homeShortName, "HOM").slice(0, 3).toUpperCase();
+  }
+  if (which === "awayLogo") {
+    return textOrFallback(data.awayShortName, "AWY").slice(0, 3).toUpperCase();
+  }
+  return textOrFallback(data.eventName, "EVT").slice(0, 3).toUpperCase();
+}
+
+function extraItemsMarkup(sport, data) {
+  return (SPORT_EXTRAS[sport] || [])
     .map((field) => {
       const value = textOrFallback(data[field], "-");
       return `
@@ -216,198 +195,259 @@ function extraItemsForSport(sport, data) {
     .join("");
 }
 
-function getPlaceholderInitial(data, fieldName) {
-  if (fieldName === "homeLogo") {
-    return textOrFallback(data.homeShortName, "HOME").slice(0, 3).toUpperCase();
-  }
-  if (fieldName === "awayLogo") {
-    return textOrFallback(data.awayShortName, "AWAY").slice(0, 3).toUpperCase();
-  }
-  return textOrFallback(data.eventName, "EVT").slice(0, 3).toUpperCase();
-}
-
-function renderScoreboard(template, data, mode) {
+function renderScoreboard(template, data) {
   const root = document.getElementById("overlay-root");
   if (!root) {
     return;
   }
-
+  const mode = modeFromBody();
   root.className = `${mode === "summary" ? "mode-summary" : "mode-live"} skin-${template.id} anim-${currentAnimation}`;
   root.innerHTML = `
     <section class="scoreboard-shell">
       <div class="event-row">
         <div class="event-meta">
-          ${createLogoMarkup(data.eventLogo, getPlaceholderInitial(data, "eventLogo"))}
-          <span class="event-name" data-slot="eventName">${textOrFallback(data.eventName)}</span>
+          ${createLogoMarkup(data.eventLogo, getLogoFallback(data, "eventLogo"))}
+          <span class="event-name">${textOrFallback(data.eventName)}</span>
         </div>
-        <span class="status-badge" data-slot="statusLabel">${textOrFallback(data.statusLabel)}</span>
+        <span class="status-badge">${textOrFallback(data.statusLabel)}</span>
       </div>
       <div class="teams-row">
         <div class="team-block home">
-          ${createLogoMarkup(data.homeLogo, getPlaceholderInitial(data, "homeLogo"))}
+          ${createLogoMarkup(data.homeLogo, getLogoFallback(data, "homeLogo"))}
           <div class="team-name-box">
-            <span class="team-name" data-slot="homeName">${textOrFallback(data.homeName)}</span>
-            <span class="team-short" data-slot="homeShortName">${textOrFallback(data.homeShortName)}</span>
+            <span class="team-name">${textOrFallback(data.homeName)}</span>
+            <span class="team-short">${textOrFallback(data.homeShortName)}</span>
           </div>
         </div>
         <div class="score-block">
           <div class="score-values">
-            <span data-slot="homeScore">${textOrFallback(data.homeScore, "0")}</span>
+            <span>${textOrFallback(data.homeScore, "0")}</span>
             <span class="score-divider">:</span>
-            <span data-slot="awayScore">${textOrFallback(data.awayScore, "0")}</span>
+            <span>${textOrFallback(data.awayScore, "0")}</span>
           </div>
           <div class="game-meta">
-            <span data-slot="gameClock">${textOrFallback(data.gameClock, "00:00")}</span>
-            <span data-slot="periodLabel">${textOrFallback(data.periodLabel, "-")}</span>
+            <span>${textOrFallback(data.gameClock, "00:00")}</span>
+            <span>${textOrFallback(data.periodLabel, "-")}</span>
           </div>
         </div>
         <div class="team-block away">
-          ${createLogoMarkup(data.awayLogo, getPlaceholderInitial(data, "awayLogo"))}
+          ${createLogoMarkup(data.awayLogo, getLogoFallback(data, "awayLogo"))}
           <div class="team-name-box">
-            <span class="team-name" data-slot="awayName">${textOrFallback(data.awayName)}</span>
-            <span class="team-short" data-slot="awayShortName">${textOrFallback(data.awayShortName)}</span>
+            <span class="team-name">${textOrFallback(data.awayName)}</span>
+            <span class="team-short">${textOrFallback(data.awayShortName)}</span>
           </div>
         </div>
       </div>
-      <div class="extra-row">
-        ${extraItemsForSport(data.sport, data)}
-      </div>
+      <div class="extra-row">${extraItemsMarkup(data.sport, data)}</div>
     </section>
   `;
 }
 
 async function loadMockData() {
-  if (mockDataPromise) {
-    return mockDataPromise;
+  if (mockDataCache) {
+    return mockDataCache;
   }
-
-  mockDataPromise = fetch("../data/mock-match-data.json")
+  mockDataCache = fetch("../data/mock-match-data.json")
     .then((response) => (response.ok ? response.json() : FALLBACK_MOCK))
     .catch(() => FALLBACK_MOCK);
-
-  return mockDataPromise;
+  return mockDataCache;
 }
 
-async function resolveMatchData(template) {
-  const sharedState = getSharedOverlayState();
-  if (sharedState.matchData && sharedState.matchData.sport === template.sport) {
-    currentData = { ...sharedState.matchData };
-    return currentData;
+async function getMockBySport(sport) {
+  const loaded = await loadMockData();
+  return loaded[sport] || FALLBACK_MOCK[sport] || FALLBACK_MOCK.football;
+}
+
+function ensureDebugBox() {
+  if (!debugEnabled) {
+    return;
   }
-
-  const mockData = await loadMockData();
-  const bySport = mockData[template.sport];
-  if (!bySport) {
-    return FALLBACK_MOCK[template.sport] || FALLBACK_MOCK.football;
+  if (debugElement) {
+    return;
   }
-
-  const merged = {
-    ...bySport,
-    sport: template.sport
-  };
-
-  currentData = merged;
-  return merged;
+  debugElement = document.createElement("aside");
+  debugElement.id = "overlay-debug-box";
+  debugElement.style.position = "fixed";
+  debugElement.style.right = "10px";
+  debugElement.style.bottom = "10px";
+  debugElement.style.maxWidth = "280px";
+  debugElement.style.background = "rgba(2, 6, 23, 0.72)";
+  debugElement.style.color = "#e2e8f0";
+  debugElement.style.border = "1px solid rgba(148, 163, 184, 0.45)";
+  debugElement.style.borderRadius = "10px";
+  debugElement.style.padding = "8px 10px";
+  debugElement.style.fontSize = "11px";
+  debugElement.style.fontFamily = "monospace";
+  debugElement.style.zIndex = "9999";
+  debugElement.style.pointerEvents = "none";
+  document.body.append(debugElement);
 }
 
-async function renderBySkin(skinId) {
-  const template = getTemplateById(skinId);
-  const mode = inferModeByDocument();
-  const data = await resolveMatchData(template);
-  renderScoreboard(template, data, mode);
+function updateDebugBox({ protocolStatus, validationStatus, updateTime, template, sport, type }) {
+  if (!debugEnabled) {
+    return;
+  }
+  ensureDebugBox();
+  if (!debugElement) {
+    return;
+  }
+  debugElement.innerHTML = `
+    <div><strong>Protocol:</strong> ${protocolStatus}</div>
+    <div><strong>Validation:</strong> ${validationStatus}</div>
+    <div><strong>Last Update:</strong> ${updateTime || "-"}</div>
+    <div><strong>Skin:</strong> ${template?.id || "-"}</div>
+    <div><strong>Sport/Type:</strong> ${sport || "-"}/${type || "-"}</div>
+  `;
 }
 
-function setupPostMessageBridge() {
-  window.addEventListener("message", async (event) => {
-    const payload = event.data || {};
-
-    if (payload.type === "pepslive:update-theme" && payload.theme) {
-      applyTheme(payload.theme);
-      sharedBridge?.publishSkin({
-        skinId: currentSkinId,
-        theme: payload.theme,
-        animation: { style: currentAnimation }
-      });
-    }
-
-    if (payload.type === "pepslive:update-animation" && payload.animationStyle) {
-      currentAnimation = payload.animationStyle;
-      sharedBridge?.publishSkin({
-        skinId: currentSkinId,
-        theme: currentTheme,
-        animation: { style: currentAnimation }
-      });
-    }
-
-    if (payload.type === "pepslive:update-skin" && payload.skinId) {
-      currentSkinId = payload.skinId;
-      sharedBridge?.publishSkin({
-        skinId: currentSkinId,
-        theme: currentTheme,
-        animation: { style: currentAnimation }
-      });
-    }
-
-    if (payload.type === "pepslive:update-data" && payload.data && typeof payload.data === "object") {
-      currentData = { ...currentData, ...payload.data };
-      sharedBridge?.publishMatchData(currentData);
-    }
-
-    const template = getTemplateById(currentSkinId || "FB-LIVE-01");
-    const mode = inferModeByDocument();
-    const data = currentData || (await resolveMatchData(template));
-    renderScoreboard(template, data, mode);
+async function fallbackRender(reason) {
+  const template = getTemplateById(currentSkinId || "FB-LIVE-01");
+  const mock = await getMockBySport(template.sport);
+  currentData = mock;
+  renderScoreboard(template, currentData);
+  updateDebugBox({
+    protocolStatus: PEPSLIVE_SCOREBOARD_PROTOCOL,
+    validationStatus: `fallback (${reason})`,
+    updateTime: new Date().toISOString(),
+    template,
+    sport: template.sport,
+    type: template.type
   });
 }
 
-function setupSharedStateBridge() {
+async function applyProtocolPayload(rawPayload, sourceLabel = "unknown") {
+  const validation = await validateIncomingPayload(rawPayload);
+  if (!validation.isValid || !validation.normalizedPayload) {
+    await fallbackRender(`invalid payload via ${sourceLabel}`);
+    return;
+  }
+
+  const payload = validation.normalizedPayload;
+  currentSkinId = payload.skinId;
+  currentAnimation = payload.animation?.style || currentAnimation;
+  applyTheme(payload.theme || {});
+  currentData = payload.matchData;
+
+  const template = getTemplateById(payload.skinId);
+  renderScoreboard(template, currentData);
+  updateDebugBox({
+    protocolStatus: payload.protocol,
+    validationStatus: validation.warnings.length ? `valid with warnings (${validation.warnings.length})` : "valid",
+    updateTime: payload.timestamp,
+    template,
+    sport: payload.sport,
+    type: payload.type
+  });
+}
+
+function buildPayloadFromLocalState() {
+  const template = getTemplateById(currentSkinId || "FB-LIVE-01");
+  return createProtocolPayload({
+    source: "overlay-local",
+    sport: template.sport,
+    skinId: template.id,
+    type: template.type,
+    theme: currentTheme,
+    animation: { style: currentAnimation },
+    matchData: currentData || {}
+  });
+}
+
+function setupSharedBridge() {
   sharedBridge = new SharedStateBridge({
     role: "overlay",
-    onRemoteEvent: async (envelope) => {
-      if (envelope.type === "skin:update") {
-        const skinPayload = envelope.payload || {};
-        if (skinPayload.skinId) {
-          currentSkinId = skinPayload.skinId;
-        }
-        if (skinPayload.theme) {
-          applyTheme(skinPayload.theme);
-        }
-        if (skinPayload.animation?.style) {
-          currentAnimation = skinPayload.animation.style;
-        }
+    onRemoteEvent: async (message) => {
+      if (message.type === PEPSLIVE_MESSAGE_TYPES.PING || message.type === PEPSLIVE_MESSAGE_TYPES.PONG) {
+        updateDebugBox({
+          protocolStatus: message.protocol || PEPSLIVE_SCOREBOARD_PROTOCOL,
+          validationStatus: message.type,
+          updateTime: message.timestamp,
+          template: getTemplateById(currentSkinId || "FB-LIVE-01"),
+          sport: getTemplateById(currentSkinId || "FB-LIVE-01").sport,
+          type: getTemplateById(currentSkinId || "FB-LIVE-01").type
+        });
+        return;
       }
-
-      if (envelope.type === "match:update") {
-        currentData = {
-          ...(currentData || {}),
-          ...(envelope.payload || {})
-        };
+      const snapshot = sharedBridge.getState();
+      if (snapshot.currentPayload) {
+        await applyProtocolPayload(snapshot.currentPayload, "shared-bridge");
       }
-
-      const template = getTemplateById(currentSkinId || "FB-LIVE-01");
-      const mode = inferModeByDocument();
-      const data = currentData || (await resolveMatchData(template));
-      renderScoreboard(template, data, mode);
+    },
+    onStateChange: async (snapshot) => {
+      if (snapshot.currentPayload) {
+        await applyProtocolPayload(snapshot.currentPayload, "shared-state");
+      }
     }
   });
   sharedBridge.start();
 }
 
+function setupPostMessageBridge() {
+  window.addEventListener("message", async (event) => {
+    const payload = event.data || {};
+    const template = getTemplateById(currentSkinId || "FB-LIVE-01");
+
+    if (payload.type === "pepslive:update-theme" && payload.theme) {
+      applyTheme(payload.theme);
+    }
+    if (payload.type === "pepslive:update-animation" && payload.animationStyle) {
+      currentAnimation = payload.animationStyle;
+    }
+    if (payload.type === "pepslive:update-skin" && payload.skinId) {
+      currentSkinId = payload.skinId;
+    }
+    if (payload.type === "pepslive:update-data" && payload.data && typeof payload.data === "object") {
+      currentData = { ...(currentData || {}), ...payload.data };
+    }
+
+    const composedPayload = createProtocolPayload({
+      source: "overlay-postmessage",
+      sport: getTemplateById(currentSkinId || template.id).sport,
+      skinId: currentSkinId || template.id,
+      type: getTemplateById(currentSkinId || template.id).type,
+      theme: currentTheme,
+      animation: { style: currentAnimation },
+      matchData: currentData || {}
+    });
+    await applyProtocolPayload(composedPayload, "post-message");
+    sharedBridge?.publishState(composedPayload);
+  });
+}
+
 async function initOverlay() {
-  const { skinId, animationStyle, themeRaw } = parseQueryParams();
+  const query = parseQueryParams();
+  debugEnabled = query.debug;
+  ensureDebugBox();
+
   const sharedState = getSharedOverlayState();
-  currentSkinId = skinId || sharedState.currentSkin?.skinId || "FB-LIVE-01";
-  currentAnimation = animationStyle || sharedState.currentSkin?.animation?.style || currentAnimation;
-  const queryTheme = parseThemeFromQuery(themeRaw);
+  const sharedPayload = sharedState.currentPayload;
+  currentSkinId = query.skinId || sharedPayload?.skinId || "FB-LIVE-01";
+  currentAnimation = query.animationStyle || sharedPayload?.animation?.style || currentAnimation;
+
+  const queryTheme = parseThemeFromQuery(query.themeRaw);
   const storedTheme = getStoredTheme(currentSkinId);
-  const sharedTheme = sharedState.currentSkin?.theme || {};
-  applyTheme({ ...storedTheme, ...sharedTheme, ...queryTheme });
-  currentData = sharedState.matchData || null;
-  await renderBySkin(currentSkinId);
-  setupSharedStateBridge();
+  applyTheme({ ...storedTheme, ...(sharedPayload?.theme || {}), ...queryTheme });
+
+  currentData = sharedPayload?.matchData || null;
+  if (!currentData) {
+    const fallbackTemplate = getTemplateById(currentSkinId);
+    currentData = await getMockBySport(fallbackTemplate.sport);
+  }
+
+  const initialPayload = buildPayloadFromLocalState();
+  await applyProtocolPayload(initialPayload, "initial");
+
+  setupSharedBridge();
   setupPostMessageBridge();
+
+  const storagePayload = getSharedOverlayState().currentPayload;
+  if (storagePayload) {
+    await applyProtocolPayload(storagePayload, "storage-bootstrap");
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  initOverlay();
+  initOverlay().catch(() => {
+    fallbackRender("init-error");
+  });
 });

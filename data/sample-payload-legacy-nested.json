@@ -1,0 +1,41 @@
+{
+  "source": "legacy-nested",
+  "timestamp": "2026-05-16T10:04:00.000Z",
+  "sport": "basketball",
+  "skinId": "BB-SUM-02",
+  "type": "summary",
+  "event": {
+    "name": "PEPS HOOPS",
+    "logo": ""
+  },
+  "teams": {
+    "home": {
+      "name": "Orange Wolves",
+      "shortName": "WOL",
+      "score": "88",
+      "logo": ""
+    },
+    "away": {
+      "name": "Blue Hawks",
+      "shortName": "HAW",
+      "score": "82",
+      "logo": ""
+    }
+  },
+  "clock": {
+    "display": "FINAL",
+    "period": "Q4",
+    "status": "ENDED",
+    "shotClock": "00"
+  },
+  "stats": {
+    "homeFouls": 5,
+    "awayFouls": 4,
+    "homeTimeouts": 0,
+    "awayTimeouts": 0,
+    "possession": "away",
+    "bonus": "home",
+    "quarterBreakdown": "Q1 24-20 | Q2 47-45 | Q3 70-64 | Q4 88-82",
+    "topScorer": "WOL #11 27 PTS"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "protocol": "PEPSLIVE_SCOREBOARD_STATE_V1",
+  "version": 1,
+  "source": "sample-football",
+  "timestamp": "2026-05-16T10:00:00.000Z",
+  "sport": "football",
+  "skinId": "FB-LIVE-01",
+  "type": "live",
+  "theme": {
+    "primaryColor": "#ff7a18",
+    "secondaryColor": "#101827",
+    "homeColor": "#f97316",
+    "awayColor": "#3b82f6",
+    "textColor": "#f8fafc",
+    "accentColor": "#fb923c",
+    "animationStyle": "smooth-broadcast"
+  },
+  "animation": {
+    "style": "smooth-broadcast"
+  },
+  "matchData": {
+    "eventName": "PEPS LIVE CUP",
+    "eventLogo": "",
+    "homeLogo": "",
+    "awayLogo": "",
+    "homeName": "Dragon FC",
+    "awayName": "Tiger FC",
+    "homeShortName": "DRA",
+    "awayShortName": "TIG",
+    "homeScore": 2,
+    "awayScore": 1,
+    "gameClock": "45:00",
+    "periodLabel": "1H",
+    "statusLabel": "LIVE",
+    "addedTime": "+2",
+    "aggregateScore": "3-2",
+    "penaltyScore": "4-3",
+    "goalScorerList": "12' Aran, 39' Krit",
+    "cardInfo": "DRA 1Y | TIG 2Y 1R"
+  }
+}

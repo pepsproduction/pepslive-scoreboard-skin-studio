@@ -1,8 +1,15 @@
 import { getTemplateById, TEMPLATE_REGISTRY } from "../templates/template-registry.js";
-import { buildGoogleSheetAdapter, buildPepsLiveDockHook, buildTournamentManagerAdapter, normalizeExternalMatchPayload } from "./external-data-adapters.js";
+import { createDefaultAdapters } from "./external-data-adapters.js";
 import { getMockDataBySport } from "./mock-data.js";
 import { ObsSourceManager } from "./obs-source-manager.js";
 import { OVERLAY_MODULE_REGISTRY } from "./overlay-module-registry.js";
+import { validateIncomingPayload } from "./payload-validator.js";
+import {
+  PEPSLIVE_CUSTOM_EVENT_UPDATED,
+  PEPSLIVE_MESSAGE_TYPES,
+  PEPSLIVE_SCOREBOARD_PROTOCOL,
+  createProtocolPayload
+} from "./pepslive-payload-protocol.js";
 import { PreviewEngine } from "./preview-engine.js";
 import {
   duplicateSkin,
@@ -21,9 +28,10 @@ import {
 import { SharedStateBridge, getSharedOverlayState } from "./shared-state-bridge.js";
 import { TemplateGallery } from "./template-gallery.js";
 import { DEFAULT_THEME, ThemeEditor } from "./theme-editor.js";
-import { ANIMATION_PRESETS, BACKGROUND_MODES, SAFE_AREA_MODES, STYLE_TAGS, downloadJson, setButtonGroupActive } from "./utils.js";
+import { ANIMATION_PRESETS, BACKGROUND_MODES, SAFE_AREA_MODES, STYLE_TAGS, downloadJson, nowIso, setButtonGroupActive } from "./utils.js";
 
-const adapters = [buildPepsLiveDockHook(), buildGoogleSheetAdapter(), buildTournamentManagerAdapter()];
+const adapters = createDefaultAdapters();
+const dockAdapter = adapters.find((item) => item.source === "pepslive-dock");
 
 const state = {
   selectedTemplate: null,
@@ -34,7 +42,10 @@ const state = {
   presets: [],
   currentSkin: getCurrentSkin(),
   activeMatchData: null,
-  bridge: null
+  bridge: null,
+  lastValidation: null,
+  applyingRemote: false,
+  lastProtocolPayload: null
 };
 
 const ui = {};
@@ -66,33 +77,54 @@ function updateBridgeStatus(message, level = "ok") {
   ui.bridgeStatusText.dataset.state = level;
 }
 
-function publishCurrentSkinToBridge() {
-  if (!state.bridge || !state.selectedTemplate) {
-    return;
+function updateProtocolMeta(payload = null, syncTime = null) {
+  if (ui.currentProtocolText) {
+    ui.currentProtocolText.textContent = PEPSLIVE_SCOREBOARD_PROTOCOL;
   }
-  state.bridge.publishSkin({
-    skinId: state.selectedTemplate.id,
-    sport: state.selectedTemplate.sport,
-    type: state.selectedTemplate.type,
-    theme: state.currentTheme,
-    animation: {
-      style: state.animationStyle
-    }
-  });
+  if (ui.lastSyncTimeText) {
+    ui.lastSyncTimeText.textContent = syncTime || payload?.timestamp || "-";
+  }
+  if (ui.lastReceivedPayloadArea) {
+    ui.lastReceivedPayloadArea.value = payload ? JSON.stringify(payload, null, 2) : "";
+  }
 }
 
-async function copyCurrentOverlayUrl(template = state.selectedTemplate) {
-  if (!template || !previewEngine) {
+function renderValidationResult(result) {
+  state.lastValidation = result;
+  if (!ui.payloadValidationResult) {
     return;
   }
-  const url = previewEngine.getOverlayUrl({ cacheBust: true, absolute: true });
-  try {
-    await navigator.clipboard.writeText(url);
-    notify("คัดลอก Browser Source URL แล้ว");
-  } catch (_error) {
-    ui.skinJsonArea.value = url;
-    notify("ไม่สามารถคัดลอกอัตโนมัติได้ ระบบวาง URL ในช่องข้อความแทนแล้ว", "warn");
+
+  const lines = [];
+  lines.push(result.isValid ? "VALIDATION: PASS" : "VALIDATION: FAIL");
+  lines.push(`Compatible: ${result.isCompatible ? "yes" : "no"}`);
+  if (result.shape) {
+    lines.push(`Shape: ${result.shape}`);
   }
+  if (result.errors?.length) {
+    lines.push("Errors:");
+    result.errors.forEach((item) => lines.push(`- ${item}`));
+  }
+  if (result.warnings?.length) {
+    lines.push("Warnings:");
+    result.warnings.forEach((item) => lines.push(`- ${item}`));
+  }
+
+  ui.payloadValidationResult.value = lines.join("\n");
+}
+
+function buildProtocolPayloadFromState(partial = {}) {
+  const template = state.selectedTemplate || TEMPLATE_REGISTRY[0];
+  return createProtocolPayload({
+    source: partial.source || "PepsLiveScoreboardSkinStudio",
+    timestamp: partial.timestamp || nowIso(),
+    sport: partial.sport || template.sport,
+    skinId: partial.skinId || template.id,
+    type: partial.type || template.type,
+    theme: partial.theme || state.currentTheme,
+    animation: partial.animation || { style: state.animationStyle },
+    matchData: partial.matchData || state.activeMatchData || {}
+  });
 }
 
 function saveSkinState() {
@@ -111,29 +143,22 @@ function saveSkinState() {
   state.currentSkin = payload;
 }
 
-async function resolveMatchDataForTemplate(template, options = { forceMock: false }) {
+async function resolveMatchDataForTemplate(template, { forceMock = false } = {}) {
   const sharedState = getSharedOverlayState();
-  const sharedMatch = sharedState.matchData;
-  if (!options.forceMock && sharedMatch && sharedMatch.sport === template.sport) {
-    return sharedMatch;
+  const sharedPayload = sharedState.currentPayload;
+  if (!forceMock && sharedPayload?.matchData?.sport === template.sport) {
+    return sharedPayload.matchData;
   }
   return getMockDataBySport(template.sport);
 }
 
-async function syncMatchDataForTemplate(template, options = { broadcast: true, forceMock: false }) {
-  const matchData = await resolveMatchDataForTemplate(template, options);
-  state.activeMatchData = matchData;
-  previewEngine.setMatchData(matchData);
+async function applyTemplate(template, options = {}) {
+  const { markRecent = false, broadcast = true, forceMock = false, matchDataOverride = null } = options;
 
-  if (options.broadcast && state.bridge) {
-    state.bridge.publishMatchData(matchData);
-  }
-}
-
-async function applyTemplate(template, options = { markRecent: false, broadcast: true, forceMock: false }) {
   state.selectedTemplate = template;
   state.currentTheme = getThemeBySkinId(template.id) || state.currentTheme || DEFAULT_THEME;
   state.animationStyle = state.currentTheme.animationStyle || state.animationStyle;
+
   previewEngine.setTemplate(template);
   previewEngine.setTheme(state.currentTheme);
   previewEngine.setAnimation(state.animationStyle);
@@ -141,15 +166,114 @@ async function applyTemplate(template, options = { markRecent: false, broadcast:
   ui.animationPreset.value = state.animationStyle;
   updateCurrentSkinLabel();
   saveSkinState();
-  await syncMatchDataForTemplate(template, { broadcast: options.broadcast, forceMock: options.forceMock });
 
-  if (options.markRecent) {
+  state.activeMatchData = matchDataOverride || (await resolveMatchDataForTemplate(template, { forceMock }));
+  previewEngine.setMatchData(state.activeMatchData);
+
+  if (markRecent) {
     state.recentlyUsed = pushRecentlyUsed(template.id);
     gallery.setCollections({ favorites: state.favorites, recentlyUsed: state.recentlyUsed });
   }
 
-  if (options.broadcast) {
-    publishCurrentSkinToBridge();
+  if (broadcast && state.bridge && !state.applyingRemote) {
+    const payload = buildProtocolPayloadFromState();
+    state.lastProtocolPayload = payload;
+    state.bridge.publishState(payload);
+    updateProtocolMeta(payload, payload.timestamp);
+  }
+}
+
+async function applyNormalizedProtocolPayload(protocolPayload, sourceLabel, options = {}) {
+  const { broadcast = true } = options;
+
+  const template = getTemplateById(protocolPayload.skinId);
+  state.currentTheme = { ...DEFAULT_THEME, ...(protocolPayload.theme || {}) };
+  state.animationStyle = protocolPayload.animation?.style || state.currentTheme.animationStyle || "smooth-broadcast";
+  setThemeBySkinId(template.id, state.currentTheme);
+
+  await applyTemplate(template, {
+    markRecent: false,
+    broadcast,
+    forceMock: false,
+    matchDataOverride: protocolPayload.matchData
+  });
+
+  updateProtocolMeta(protocolPayload, protocolPayload.timestamp);
+  notify(`Payload applied (${sourceLabel})`);
+}
+
+async function validateRawPayload(rawPayload) {
+  if (!dockAdapter) {
+    return {
+      isValid: false,
+      isCompatible: false,
+      errors: ["Dock adapter not available"],
+      warnings: [],
+      normalizedPayload: null,
+      shape: "unknown"
+    };
+  }
+
+  const adapterResult = await dockAdapter.ingest(rawPayload);
+  if (!adapterResult.accepted) {
+    return {
+      isValid: false,
+      isCompatible: false,
+      errors: adapterResult.errors || ["Payload rejected"],
+      warnings: adapterResult.warnings || [],
+      normalizedPayload: null,
+      shape: adapterResult.shape
+    };
+  }
+
+  const validation = await validateIncomingPayload(adapterResult.payload);
+  return {
+    ...validation,
+    shape: adapterResult.shape
+  };
+}
+
+async function handlePayloadValidation(rawPayload) {
+  const result = await validateRawPayload(rawPayload);
+  renderValidationResult(result);
+  if (!result.isValid) {
+    updateBridgeStatus("Payload rejected by validator", "warn");
+  } else {
+    updateBridgeStatus("Payload validation passed", "ok");
+  }
+  return result;
+}
+
+async function handlePayloadIngest(rawPayload, sourceLabel, options = {}) {
+  const validation = await handlePayloadValidation(rawPayload);
+  if (!validation.isValid || !validation.normalizedPayload) {
+    notify(`Payload rejected (${sourceLabel})`, "warn");
+    return;
+  }
+  await applyNormalizedProtocolPayload(validation.normalizedPayload, sourceLabel, {
+    broadcast: options.broadcast ?? true
+  });
+}
+
+async function loadSamplePayload(path) {
+  const response = await fetch(path);
+  if (!response.ok) {
+    throw new Error(`Cannot load ${path}`);
+  }
+  return response.json();
+}
+
+async function copyCurrentOverlayUrl(template = state.selectedTemplate) {
+  if (!template || !previewEngine) {
+    return;
+  }
+  const url = previewEngine.getOverlayUrl({ cacheBust: true, absolute: true });
+  try {
+    await navigator.clipboard.writeText(url);
+    notify("Copied Browser Source URL");
+  } catch (_error) {
+    ui.skinJsonArea.value = url;
+    notify("Clipboard unavailable. URL written to JSON area", "warn");
   }
 }
 
@@ -167,7 +291,7 @@ async function addSourceToObs(template = state.selectedTemplate) {
     } catch (_error) {
       ui.skinJsonArea.value = url;
     }
-    notify("OBS ไม่ได้เชื่อมต่อ ระบบอยู่ใน Manual Mode และคัดลอก URL ให้แล้ว", "warn");
+    notify("OBS disconnected. Manual mode + URL copy fallback", "warn");
     return;
   }
 
@@ -178,14 +302,14 @@ async function addSourceToObs(template = state.selectedTemplate) {
       width: source.width,
       height: source.height
     });
-    notify(`Add Source สำเร็จ (${result.inputName})`);
+    notify(`Add Source success (${result.inputName})`);
   } catch (error) {
     try {
       await navigator.clipboard.writeText(url);
     } catch (_error) {
       ui.skinJsonArea.value = url;
     }
-    notify(`Add Source ไม่สำเร็จ: ${error.message} (fallback: copy URL)`, "error");
+    notify(`Add Source failed: ${error.message}`, "error");
   }
 }
 
@@ -251,9 +375,14 @@ function bindPreviewTools() {
     state.currentTheme = { ...state.currentTheme, animationStyle: state.animationStyle };
     previewEngine.setAnimation(state.animationStyle);
     previewEngine.setTheme(state.currentTheme);
-    setThemeBySkinId(state.selectedTemplate.id, state.currentTheme);
-    saveSkinState();
-    publishCurrentSkinToBridge();
+    if (state.selectedTemplate) {
+      setThemeBySkinId(state.selectedTemplate.id, state.currentTheme);
+      saveSkinState();
+    }
+    if (!state.applyingRemote) {
+      state.bridge?.publishAnimation({ style: state.animationStyle });
+      state.bridge?.publishTheme(state.currentTheme);
+    }
   });
 }
 
@@ -274,13 +403,13 @@ function bindSkinJsonActions() {
     });
     ui.skinJsonArea.value = JSON.stringify(payload, null, 2);
     downloadJson(`skin-${state.selectedTemplate.id}.json`, payload);
-    notify("Export Current Skin JSON เรียบร้อย");
+    notify("Export Skin JSON complete");
   });
 
   ui.importJsonBtn.addEventListener("click", async () => {
     const raw = ui.skinJsonArea.value.trim();
     if (!raw) {
-      notify("วาง Skin JSON ก่อน import", "warn");
+      notify("Paste Skin JSON before import", "warn");
       return;
     }
     try {
@@ -290,9 +419,9 @@ function bindSkinJsonActions() {
       state.animationStyle = parsed.animation?.style || state.currentTheme.animationStyle || "smooth-broadcast";
       setThemeBySkinId(template.id, state.currentTheme);
       await applyTemplate(template, { markRecent: true, broadcast: true, forceMock: false });
-      notify(`Import Skin สำเร็จ: ${template.id}`);
+      notify(`Import Skin success: ${template.id}`);
     } catch (error) {
-      notify(`Import JSON ไม่สำเร็จ: ${error.message}`, "error");
+      notify(`Import JSON failed: ${error.message}`, "error");
     }
   });
 
@@ -312,7 +441,7 @@ function bindSkinJsonActions() {
     state.animationStyle = DEFAULT_THEME.animationStyle;
     setThemeBySkinId(state.selectedTemplate.id, state.currentTheme);
     await applyTemplate(state.selectedTemplate, { markRecent: false, broadcast: true, forceMock: false });
-    notify("Reset Skin เรียบร้อย");
+    notify("Reset Skin complete");
   });
 
   ui.duplicateSkinBtn.addEventListener("click", () => {
@@ -322,7 +451,7 @@ function bindSkinJsonActions() {
     const cloned = duplicateSkin(state.currentSkin);
     state.currentSkin = cloned;
     ui.skinJsonArea.value = JSON.stringify(cloned, null, 2);
-    notify("Duplicate Skin แล้ว (เก็บเป็น currentSkin ใหม่)");
+    notify("Duplicate Skin complete");
   });
 }
 
@@ -351,15 +480,15 @@ function bindObsPanel() {
       password: ui.obsPassword.value
     });
     updateObsStatus(connected);
-    notify(connected ? "เชื่อม OBS สำเร็จ" : "เชื่อม OBS ไม่สำเร็จ (Manual Mode)");
+    notify(connected ? "OBS connected" : "OBS disconnected: manual mode");
   });
 
   ui.obsTestBtn.addEventListener("click", async () => {
     try {
       const version = await obsManager.testConnection();
-      notify(`OBS OK | ${version.obsVersion || "version unknown"}`);
+      notify(`OBS OK | ${version.obsVersion || "unknown"}`);
     } catch (error) {
-      notify(`OBS Test ไม่สำเร็จ: ${error.message}`, "error");
+      notify(`OBS test failed: ${error.message}`, "error");
     }
   });
 
@@ -367,9 +496,9 @@ function bindObsPanel() {
     try {
       const type = state.selectedTemplate?.type || "live";
       await obsManager.refreshBrowserSource(type);
-      notify("Refresh Browser Source สำเร็จ");
+      notify("Refresh Browser Source success");
     } catch (error) {
-      notify(`Refresh ไม่สำเร็จ: ${error.message}`, "error");
+      notify(`Refresh failed: ${error.message}`, "error");
     }
   });
 
@@ -388,7 +517,7 @@ function bindObsPanel() {
   });
 }
 
-function renderPhase2Roadmap() {
+function renderPhaseRoadmap() {
   if (!ui.moduleRoadmapList || !ui.hookStatusList) {
     return;
   }
@@ -413,77 +542,111 @@ function renderPhase2Roadmap() {
     .join("");
 }
 
-async function ingestExternalPayload(rawPayload, sourceLabel = "manual", options = { broadcast: true }) {
-  const normalized = normalizeExternalMatchPayload(rawPayload);
-  if (!normalized) {
-    notify("Payload ไม่ถูกต้องหรือไม่พบข้อมูลที่นำเข้าได้", "warn");
-    return;
-  }
-
-  if (normalized.sport && state.selectedTemplate && normalized.sport !== state.selectedTemplate.sport) {
-    const fallbackTemplate =
-      TEMPLATE_REGISTRY.find((item) => item.sport === normalized.sport && item.type === state.selectedTemplate.type) ||
-      TEMPLATE_REGISTRY.find((item) => item.sport === normalized.sport) ||
-      state.selectedTemplate;
-    await applyTemplate(fallbackTemplate, { markRecent: false, broadcast: true, forceMock: false });
-  }
-
-  state.activeMatchData = normalized;
-  previewEngine.setMatchData(normalized);
-  if (options.broadcast) {
-    state.bridge?.publishMatchData(normalized);
-  }
-  notify(`รับข้อมูลภายนอกแล้ว (${sourceLabel})`);
-}
-
-function bindPhase2Panel() {
-  ui.ingestPayloadBtn.addEventListener("click", async () => {
+function bindDataBridgePanel() {
+  ui.validatePayloadBtn.addEventListener("click", async () => {
     const raw = ui.externalPayloadArea.value.trim();
     if (!raw) {
-      notify("วาง JSON payload ก่อน ingest", "warn");
+      notify("Paste payload JSON before validation", "warn");
       return;
     }
     try {
       const parsed = JSON.parse(raw);
-      await ingestExternalPayload(parsed, "manual-json");
+      await handlePayloadValidation(parsed);
     } catch (error) {
-      notify(`JSON parse ไม่สำเร็จ: ${error.message}`, "error");
+      renderValidationResult({
+        isValid: false,
+        isCompatible: false,
+        errors: [`JSON parse error: ${error.message}`],
+        warnings: [],
+        normalizedPayload: null
+      });
+      notify("Payload validation failed", "error");
     }
   });
 
-  ui.clearPayloadBtn.addEventListener("click", async () => {
-    ui.externalPayloadArea.value = "";
-    if (state.selectedTemplate) {
-      await syncMatchDataForTemplate(state.selectedTemplate, { broadcast: true, forceMock: true });
+  ui.ingestPayloadBtn.addEventListener("click", async () => {
+    const raw = ui.externalPayloadArea.value.trim();
+    if (!raw) {
+      notify("Paste payload JSON before ingest", "warn");
+      return;
     }
-    notify("ล้าง payload แล้วและรีเซ็ตกลับ mock data");
+    try {
+      const parsed = JSON.parse(raw);
+      await handlePayloadIngest(parsed, "manual-json", { broadcast: true });
+    } catch (error) {
+      notify(`Payload ingest failed: ${error.message}`, "error");
+    }
+  });
+
+  ui.sendTestFootballBtn.addEventListener("click", async () => {
+    try {
+      const payload = await loadSamplePayload("./data/sample-payload-football.json");
+      ui.externalPayloadArea.value = JSON.stringify(payload, null, 2);
+      await handlePayloadIngest(payload, "sample-football", { broadcast: true });
+    } catch (error) {
+      notify(`Load sample football failed: ${error.message}`, "error");
+    }
+  });
+
+  ui.sendTestBasketballBtn.addEventListener("click", async () => {
+    try {
+      const payload = await loadSamplePayload("./data/sample-payload-basketball.json");
+      ui.externalPayloadArea.value = JSON.stringify(payload, null, 2);
+      await handlePayloadIngest(payload, "sample-basketball", { broadcast: true });
+    } catch (error) {
+      notify(`Load sample basketball failed: ${error.message}`, "error");
+    }
+  });
+}
+
+function bindBridgeListeners() {
+  window.addEventListener(PEPSLIVE_CUSTOM_EVENT_UPDATED, (event) => {
+    const detail = event.detail || {};
+    const stateSnapshot = detail.state || {};
+    if (stateSnapshot.lastSyncTime) {
+      updateProtocolMeta(stateSnapshot.currentPayload, stateSnapshot.lastSyncTime);
+    }
   });
 }
 
 function initSharedBridge() {
   state.bridge = new SharedStateBridge({
     role: "dock",
-    onRemoteEvent: async (envelope, transport) => {
-      if (envelope.type === "skin:update" && envelope.payload?.skinId) {
-        const remoteTemplate = getTemplateById(envelope.payload.skinId);
-        state.currentTheme = { ...DEFAULT_THEME, ...(envelope.payload.theme || state.currentTheme) };
-        state.animationStyle = envelope.payload.animation?.style || state.animationStyle;
-        await applyTemplate(remoteTemplate, { markRecent: false, broadcast: false, forceMock: false });
+    onRemoteEvent: async (message, transport) => {
+      if (!message || !message.payload) {
+        return;
+      }
+      if (message.type === PEPSLIVE_MESSAGE_TYPES.PING || message.type === PEPSLIVE_MESSAGE_TYPES.PONG) {
+        updateBridgeStatus(`Bridge heartbeat via ${transport}`, "ok");
+        return;
+      }
+      if (message.type === PEPSLIVE_MESSAGE_TYPES.RESET) {
+        updateBridgeStatus(`Bridge reset via ${transport}`, "warn");
+        return;
       }
 
-      if (envelope.type === "match:update" && envelope.payload) {
-      await ingestExternalPayload(envelope.payload, `bridge:${transport}`, { broadcast: false });
+      const snapshotPayload = state.bridge?.getState()?.currentPayload;
+      if (!snapshotPayload) {
+        return;
       }
 
-      updateBridgeStatus(`Sync active via ${transport}`, "ok");
+      state.applyingRemote = true;
+      try {
+        await handlePayloadIngest(snapshotPayload, `bridge-${transport}`, { broadcast: false });
+      } finally {
+        state.applyingRemote = false;
+      }
+      updateBridgeStatus(`Remote update via ${transport}`, "ok");
     },
     onStateChange: (sharedState, mode) => {
-      updateBridgeStatus(`State ${mode} @ ${sharedState.updatedAt || "-"}`, "ok");
+      if (sharedState.lastSyncTime) {
+        updateProtocolMeta(sharedState.currentPayload, sharedState.lastSyncTime);
+      }
+      updateBridgeStatus(`State sync ${mode}`, "ok");
     }
   });
-
   state.bridge.start();
-  updateBridgeStatus("BroadcastChannel + localStorage sync ready", "ok");
+  updateBridgeStatus("Bridge ready: BroadcastChannel + localStorage fallback", "ok");
 }
 
 function cacheElements() {
@@ -524,8 +687,14 @@ function cacheElements() {
 
   ui.bridgeStatusText = document.getElementById("bridgeStatusText");
   ui.externalPayloadArea = document.getElementById("externalPayloadArea");
+  ui.validatePayloadBtn = document.getElementById("validatePayloadBtn");
   ui.ingestPayloadBtn = document.getElementById("ingestPayloadBtn");
-  ui.clearPayloadBtn = document.getElementById("clearPayloadBtn");
+  ui.sendTestFootballBtn = document.getElementById("sendTestFootballBtn");
+  ui.sendTestBasketballBtn = document.getElementById("sendTestBasketballBtn");
+  ui.payloadValidationResult = document.getElementById("payloadValidationResult");
+  ui.lastReceivedPayloadArea = document.getElementById("lastReceivedPayloadArea");
+  ui.currentProtocolText = document.getElementById("currentProtocolText");
+  ui.lastSyncTimeText = document.getElementById("lastSyncTimeText");
   ui.moduleRoadmapList = document.getElementById("moduleRoadmapList");
   ui.hookStatusList = document.getElementById("hookStatusList");
 }
@@ -561,7 +730,7 @@ function initGallery() {
     onPreview: async (template) => applyTemplate(template, { markRecent: false, broadcast: false, forceMock: false }),
     onUse: async (template) => {
       await applyTemplate(template, { markRecent: true, broadcast: true, forceMock: false });
-      notify(`กำลังใช้สกิน ${template.id}`);
+      notify(`Using skin ${template.id}`);
     },
     onFavorite: (template) => {
       state.favorites = toggleFavorite(template.id);
@@ -607,11 +776,14 @@ function initThemeEditor() {
       if (state.selectedTemplate) {
         setThemeBySkinId(state.selectedTemplate.id, theme);
         saveSkinState();
-        publishCurrentSkinToBridge();
+      }
+      if (!state.applyingRemote) {
+        state.bridge?.publishTheme(theme);
+        state.bridge?.publishAnimation({ style: state.animationStyle });
       }
     },
     onPresetChange: (preset) => {
-      notify(`ใช้ preset: ${preset.name}`);
+      notify(`Preset applied: ${preset.name}`);
     }
   });
   themeEditor.render();
@@ -638,33 +810,43 @@ async function initApp() {
   initPreview();
   initObsManager();
   initSharedBridge();
+  bindBridgeListeners();
   initGallery();
   initThemeEditor();
-  renderPhase2Roadmap();
+  renderPhaseRoadmap();
 
   bindSidebarFilters();
   bindTopActions();
   bindPreviewTools();
   bindSkinJsonActions();
   bindObsPanel();
-  bindPhase2Panel();
+  bindDataBridgePanel();
 
   setButtonGroupActive(ui.sportFilter, "all");
   setButtonGroupActive(ui.typeFilter, "all");
   setButtonGroupActive(ui.listFilter, "All");
 
   const sharedState = getSharedOverlayState();
+  const sharedPayload = sharedState.currentPayload;
   const initialTemplate = state.currentSkin?.skinId
     ? getTemplateById(state.currentSkin.skinId)
-    : sharedState.currentSkin?.skinId
-      ? getTemplateById(sharedState.currentSkin.skinId)
+    : sharedPayload?.skinId
+      ? getTemplateById(sharedPayload.skinId)
       : TEMPLATE_REGISTRY[0];
 
-  const initialTheme = getThemeBySkinId(initialTemplate.id) || sharedState.currentSkin?.theme || state.currentSkin?.theme || DEFAULT_THEME;
+  const initialTheme = getThemeBySkinId(initialTemplate.id) || sharedPayload?.theme || state.currentSkin?.theme || DEFAULT_THEME;
   state.currentTheme = { ...DEFAULT_THEME, ...initialTheme };
-  state.animationStyle = sharedState.currentSkin?.animation?.style || state.currentTheme.animationStyle || DEFAULT_THEME.animationStyle;
-  await applyTemplate(initialTemplate, { markRecent: false, broadcast: true, forceMock: false });
-  notify("พร้อมใช้งาน: เลือก template แล้วกด Use Skin");
+  state.animationStyle = sharedPayload?.animation?.style || state.currentTheme.animationStyle || DEFAULT_THEME.animationStyle;
+
+  await applyTemplate(initialTemplate, {
+    markRecent: false,
+    broadcast: false,
+    forceMock: false,
+    matchDataOverride: sharedPayload?.matchData || null
+  });
+
+  updateProtocolMeta(sharedPayload || buildProtocolPayloadFromState(), sharedState.lastSyncTime || nowIso());
+  notify("Ready: choose template and use skin");
 }
 
 window.addEventListener("beforeunload", () => {

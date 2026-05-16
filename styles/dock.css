@@ -481,6 +481,10 @@ textarea:focus {
   resize: vertical;
 }
 
+.json-area.small {
+  min-height: 110px;
+}
+
 .tiny-note {
   margin: 0 0 8px;
   font-size: 0.74rem;
@@ -505,6 +509,23 @@ textarea:focus {
 .status-chip[data-state="warn"] {
   color: #fde68a;
   border-color: rgba(253, 230, 138, 0.45);
+}
+
+.status-chip[data-state="error"] {
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.meta-grid {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.meta-grid strong {
+  color: var(--text-primary);
 }
 
 .mini-title {

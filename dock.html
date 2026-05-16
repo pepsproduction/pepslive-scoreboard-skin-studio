@@ -13,7 +13,7 @@
       <header class="dock-header glass-panel">
         <div class="brand-block">
           <h1>PepsLive Scoreboard Skin Studio</h1>
-          <p>Dock UI สำหรับเลือก Skin / Template ของ Scoreboard</p>
+          <p>Dock UI for selecting scoreboard skins/templates only</p>
         </div>
         <div class="header-meta">
           <div class="status-line">
@@ -31,7 +31,7 @@
         </div>
       </header>
 
-      <div id="dockMessage" class="dock-message" data-level="info">กำลังโหลด...</div>
+      <div id="dockMessage" class="dock-message" data-level="info">Loading...</div>
 
       <div class="dock-layout">
         <aside class="sidebar glass-panel">
@@ -79,12 +79,7 @@
               <small id="previewStatusText">-</small>
             </div>
             <div id="previewStage" class="preview-stage bg-transparent-grid">
-              <iframe
-                id="overlayPreviewFrame"
-                title="Overlay Preview"
-                loading="eager"
-                allowtransparency="true"
-              ></iframe>
+              <iframe id="overlayPreviewFrame" title="Overlay Preview" loading="eager" allowtransparency="true"></iframe>
               <div id="safeAreaOverlay" class="safe-layer safe-off"></div>
             </div>
             <div class="inline-grid">
@@ -135,23 +130,35 @@
           </section>
 
           <section class="panel-block">
-            <h2>Phase 2 Data Bridge</h2>
-            <p class="tiny-note">
-              รองรับการ sync state ระหว่าง Dock UI กับ Overlay ผ่าน BroadcastChannel และ localStorage shared state
-            </p>
+            <h2>Phase 2.1 Data Bridge</h2>
+            <p class="tiny-note">Data ingest/debug only. This panel does not provide score control or timer control.</p>
             <div class="status-chip" id="bridgeStatusText" data-state="ok">initializing...</div>
+            <div class="meta-grid">
+              <div><strong>Current Protocol:</strong> <span id="currentProtocolText">-</span></div>
+              <div><strong>Last Sync Time:</strong> <span id="lastSyncTimeText">-</span></div>
+            </div>
             <label>
-              <span>External Payload JSON (PepsLive Dock / Adapter Feed)</span>
+              <span>External Payload JSON</span>
               <textarea
                 id="externalPayloadArea"
                 class="json-area"
-                placeholder='{"sport":"football","eventName":"PEPS LIVE CUP","homeName":"Dragon FC","awayName":"Tiger FC","homeScore":2,"awayScore":1}'
+                placeholder='{"protocol":"PEPSLIVE_SCOREBOARD_STATE_V1","version":1,"sport":"football","skinId":"FB-LIVE-01","type":"live","matchData":{"homeScore":1,"awayScore":0}}'
               ></textarea>
             </label>
             <div class="inline-row">
+              <button type="button" class="capsule-btn" id="validatePayloadBtn">Validate Payload</button>
               <button type="button" class="capsule-btn" id="ingestPayloadBtn">Ingest Payload</button>
-              <button type="button" class="capsule-btn" id="clearPayloadBtn">Clear Payload</button>
+              <button type="button" class="capsule-btn" id="sendTestFootballBtn">Send Test Football Payload</button>
+              <button type="button" class="capsule-btn" id="sendTestBasketballBtn">Send Test Basketball Payload</button>
             </div>
+            <label>
+              <span>Validation Result</span>
+              <textarea id="payloadValidationResult" class="json-area small" readonly></textarea>
+            </label>
+            <label>
+              <span>Last Received Payload</span>
+              <textarea id="lastReceivedPayloadArea" class="json-area small" readonly></textarea>
+            </label>
             <h3 class="mini-title">Adapter Hooks</h3>
             <ul id="hookStatusList" class="mini-list"></ul>
             <h3 class="mini-title">Future Overlay Modules</h3>
@@ -168,11 +175,7 @@
               <button type="button" class="capsule-btn" id="resetSkinBtn">Reset Skin</button>
               <button type="button" class="capsule-btn" id="duplicateSkinBtn">Duplicate Skin</button>
             </div>
-            <textarea
-              id="skinJsonArea"
-              class="json-area"
-              placeholder="วาง Skin JSON ที่นี่เพื่อ Import หรือกด Export เพื่อสร้างไฟล์"
-            ></textarea>
+            <textarea id="skinJsonArea" class="json-area" placeholder="Paste skin JSON here"></textarea>
           </section>
         </aside>
       </div>

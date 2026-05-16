@@ -1,0 +1,45 @@
+{
+  "protocol": "PEPSLIVE_SCOREBOARD_STATE_V1",
+  "version": 1,
+  "source": "sample-basketball",
+  "timestamp": "2026-05-16T10:02:00.000Z",
+  "sport": "basketball",
+  "skinId": "BB-LIVE-01",
+  "type": "live",
+  "theme": {
+    "primaryColor": "#00c2ff",
+    "secondaryColor": "#04152c",
+    "homeColor": "#f97316",
+    "awayColor": "#2563eb",
+    "textColor": "#e2e8f0",
+    "accentColor": "#38bdf8",
+    "animationStyle": "fade"
+  },
+  "animation": {
+    "style": "fade"
+  },
+  "matchData": {
+    "eventName": "PEPS HOOPS",
+    "eventLogo": "",
+    "homeLogo": "",
+    "awayLogo": "",
+    "homeName": "Orange Wolves",
+    "awayName": "Blue Hawks",
+    "homeShortName": "WOL",
+    "awayShortName": "HAW",
+    "homeScore": 78,
+    "awayScore": 74,
+    "gameClock": "02:18",
+    "periodLabel": "Q4",
+    "statusLabel": "LIVE",
+    "shotClock": "14",
+    "homeFouls": 4,
+    "awayFouls": 3,
+    "homeTimeouts": 2,
+    "awayTimeouts": 1,
+    "possession": "home",
+    "bonus": "away",
+    "quarterBreakdown": "Q1 20-18 | Q2 41-39 | Q3 61-58 | Q4 78-74",
+    "topScorer": "WOL #11 24 PTS"
+  }
+}
