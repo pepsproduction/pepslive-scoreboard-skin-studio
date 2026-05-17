@@ -164,7 +164,8 @@ export class PreviewEngine {
       theme: this.state.theme,
       displayOptions: this.state.displayOptions,
       cacheBust,
-      absolute
+      absolute,
+      isolated: true
     });
   }
 

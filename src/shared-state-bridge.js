@@ -7,7 +7,8 @@ import {
   PEPSLIVE_SCOREBOARD_PROTOCOL_VERSION,
   createProtocolMessage,
   createProtocolPayload,
-  isProtocolMessage
+  isProtocolMessage,
+  isProtocolPayload
 } from "./pepslive-payload-protocol.js";
 import { nowIso, safeJsonParse } from "./utils.js";
 
@@ -34,9 +35,39 @@ export function getSharedOverlayState() {
   if (!parsed || typeof parsed !== "object") {
     return createFallbackState();
   }
+  if (isProtocolPayload(parsed)) {
+    return {
+      ...createFallbackState(),
+      updatedAt: parsed.timestamp || nowIso(),
+      lastSyncTime: parsed.timestamp || nowIso(),
+      currentPayload: parsed,
+      lastMessageType: PEPSLIVE_MESSAGE_TYPES.STATE_UPDATE,
+      sourceId: parsed.source || "storage-payload"
+    };
+  }
   return {
     ...createFallbackState(),
     ...parsed
+  };
+}
+
+function normalizeStoredState(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  if (isProtocolPayload(value)) {
+    return {
+      ...createFallbackState(),
+      updatedAt: value.timestamp || nowIso(),
+      lastSyncTime: value.timestamp || nowIso(),
+      currentPayload: value,
+      lastMessageType: PEPSLIVE_MESSAGE_TYPES.STATE_UPDATE,
+      sourceId: value.source || "storage-payload"
+    };
+  }
+  return {
+    ...createFallbackState(),
+    ...value
   };
 }
 
@@ -104,14 +135,11 @@ export class SharedStateBridge {
     if (event.key !== PEPSLIVE_LOCALSTORAGE_FALLBACK_KEY || !event.newValue) {
       return;
     }
-    const nextState = safeJsonParse(event.newValue, null);
-    if (!nextState || typeof nextState !== "object") {
+    const nextState = normalizeStoredState(safeJsonParse(event.newValue, null));
+    if (!nextState) {
       return;
     }
-    this.state = {
-      ...createFallbackState(),
-      ...nextState
-    };
+    this.state = nextState;
     const syntheticMessage = createProtocolMessage(PEPSLIVE_MESSAGE_TYPES.STATE_UPDATE, this.state.currentPayload || {}, {
       sourceId: this.state.sourceId || "storage",
       timestamp: this.state.lastSyncTime || nowIso()

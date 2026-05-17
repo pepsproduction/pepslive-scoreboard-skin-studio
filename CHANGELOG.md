@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## Phase 4.2 - Preview Stability + Gallery Accuracy
+
+### Fixes
+- Isolated studio preview and gallery thumbnail iframes from shared BroadcastChannel/localStorage updates so cards no longer collapse back to the same selected skin.
+- Reduced event-logo lag by resizing uploaded logos locally before saving/publishing and debouncing high-frequency theme publishes.
+- Kept background opacity/theme edits bound to the currently selected skin.
+
+### Scoreboard Parts
+- Added team logo position options: Left / Left, Right / Right, Outer, and Inner.
+- Blank Plates now hides team/event logos as well as text while preserving scoreboard plate structure.
+- Gallery preview boxes now use a consistent height while preserving each Browser Source's real aspect ratio inside the card.
+
 ## Phase 4.1 - Theme Stability + Event Logo Palette
 
 ### Fixes

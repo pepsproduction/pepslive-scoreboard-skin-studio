@@ -467,3 +467,26 @@ publishPepsLiveDockState({
 คำเตือน:
 - โปรเจกต์นี้ไม่ควบคุมคะแนนหรือเวลาเอง
 - หากต้องการเปลี่ยนคะแนน/เวลา ให้เปลี่ยนจาก Dock UI เดิม แล้วส่ง payload มา
+
+## Phase 4.2 - Preview Stability and Gallery Accuracy
+
+- Studio preview and Template Gallery thumbnails use isolated iframe mode so BroadcastChannel/localStorage updates do not force every thumbnail back to the same skin.
+- Gallery cards keep a consistent preview box height while the embedded Browser Source keeps its real source ratio.
+- Scoreboard Parts now includes Team Logo Position: `Left / Left`, `Right / Right`, `Outer: Left / Right`, and `Inner: Right / Left`.
+- `Blank Plates` hides team/event logos and text while keeping the scoreboard plate structure for OBS text layers.
+- Event logo uploads are resized locally before storage/publish to reduce lag while adjusting the theme in real time.
+
+### PepsLive Dock V1 Sync Note
+
+PepsLive Dock V1 already publishes match state through `PEPSLIVE_SCOREBOARD_STATE_V1`, `pepslive-scoreboard-state-v1`, and `pepslive.scoreboard.sharedState.v1`.
+
+You do not need to keep this Skin Studio `dock.html` page open after copying the overlay URL. For live score/team/time updates, keep PepsLive Dock V1 open and make sure Dock V1 and the Skin Studio overlay run on the same origin/browser profile.
+
+Most reliable current setup:
+
+1. Choose a skin in Skin Studio and copy the overlay URL.
+2. Add that URL to OBS Browser Source.
+3. Keep PepsLive Dock V1 open while controlling the match.
+4. Open Dock V1 and overlay from the same origin when using BroadcastChannel/localStorage sync.
+
+Known browser limitation: OBS Browser Source may use a separate storage profile or a different origin. If so, BroadcastChannel/localStorage will not sync. A future fully portable bridge should use a hosted/shared JSON state URL or backend relay so PepsLive Dock V1 can be the single source of truth without relying on same-origin storage.

@@ -124,6 +124,7 @@ let lastRenderedTemplateId = "";
 let lastRenderedMode = "";
 let displayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
 let postMessageRenderTimer = 0;
+let isolatedPreviewMode = false;
 
 function parseQueryParams() {
   const params = new URLSearchParams(window.location.search);
@@ -132,6 +133,7 @@ function parseQueryParams() {
     animationStyle: params.get("animation"),
     themeRaw: params.get("theme"),
     slotsRaw: params.get("slots"),
+    isolated: params.get("isolated") === "1",
     debug: params.get("debug") === "1"
   };
 }
@@ -296,6 +298,10 @@ function applyDisplayOptions(root) {
   root.classList.toggle("hide-status-label", !displayOptions.statusLabel);
   root.classList.toggle("hide-extra-row", !displayOptions.extraRow);
   root.classList.toggle("text-mode-blank", displayOptions.textMode === "blank");
+  root.classList.toggle("logo-position-same-left", displayOptions.teamLogoPosition === "same-left");
+  root.classList.toggle("logo-position-same-right", displayOptions.teamLogoPosition === "same-right");
+  root.classList.toggle("logo-position-outer", displayOptions.teamLogoPosition === "outer");
+  root.classList.toggle("logo-position-inner", displayOptions.teamLogoPosition === "inner");
 
   const eventRowEmpty = !displayOptions.eventLogo && !displayOptions.eventName && !displayOptions.statusLabel;
   const gameMetaEmpty = !displayOptions.gameClock && !displayOptions.periodLabel;
@@ -622,6 +628,7 @@ function setupPostMessageBridge() {
 async function initOverlay() {
   const query = parseQueryParams();
   debugEnabled = query.debug;
+  isolatedPreviewMode = query.isolated;
   ensureDebugBox();
   displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(parseDisplayOptionsString(query.slotsRaw) || {}) };
 
@@ -648,11 +655,13 @@ async function initOverlay() {
   const initialPayload = buildPayloadFromLocalState();
   await applyProtocolPayload(initialPayload, "initial");
 
-  setupSharedBridge();
+  if (!isolatedPreviewMode) {
+    setupSharedBridge();
+  }
   setupPostMessageBridge();
 
   const storagePayload = getSharedOverlayState().currentPayload;
-  if (storagePayload && !query.skinId) {
+  if (storagePayload && !query.skinId && !isolatedPreviewMode) {
     await applyProtocolPayload(storagePayload, "storage-bootstrap");
   }
 }

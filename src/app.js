@@ -81,7 +81,8 @@ const state = {
   integrationPayloadStatus: "Payload Status: waiting",
   displayOptions: { ...DEFAULT_DISPLAY_OPTIONS },
   eventLogoDataUrl: "",
-  eventLogoPalette: []
+  eventLogoPalette: [],
+  publishTimer: 0
 };
 
 const OBS_CUSTOM_CSS = "body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }";
@@ -699,6 +700,10 @@ function closeSettingsModal() {
 }
 
 function publishCurrentStateIfReady() {
+  if (state.publishTimer) {
+    window.clearTimeout(state.publishTimer);
+    state.publishTimer = 0;
+  }
   if (!state.bridge || !state.selectedTemplate || state.applyingRemote) {
     return;
   }
@@ -708,63 +713,105 @@ function publishCurrentStateIfReady() {
   updateProtocolMeta(payload, payload.timestamp);
 }
 
+function scheduleCurrentStatePublish(delay = 160) {
+  if (state.publishTimer) {
+    window.clearTimeout(state.publishTimer);
+  }
+  state.publishTimer = window.setTimeout(() => {
+    state.publishTimer = 0;
+    publishCurrentStateIfReady();
+  }, delay);
+}
+
 function rgbToHex(r, g, b) {
   return `#${[r, g, b].map((value) => Math.max(0, Math.min(255, value)).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function extractPaletteFromPixels(pixels) {
+  const buckets = new Map();
+  for (let index = 0; index < pixels.length; index += 16) {
+    const alpha = pixels[index + 3];
+    if (alpha < 160) {
+      continue;
+    }
+    const r = pixels[index];
+    const g = pixels[index + 1];
+    const b = pixels[index + 2];
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const saturation = max - min;
+    if (saturation < 18 && max > 220) {
+      continue;
+    }
+    const qr = Math.round(r / 32) * 32;
+    const qg = Math.round(g / 32) * 32;
+    const qb = Math.round(b / 32) * 32;
+    const key = `${qr},${qg},${qb}`;
+    const current = buckets.get(key) || { count: 0, score: 0, color: rgbToHex(qr, qg, qb) };
+    current.count += 1;
+    current.score += saturation + Math.abs(128 - max) * 0.15;
+    buckets.set(key, current);
+  }
+  return Array.from(buckets.values())
+    .sort((a, b) => b.count * b.score - a.count * a.score)
+    .map((item) => item.color)
+    .filter((color, index, list) => list.indexOf(color) === index)
+    .slice(0, 5);
+}
+
+function drawImageToAnalysisCanvas(image, maxSize = 256) {
+  const canvas = document.createElement("canvas");
+  const naturalWidth = image.naturalWidth || image.width || maxSize;
+  const naturalHeight = image.naturalHeight || image.height || maxSize;
+  const scale = Math.min(maxSize / naturalWidth, maxSize / naturalHeight, 1);
+  canvas.width = Math.max(1, Math.round(naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(naturalHeight * scale));
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    return { dataUrl: "", colors: [] };
+  }
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  return {
+    dataUrl: canvas.toDataURL("image/png"),
+    colors: extractPaletteFromPixels(pixels)
+  };
 }
 
 function extractPaletteFromDataUrl(dataUrl) {
   return new Promise((resolve) => {
     const image = new Image();
     image.onload = () => {
-      const canvas = document.createElement("canvas");
-      const size = 96;
-      const scale = Math.min(size / image.width, size / image.height, 1);
-      canvas.width = Math.max(1, Math.round(image.width * scale));
-      canvas.height = Math.max(1, Math.round(image.height * scale));
-      const context = canvas.getContext("2d", { willReadFrequently: true });
-      if (!context) {
-        resolve([]);
-        return;
-      }
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-      const buckets = new Map();
-      for (let index = 0; index < pixels.length; index += 16) {
-        const alpha = pixels[index + 3];
-        if (alpha < 160) {
-          continue;
-        }
-        const r = pixels[index];
-        const g = pixels[index + 1];
-        const b = pixels[index + 2];
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const saturation = max - min;
-        if (saturation < 18 && max > 220) {
-          continue;
-        }
-        const qr = Math.round(r / 32) * 32;
-        const qg = Math.round(g / 32) * 32;
-        const qb = Math.round(b / 32) * 32;
-        const key = `${qr},${qg},${qb}`;
-        const current = buckets.get(key) || { count: 0, score: 0, color: rgbToHex(qr, qg, qb) };
-        current.count += 1;
-        current.score += saturation + Math.abs(128 - max) * 0.15;
-        buckets.set(key, current);
-      }
-      const colors = Array.from(buckets.values())
-        .sort((a, b) => b.count * b.score - a.count * a.score)
-        .map((item) => item.color)
-        .filter((color, index, list) => list.indexOf(color) === index)
-        .slice(0, 5);
-      resolve(colors);
+      resolve(drawImageToAnalysisCanvas(image, 128).colors);
     };
     image.onerror = () => resolve([]);
     image.src = dataUrl;
   });
 }
 
-function applyPaletteToTheme(colors = state.eventLogoPalette) {
+function prepareEventLogoImage(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      try {
+        resolve(drawImageToAnalysisCanvas(image, 256));
+      } catch (error) {
+        reject(error);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Cannot decode event logo image"));
+    };
+    image.src = objectUrl;
+  });
+}
+
+function applyPaletteToTheme(colors = state.eventLogoPalette, { publish = true } = {}) {
   if (!colors.length) {
     return;
   }
@@ -775,17 +822,19 @@ function applyPaletteToTheme(colors = state.eventLogoPalette) {
     homeColor: colors[0] || state.currentTheme.homeColor,
     awayColor: colors[2] || colors[1] || state.currentTheme.awayColor
   };
-  themeEditor.setTheme(nextTheme);
+  if (publish) {
+    themeEditor.setTheme(nextTheme);
+  } else {
+    state.currentTheme = nextTheme;
+    state.animationStyle = nextTheme.animationStyle || state.animationStyle;
+    themeEditor.setTheme(nextTheme, { silent: true });
+    previewEngine.setTheme(nextTheme);
+    previewEngine.setAnimation(state.animationStyle);
+    if (state.selectedTemplate) {
+      setThemeBySkinId(state.selectedTemplate.id, nextTheme);
+    }
+  }
   notify("Logo palette applied to scoreboard theme");
-}
-
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(reader.error || new Error("Cannot read file"));
-    reader.readAsDataURL(file);
-  });
 }
 
 async function handleEventLogoUpload(file) {
@@ -796,14 +845,17 @@ async function handleEventLogoUpload(file) {
     notify("Please choose an image file for the event logo", "warn");
     return;
   }
-  const dataUrl = await readFileAsDataUrl(file);
-  state.eventLogoDataUrl = dataUrl;
-  state.eventLogoPalette = await extractPaletteFromDataUrl(dataUrl);
+  if (ui.eventLogoStatusText) {
+    ui.eventLogoStatusText.textContent = "Processing logo and color palette...";
+  }
+  const prepared = await prepareEventLogoImage(file);
+  state.eventLogoDataUrl = prepared.dataUrl;
+  state.eventLogoPalette = prepared.colors;
   state.activeMatchData = applyEventLogoToMatchData(state.activeMatchData || {});
   previewEngine.setMatchData(state.activeMatchData);
   updateEventLogoUi();
   if (ui.eventLogoAutoTheme?.checked) {
-    applyPaletteToTheme();
+    applyPaletteToTheme(state.eventLogoPalette, { publish: false });
   }
   saveSkinState();
   publishCurrentStateIfReady();
@@ -945,7 +997,7 @@ function bindPreviewTools() {
       saveSkinState();
     }
     if (!state.applyingRemote) {
-      publishCurrentStateIfReady();
+      scheduleCurrentStatePublish();
     }
   });
 
@@ -975,6 +1027,7 @@ function bindPreviewTools() {
     previewEngine.setDisplayOptions(state.displayOptions);
     refreshObsUrlsPanel();
     saveSkinState();
+    scheduleCurrentStatePublish();
   });
 
   ui.eventLogoInput?.addEventListener("change", async () => {
@@ -1855,7 +1908,7 @@ function initThemeEditor() {
         saveSkinState();
       }
       if (!state.applyingRemote) {
-        publishCurrentStateIfReady();
+        scheduleCurrentStatePublish();
       }
     },
     onPresetChange: (preset) => {

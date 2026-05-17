@@ -378,11 +378,11 @@ body {
 }
 
 .template-thumb {
-  min-height: 0;
-  aspect-ratio: var(--thumb-aspect-ratio, 5 / 1);
+  min-height: 190px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: grid;
-  align-content: stretch;
+  align-content: center;
+  justify-items: center;
   gap: 5px;
   padding: 0;
   position: relative;
@@ -393,10 +393,27 @@ body {
   background: #020617;
 }
 
-.thumb-frame {
+.thumb-source-window {
   position: absolute;
-  inset: 0;
+  inset: 42px 12px 42px;
   z-index: 0;
+  width: calc(100% - 24px);
+  aspect-ratio: var(--source-aspect-ratio, 5 / 1);
+  max-height: calc(100% - 84px);
+  align-self: center;
+  justify-self: center;
+  border-radius: 10px;
+  overflow: hidden;
+  background:
+    linear-gradient(45deg, rgba(148, 163, 184, 0.13) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(148, 163, 184, 0.13) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(148, 163, 184, 0.13) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(148, 163, 184, 0.13) 75%);
+  background-size: 18px 18px;
+  background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+}
+
+.thumb-frame {
   width: 100%;
   height: 100%;
   border: 0;
@@ -817,6 +834,9 @@ body {
   min-width: 0;
   width: 100%;
   padding-inline: 7px;
+  min-height: 40px;
+  font-size: clamp(0.64rem, 1.4vw, 0.76rem);
+  line-height: 1.05;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

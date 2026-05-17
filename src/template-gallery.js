@@ -145,7 +145,8 @@ export class TemplateGallery {
                       type: template.type,
                       animationStyle: "none",
                       cacheBust: false,
-                      absolute: false
+                      absolute: false,
+                      isolated: true
                     });
                     const thumbRatio = `${source.width} / ${source.height}`;
                     return `
@@ -160,7 +161,9 @@ export class TemplateGallery {
                             <span class="badge sport">${escapeHtml(template.sport)}</span>
                             <span class="badge type">${escapeHtml(template.type)}</span>
                           </div>
-                          <iframe class="thumb-frame" src="${escapeAttribute(thumbUrl)}" title="${escapeAttribute(template.id)} preview" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+                          <div class="thumb-source-window" style="--source-aspect-ratio: ${thumbRatio}">
+                            <iframe class="thumb-frame" src="${escapeAttribute(thumbUrl)}" title="${escapeAttribute(template.id)} preview" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+                          </div>
                           <span class="thumb-code">${escapeHtml(template.id)}</span>
                           <span class="thumb-name">${escapeHtml(template.name)}</span>
                           ${isSelected ? '<span class="selected-ribbon">Selected</span>' : ""}

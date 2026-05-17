@@ -20,6 +20,7 @@ export const DEFAULT_DISPLAY_OPTIONS = {
   eventLogo: true,
   eventName: true,
   teamLogos: true,
+  teamLogoPosition: "same-left",
   teamShortNames: true,
   gameClock: true,
   periodLabel: true,
@@ -123,7 +124,8 @@ export function generateOverlayUrl({
   cacheBust = true,
   absolute = true,
   debug = false,
-  stateKey = ""
+  stateKey = "",
+  isolated = false
 }) {
   const overlayFile = type === "summary" ? "overlays/summary.html" : "overlays/live.html";
   const basePath = getProjectRootPath();
@@ -151,6 +153,10 @@ export function generateOverlayUrl({
 
   if (stateKey) {
     url.searchParams.set("stateKey", stateKey);
+  }
+
+  if (isolated) {
+    url.searchParams.set("isolated", "1");
   }
 
   if (cacheBust) {

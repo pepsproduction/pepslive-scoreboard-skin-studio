@@ -199,6 +199,7 @@ body {
   min-width: 0;
   display: grid;
   gap: 2px;
+  flex: 1 1 auto;
 }
 
 .team-name {
@@ -344,6 +345,47 @@ body {
 #overlay-root.event-row-empty [data-slot="eventRow"],
 #overlay-root.game-meta-empty .game-meta {
   display: none !important;
+}
+
+#overlay-root.text-mode-blank [data-slot="eventLogo"],
+#overlay-root.text-mode-blank [data-slot="homeLogo"],
+#overlay-root.text-mode-blank [data-slot="awayLogo"] {
+  display: none !important;
+}
+
+#overlay-root.text-mode-blank .team-block {
+  justify-content: center;
+  padding-inline: 14px;
+}
+
+#overlay-root.logo-position-same-right .team-block .logo-slot,
+#overlay-root.logo-position-inner .team-block.home .logo-slot,
+#overlay-root.logo-position-outer .team-block.away .logo-slot {
+  order: 2;
+}
+
+#overlay-root.logo-position-same-right .team-block .team-name-box,
+#overlay-root.logo-position-inner .team-block.home .team-name-box,
+#overlay-root.logo-position-outer .team-block.away .team-name-box {
+  order: 1;
+}
+
+#overlay-root.logo-position-inner .team-block.home,
+#overlay-root.logo-position-outer .team-block.away,
+#overlay-root.logo-position-same-right .team-block {
+  justify-content: flex-end;
+}
+
+#overlay-root.logo-position-inner .team-block.away .logo-slot,
+#overlay-root.logo-position-outer .team-block.home .logo-slot,
+#overlay-root.logo-position-same-left .team-block .logo-slot {
+  order: 1;
+}
+
+#overlay-root.logo-position-inner .team-block.away .team-name-box,
+#overlay-root.logo-position-outer .team-block.home .team-name-box,
+#overlay-root.logo-position-same-left .team-block .team-name-box {
+  order: 2;
 }
 
 #overlay-root.hide-team-logos .team-block {
