@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="th">
   <head>
     <meta charset="UTF-8" />
@@ -281,6 +281,16 @@
                 <button type="button" class="capsule-btn" id="copyObsCssBtn" data-copy-feedback="true">Copy OBS Custom CSS</button>
                 <button type="button" class="capsule-btn" id="copyLiveUrlBtn" data-copy-feedback="true">Copy Live URL</button>
                 <button type="button" class="capsule-btn" id="copySummaryUrlBtn" data-copy-feedback="true">Copy Summary URL</button>
+              </div>
+              <h3 class="mini-title">Portable State URLs (Phase 4.3)</h3>
+              <p class="tiny-note">Portable URLs embed skin, theme, and display options into the URL itself — no localStorage required. Ideal for OBS Browser Sources that run in an isolated storage profile. Live scores still require same-origin sync or a future backend relay.</p>
+              <label><span>Portable Live URL</span><textarea id="portableLiveUrlText" class="json-area small" readonly></textarea></label>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn primary" id="copyPortableLiveUrlBtn" data-copy-feedback="true">Copy Portable Live URL</button>
+              </div>
+              <label><span>Portable Summary URL</span><textarea id="portableSummaryUrlText" class="json-area small" readonly></textarea></label>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn primary" id="copyPortableSummaryUrlBtn" data-copy-feedback="true">Copy Portable Summary URL</button>
               </div>
               <h3 class="mini-title">Health Check</h3>
               <div class="status-chip" id="obsHealthStatusText" data-state="warn">Health status: not checked</div>

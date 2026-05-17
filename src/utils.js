@@ -1,4 +1,4 @@
-﻿export const STYLE_TAGS = ["Minimal", "Broadcast", "Premium", "Neon", "Glass", "Local", "Tournament", "Social", "Compact", "Large"];
+export const STYLE_TAGS = ["Minimal", "Broadcast", "Premium", "Neon", "Glass", "Local", "Tournament", "Social", "Compact", "Large"];
 export const LIST_FILTERS = ["All", "Favorites", "Recently Used"];
 export const SAFE_AREA_MODES = ["Off", "16:9 Safe Area", "9:16 Safe Area", "YouTube Safe Area", "Facebook Live Safe Area", "OBS Corner Guide"];
 export const BACKGROUND_MODES = [
@@ -182,4 +182,145 @@ export function downloadJson(filename, data) {
 
 export function nowIso() {
   return new Date().toISOString();
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4.3 – Portable State URL
+// ---------------------------------------------------------------------------
+
+/** Max byte length for the base64url state param before a warning is issued. */
+export const PORTABLE_STATE_SIZE_LIMIT = 4096;
+
+/**
+ * Encode a plain-object state into a compact base64url string.
+ * Omits undefined/null values and optionally strips the eventLogo data-URL
+ * if the resulting payload would exceed PORTABLE_STATE_SIZE_LIMIT.
+ *
+ * @param {object} stateObj
+ * @param {{ includeEventLogo?: boolean }} [opts]
+ * @returns {{ encoded: string, size: number, oversized: boolean, dropped: string[] }}
+ */
+export function encodePortableState(stateObj, { includeEventLogo = false } = {}) {
+  const dropped = [];
+  const clean = {};
+  for (const [key, value] of Object.entries(stateObj)) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+    clean[key] = value;
+  }
+
+  // Always attempt without eventLogo first to check size
+  const withoutLogo = { ...clean };
+  delete withoutLogo.eventLogo;
+
+  const jsonWithoutLogo = JSON.stringify(withoutLogo);
+  let jsonToEncode = jsonWithoutLogo;
+
+  if (includeEventLogo && clean.eventLogo) {
+    const jsonWithLogo = JSON.stringify(clean);
+    if (jsonWithLogo.length <= PORTABLE_STATE_SIZE_LIMIT) {
+      jsonToEncode = jsonWithLogo;
+    } else {
+      dropped.push("eventLogo");
+    }
+  }
+
+  const encoded = btoa(unescape(encodeURIComponent(jsonToEncode)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  return {
+    encoded,
+    size: encoded.length,
+    oversized: encoded.length > PORTABLE_STATE_SIZE_LIMIT,
+    dropped
+  };
+}
+
+/**
+ * Decode a base64url portable state string back to a plain object.
+ * Returns null (never throws) on any decode/parse failure.
+ *
+ * @param {string} raw
+ * @returns {object|null}
+ */
+export function decodePortableState(raw) {
+  if (!raw || typeof raw !== "string") {
+    return null;
+  }
+  try {
+    const base64 = raw.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(escape(atob(base64)));
+    const parsed = JSON.parse(json);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed;
+  } catch (_error) {
+    return null;
+  }
+}
+
+/**
+ * Generate a "portable" overlay URL that embeds skin/theme/displayOptions in
+ * a `state` query parameter so that the overlay works without localStorage.
+ *
+ * @param {{
+ *   skinId: string,
+ *   type: string,
+ *   sport?: string,
+ *   animationStyle?: string,
+ *   theme?: object,
+ *   displayOptions?: object,
+ *   textMode?: string,
+ *   teamLogoPosition?: string,
+ *   eventLogo?: string,
+ *   debug?: boolean,
+ *   absolute?: boolean
+ * }} opts
+ * @returns {{ url: string, warning: string|null }}
+ */
+export function generatePortableOverlayUrl(opts) {
+  const {
+    skinId,
+    type,
+    sport,
+    animationStyle,
+    theme,
+    displayOptions,
+    eventLogo,
+    debug = false,
+    absolute = true
+  } = opts;
+
+  const stateObj = {};
+  if (skinId) stateObj.skinId = skinId;
+  if (sport) stateObj.sport = sport;
+  if (type) stateObj.type = type;
+  if (animationStyle) stateObj.animation = animationStyle;
+  if (theme && Object.keys(theme).length > 0) stateObj.theme = theme;
+  if (displayOptions && Object.keys(displayOptions).length > 0) stateObj.displayOptions = displayOptions;
+  if (eventLogo) stateObj.eventLogo = eventLogo;
+
+  const { encoded, size, oversized, dropped } = encodePortableState(stateObj, { includeEventLogo: !!eventLogo });
+
+  const overlayFile = type === "summary" ? "overlays/summary.html" : "overlays/live.html";
+  const basePath = getProjectRootPath();
+  const url = new URL(`${basePath}${overlayFile}`, window.location.href);
+  url.searchParams.set("state", encoded);
+  if (debug) url.searchParams.set("debug", "1");
+
+  let warning = null;
+  if (oversized) {
+    warning = `Portable URL state is ${size} chars (limit: ${PORTABLE_STATE_SIZE_LIMIT}). Consider using same-origin localStorage sync instead.`;
+  } else if (dropped.length > 0) {
+    warning = `Fields dropped from portable state (too large): ${dropped.join(", ")}. Use same-origin sync for full data.`;
+  }
+
+  return {
+    url: absolute ? url.toString() : `${url.pathname}${url.search}`,
+    warning
+  };
 }

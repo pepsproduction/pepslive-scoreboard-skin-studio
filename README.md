@@ -490,3 +490,68 @@ Most reliable current setup:
 4. Open Dock V1 and overlay from the same origin when using BroadcastChannel/localStorage sync.
 
 Known browser limitation: OBS Browser Source may use a separate storage profile or a different origin. If so, BroadcastChannel/localStorage will not sync. A future fully portable bridge should use a hosted/shared JSON state URL or backend relay so PepsLive Dock V1 can be the single source of truth without relying on same-origin storage.
+
+## Phase 4.3 Portable State URL + Dock Sync Reliability
+
+### ปัญหาที่แก้
+OBS Browser Source อาจโหลดในสภาพแวดล้อมที่แยก storage profile ออกจาก Skin Studio dock.html ทำให้ BroadcastChannel/localStorage ไม่ทำงาน ทำให้ skin/theme/display options ที่ตั้งไว้ไม่ถูกส่งไปที่ overlay
+
+### วิธีการแก้: Portable State URL
+Phase 4.3 เพิ่มระบบ Portable URL ที่ฝัง skin, theme, และ display options ลงใน `?state=` parameter โดยตรง
+
+```text
+overlays/live.html?state=<base64url-encoded-json>
+```
+
+**ข้อมูลที่ฝังใน URL ได้:**
+- `skinId` — รหัส skin ที่เลือก
+- `sport` — กีฬา (football / basketball)
+- `type` — ประเภท (live / summary)
+- `animation` — animation preset
+- `theme` — ค่าสีและ visual settings
+- `displayOptions` — การซ่อน/แสดง element ต่างๆ (eventLogo, gameClock, ฯลฯ)
+- `eventLogo` — data-URL ของ event logo (ถ้าขนาดไม่เกิน 4096 chars หลัง encode)
+
+### วิธีใช้ใน dock.html
+1. เลือก skin และปรับแต่ง theme/display options ตามต้องการ
+2. เปิด **Settings → Browser Source Export**
+3. ใต้หัวข้อ **Portable State URLs** จะมี URL ที่พร้อมใช้งาน
+4. กด **Copy Portable Live URL** หรือ **Copy Portable Summary URL**
+5. วาง URL ที่ได้ลงใน OBS Browser Source ได้เลย — ไม่ต้องพึ่ง localStorage
+
+### ลำดับการโหลดของ Overlay (Phase 4.3)
+1. **`?state=` param (Portable)** — ถ้ามี ใช้ก่อนอื่นทั้งหมด และห้าม localStorage ทับค่า skin/theme ตอนเริ่มโหลด
+2. **`?skin` / `?theme` / `?slots` แบบเดิม** — fallback ถ้าไม่มี `?state=`
+3. **Shared state (localStorage / BroadcastChannel)** — สำหรับ same-origin sync
+4. **Mock data fallback** — ถ้าไม่มีข้อมูลจากแหล่งไหนเลย
+
+### ข้อจำกัดของ Portable URL
+| สิ่งที่ Portable URL รองรับ | สิ่งที่ยังต้องพึ่ง same-origin |
+|---|---|
+| Skin ID | Live score (homeScore/awayScore) |
+| Theme (สี/ขนาด/animation) | Game clock (gameClock) |
+| Display options (toggle slots) | Period / status (periodLabel, statusLabel) |
+| Event logo (ถ้าขนาดเล็กพอ) | Added time, fouls, timeouts, ฯลฯ |
+
+**Live score update ยังต้องมาจาก PepsLive Dock V1** ผ่าน BroadcastChannel/localStorage (same-origin) หรือ Phase ถัดไปที่จะเป็น hosted JSON relay / backend bridge
+
+### เมื่อ URL ยาวเกินไป
+ถ้า state ใหญ่กว่า 4 096 chars หลัง encode:
+- ระบบแสดง warning notification ใน dock.html
+- ถ้า `eventLogo` ทำให้เกิน limit ระบบจะตัด eventLogo ออกก่อนและแสดง warning
+- แนะนำให้ใช้ same-origin localStorage sync แทน หรือรอ Phase ถัดไป (hosted relay)
+
+### ขั้นตอนถัดไปสำหรับ cross-origin sync 100%
+ถ้าต้องการ sync live score ข้าม origin/profile อย่างแน่นอน:
+- Phase ถัดไป: **Hosted JSON Relay / Backend Bridge**
+  - Dock V1 push state ไปที่ server endpoint
+  - Overlay ดึง state จาก endpoint เป็นระยะ (polling) หรือ SSE
+  - ไม่พึ่ง localStorage หรือ BroadcastChannel อีกต่อไป
+
+### QA check
+```bash
+node scripts/check-portable-url.mjs   # 32/32 assertions pass
+node scripts/check-phase3-integration.mjs   # PASS (no regressions)
+node --check src/utils.js src/app.js overlays/overlay-core.js src/shared-state-bridge.js
+```
+

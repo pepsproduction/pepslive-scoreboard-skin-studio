@@ -1,5 +1,53 @@
 # CHANGELOG
 
+## Phase 4.3 - Portable State URL + Reliable Dock Sync Bridge
+
+### Overview
+Adds a first-class **Portable State URL** strategy so that OBS Browser Sources can load the correct skin/theme/display options without depending on localStorage or BroadcastChannel. This resolves the sync gap where OBS Browser Sources using an isolated storage profile could not reliably receive state from the Skin Studio dock.
+
+### New Features
+- **`encodePortableState` / `decodePortableState`** in `src/utils.js`
+  - Base64url encode/decode of a plain-object state (skinId, sport, type, animation, theme, displayOptions, eventLogo)
+  - Size limit: 4 096 chars; warns if exceeded
+  - `eventLogo` data-URL is included only if the total remains within the limit, otherwise dropped with a warning
+  - Decode returns `null` (never throws) on any invalid/corrupt input
+- **`generatePortableOverlayUrl`** in `src/utils.js`
+  - Produces overlay URLs with `?state=<base64url>` parameter
+  - Warning message returned (not thrown) when state is oversized
+- **`buildPortableUrlByType`** in `src/app.js`
+  - Builds portable live/summary URLs from current studio state (skin + theme + displayOptions + eventLogo)
+  - Updates both portable URL textareas whenever skin/theme/display changes via `refreshObsUrlsPanel`
+- **Portable State URLs** section in Browser Source Export panel (`dock.html`)
+  - "Copy Portable Live URL" button
+  - "Copy Portable Summary URL" button
+  - Descriptive note explaining use-case and limitations
+
+### Overlay Changes (`overlays/overlay-core.js`)
+- Priority loading order is now:
+  1. **`?state=` portable param** (Phase 4.3) — highest priority; locks out localStorage override on first load
+  2. Legacy `?skin` / `?theme` / `?slots` individual params
+  3. Shared state (localStorage / BroadcastChannel)
+  4. Mock data fallback
+- `decodePortableState` is imported from `src/utils.js`
+- Source label "Portable URL State" added for debug overlay box
+- Live score updates still arrive via BroadcastChannel/postMessage if the dock is same-origin
+
+### QA
+- `scripts/check-portable-url.mjs` — 32/32 assertions pass:
+  - Round-trip encode/decode for skin/theme/displayOptions
+  - Base64url safety (no `+`, `/`, trailing `=`)
+  - Invalid state fallback (null, garbage, corrupt, array) — never throws
+  - EventLogo size budget (small included, oversized dropped)
+  - Overlay file existence + no absolute path leaks
+  - State completeness including `teamLogoPosition` and boolean `extraRow`
+- `scripts/check-phase3-integration.mjs` — still PASS (no regressions)
+- `node --check` — clean for all 4 modified files
+
+### Limitations (unchanged)
+- Skin Studio is a skin selector only — no score/timer controls
+- Portable URL carries **static** skin/theme/displayOptions only
+- Live score updates still require same-origin or a future hosted JSON relay/backend bridge
+
 ## Phase 4.2 - Preview Stability + Gallery Accuracy
 
 ### Fixes

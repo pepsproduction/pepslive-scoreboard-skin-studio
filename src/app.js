@@ -39,6 +39,7 @@ import {
   VISUAL_QA_MODES,
   downloadJson,
   generateOverlayUrl,
+  generatePortableOverlayUrl,
   nowIso,
   setButtonGroupActive
 } from "./utils.js";
@@ -253,17 +254,46 @@ function buildOverlayUrlByType(type, { debug = false, cacheBust = false, forceVe
   });
 }
 
+/**
+ * Phase 4.3 – Build a portable overlay URL that encodes skin/theme/displayOptions
+ * into the ?state= query param, making it work without localStorage sync.
+ * @returns {{ url: string, warning: string|null }}
+ */
+function buildPortableUrlByType(type, { debug = false } = {}) {
+  const template = resolveTemplateForObsType(type);
+  return generatePortableOverlayUrl({
+    skinId: template.id,
+    type,
+    sport: template.sport,
+    animationStyle: state.animationStyle,
+    theme: state.currentTheme,
+    displayOptions: state.displayOptions,
+    eventLogo: state.eventLogoDataUrl || "",
+    debug,
+    absolute: true
+  });
+}
+
 function refreshObsUrlsPanel() {
   const liveProd = buildOverlayUrlByType("live", { debug: false, cacheBust: false });
   const liveDebug = buildOverlayUrlByType("live", { debug: true, cacheBust: false });
   const summaryProd = buildOverlayUrlByType("summary", { debug: false, cacheBust: false });
   const summaryDebug = buildOverlayUrlByType("summary", { debug: true, cacheBust: false });
 
+  const portableLiveResult = buildPortableUrlByType("live");
+  const portableSummaryResult = buildPortableUrlByType("summary");
+
   if (ui.liveProductionUrlText) {
     ui.liveProductionUrlText.value = liveProd;
   }
   if (ui.summaryProductionUrlText) {
     ui.summaryProductionUrlText.value = summaryProd;
+  }
+  if (ui.portableLiveUrlText) {
+    ui.portableLiveUrlText.value = portableLiveResult.url;
+  }
+  if (ui.portableSummaryUrlText) {
+    ui.portableSummaryUrlText.value = portableSummaryResult.url;
   }
   if (ui.obsSelectedSkinText) {
     ui.obsSelectedSkinText.textContent = state.selectedTemplate ? `${state.selectedTemplate.id} - ${state.selectedTemplate.name}` : "-";
@@ -279,7 +309,11 @@ function refreshObsUrlsPanel() {
     liveProd,
     liveDebug,
     summaryProd,
-    summaryDebug
+    summaryDebug,
+    portableLive: portableLiveResult.url,
+    portableLiveWarning: portableLiveResult.warning,
+    portableSummary: portableSummaryResult.url,
+    portableSummaryWarning: portableSummaryResult.warning
   };
 }
 
@@ -1528,6 +1562,36 @@ function bindObsPanel() {
       notify(`Health Check failed: ${error.message}`, "error");
     }
   });
+
+  // Phase 4.3: Copy Portable Live URL
+  ui.copyPortableLiveUrlBtn?.addEventListener("click", async () => {
+    const urls = refreshObsUrlsPanel();
+    if (urls.portableLiveWarning) {
+      notify(urls.portableLiveWarning, "warn");
+    }
+    const copied = await copyText(urls.portableLive, ui.portableLiveUrlText);
+    if (copied) {
+      flashCopyButton(ui.copyPortableLiveUrlBtn);
+      flashMessage("Copied Portable Live URL", "info");
+    } else {
+      notify("Clipboard unavailable. URL written to text area", "warn");
+    }
+  });
+
+  // Phase 4.3: Copy Portable Summary URL
+  ui.copyPortableSummaryUrlBtn?.addEventListener("click", async () => {
+    const urls = refreshObsUrlsPanel();
+    if (urls.portableSummaryWarning) {
+      notify(urls.portableSummaryWarning, "warn");
+    }
+    const copied = await copyText(urls.portableSummary, ui.portableSummaryUrlText);
+    if (copied) {
+      flashCopyButton(ui.copyPortableSummaryUrlBtn);
+      flashMessage("Copied Portable Summary URL", "info");
+    } else {
+      notify("Clipboard unavailable. URL written to text area", "warn");
+    }
+  });
 }
 
 function renderPhaseRoadmap() {
@@ -1794,6 +1858,12 @@ function cacheElements() {
   ui.obsHealthStatusText = document.getElementById("obsHealthStatusText");
   ui.obsHealthResultArea = document.getElementById("obsHealthResultArea");
   ui.obsManualGuideText = document.getElementById("obsManualGuideText");
+
+  // Phase 4.3: Portable URL elements
+  ui.portableLiveUrlText = document.getElementById("portableLiveUrlText");
+  ui.portableSummaryUrlText = document.getElementById("portableSummaryUrlText");
+  ui.copyPortableLiveUrlBtn = document.getElementById("copyPortableLiveUrlBtn");
+  ui.copyPortableSummaryUrlBtn = document.getElementById("copyPortableSummaryUrlBtn");
 
   ui.integrationModeSelect = document.getElementById("integrationModeSelect");
   ui.integrationDataSourceText = document.getElementById("integrationDataSourceText");

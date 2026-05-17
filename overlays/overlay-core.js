@@ -1,9 +1,9 @@
-﻿import { getTemplateById } from "../templates/template-registry.js";
+import { getTemplateById } from "../templates/template-registry.js";
 import { validateIncomingPayload } from "../src/payload-validator.js";
 import { PEPSLIVE_MESSAGE_TYPES, PEPSLIVE_SCOREBOARD_PROTOCOL, createProtocolPayload } from "../src/pepslive-payload-protocol.js";
 import { SharedStateBridge, getSharedOverlayState } from "../src/shared-state-bridge.js";
 import { evaluateRenderedSlots, getRenderContractByTemplateId } from "../src/template-render-contract.js";
-import { DEFAULT_DISPLAY_OPTIONS, parseDisplayOptionsString } from "../src/utils.js";
+import { DEFAULT_DISPLAY_OPTIONS, parseDisplayOptionsString, decodePortableState } from "../src/utils.js";
 
 const DEFAULT_THEME = {
   primaryColor: "#ff7a18",
@@ -133,6 +133,7 @@ function parseQueryParams() {
     animationStyle: params.get("animation"),
     themeRaw: params.get("theme"),
     slotsRaw: params.get("slots"),
+    stateRaw: params.get("state"),  // Phase 4.3 portable state
     isolated: params.get("isolated") === "1",
     debug: params.get("debug") === "1"
   };
@@ -456,6 +457,9 @@ function updateDebugBox({ protocolStatus, validationStatus, updateTime, template
 
 function resolveSourceLabel(sourceValue = "") {
   const source = String(sourceValue || "").toLowerCase();
+  if (source.includes("portable")) {
+    return "Portable URL State";
+  }
   if (source.includes("dock")) {
     return "PepsLive Dock";
   }
@@ -630,39 +634,69 @@ async function initOverlay() {
   debugEnabled = query.debug;
   isolatedPreviewMode = query.isolated;
   ensureDebugBox();
-  displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(parseDisplayOptionsString(query.slotsRaw) || {}) };
 
-  const sharedState = getSharedOverlayState();
-  const sharedPayload = sharedState.currentPayload;
-  currentSkinId = query.skinId || sharedPayload?.skinId || "FB-LIVE-01";
-  currentAnimation = query.animationStyle || sharedPayload?.animation?.style || currentAnimation;
+  // --- Phase 4.3: Parse portable state first (highest priority) ---
+  const portableState = decodePortableState(query.stateRaw);
+  const hasPortableState = !!portableState;
+
+  if (hasPortableState) {
+    // Portable state takes priority over everything else for skin/theme/displayOptions
+    currentSkinId = portableState.skinId || query.skinId || "FB-LIVE-01";
+    currentAnimation = portableState.animation || query.animationStyle || currentAnimation;
+    displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(portableState.displayOptions || {}), ...(parseDisplayOptionsString(query.slotsRaw) || {}) };
+
+    const portableTheme = portableState.theme || null;
+    const queryTheme = parseThemeFromQuery(query.themeRaw);
+    applyTheme({ ...portableTheme, ...queryTheme });
+
+    currentSourceLabel = "Portable URL State";
+  } else {
+    // Legacy fallback: individual query params + shared state
+    displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(parseDisplayOptionsString(query.slotsRaw) || {}) };
+
+    const sharedState = getSharedOverlayState();
+    const sharedPayload = sharedState.currentPayload;
+    currentSkinId = query.skinId || sharedPayload?.skinId || "FB-LIVE-01";
+    currentAnimation = query.animationStyle || sharedPayload?.animation?.style || currentAnimation;
+
+    const queryTheme = parseThemeFromQuery(query.themeRaw);
+    const storedTheme = getStoredTheme(currentSkinId);
+    applyTheme({ ...storedTheme, ...(!query.skinId ? sharedPayload?.theme || {} : {}), ...queryTheme });
+  }
 
   const contract = getRenderContractByTemplateId(currentSkinId);
   if (!contract) {
     currentSkinId = "FB-LIVE-01";
   }
 
-  const queryTheme = parseThemeFromQuery(query.themeRaw);
-  const storedTheme = getStoredTheme(currentSkinId);
-  applyTheme({ ...storedTheme, ...(!query.skinId ? sharedPayload?.theme || {} : {}), ...queryTheme });
-
   const fallbackTemplate = getTemplateById(currentSkinId);
-  currentData = sharedPayload?.matchData?.sport === fallbackTemplate.sport ? sharedPayload.matchData : null;
-  if (!currentData) {
+
+  if (hasPortableState) {
+    // Use mock data; live scores will arrive via BroadcastChannel/postMessage if same-origin
     currentData = await getMockBySport(fallbackTemplate.sport);
+  } else {
+    const sharedState = getSharedOverlayState();
+    const sharedPayload = sharedState.currentPayload;
+    currentData = sharedPayload?.matchData?.sport === fallbackTemplate.sport ? sharedPayload.matchData : null;
+    if (!currentData) {
+      currentData = await getMockBySport(fallbackTemplate.sport);
+    }
   }
 
   const initialPayload = buildPayloadFromLocalState();
-  await applyProtocolPayload(initialPayload, "initial");
+  await applyProtocolPayload(initialPayload, hasPortableState ? "overlay-portable" : "initial");
 
   if (!isolatedPreviewMode) {
     setupSharedBridge();
   }
   setupPostMessageBridge();
 
-  const storagePayload = getSharedOverlayState().currentPayload;
-  if (storagePayload && !query.skinId && !isolatedPreviewMode) {
-    await applyProtocolPayload(storagePayload, "storage-bootstrap");
+  // Only allow localStorage bootstrap to override skin/template when NO portable state is present
+  if (!hasPortableState) {
+    const storagePayload = getSharedOverlayState().currentPayload;
+    if (storagePayload && !query.skinId && !isolatedPreviewMode) {
+      await applyProtocolPayload(storagePayload, "storage-bootstrap");
+    }
   }
 }
 
