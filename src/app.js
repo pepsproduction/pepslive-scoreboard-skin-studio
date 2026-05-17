@@ -23,7 +23,12 @@ import {
   resetSkin,
   setCurrentSkin,
   setThemeBySkinId,
-  toggleFavorite
+  toggleFavorite,
+  listSkinPresets,
+  saveSkinPreset,
+  deleteSkinPreset,
+  getRelayConfig,
+  setRelayConfig
 } from "./skin-storage.js";
 import { SharedStateBridge, getSharedOverlayState } from "./shared-state-bridge.js";
 import { auditTemplateContracts, getRenderContractByTemplateId } from "./template-render-contract.js";
@@ -40,6 +45,7 @@ import {
   downloadJson,
   generateOverlayUrl,
   generatePortableOverlayUrl,
+  generateRelayOverlayUrl,
   nowIso,
   setButtonGroupActive
 } from "./utils.js";
@@ -83,7 +89,10 @@ const state = {
   displayOptions: { ...DEFAULT_DISPLAY_OPTIONS },
   eventLogoDataUrl: "",
   eventLogoPalette: [],
-  publishTimer: 0
+  publishTimer: 0,
+  // Phase 4.4
+  skinPresets: [],
+  relayConfig: { url: "", intervalSec: 5 }
 };
 
 const OBS_CUSTOM_CSS = "body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }";
@@ -1594,6 +1603,205 @@ function bindObsPanel() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Phase 4.4 – Named Skin Presets panel
+// ---------------------------------------------------------------------------
+
+function renderPresetsPanel() {
+  if (!ui.presetListEl) return;
+  state.skinPresets = listSkinPresets();
+  if (state.skinPresets.length === 0) {
+    ui.presetListEl.innerHTML = '<li class="preset-empty tiny-note">No presets saved yet.</li>';
+    return;
+  }
+  ui.presetListEl.innerHTML = state.skinPresets
+    .map(
+      (preset) => `
+      <li class="preset-item" data-preset-id="${preset.id}">
+        <div class="preset-info">
+          <strong class="preset-name">${preset.name}</strong>
+          <span class="preset-meta tiny-note">${preset.skinId} · ${preset.sport} · ${preset.type}</span>
+        </div>
+        <div class="preset-actions">
+          <button type="button" class="capsule-btn preset-load-btn" data-preset-id="${preset.id}">Load</button>
+          <button type="button" class="capsule-btn preset-delete-btn" data-preset-id="${preset.id}">Delete</button>
+        </div>
+      </li>`
+    )
+    .join("");
+}
+
+async function loadPreset(id) {
+  const preset = state.skinPresets.find((p) => p.id === id);
+  if (!preset) return;
+
+  const template = getTemplateById(preset.skinId);
+  state.currentTheme = { ...DEFAULT_THEME, ...(preset.theme || {}) };
+  state.animationStyle = typeof preset.animation === "string" ? preset.animation : (preset.animation?.style || DEFAULT_THEME.animationStyle);
+  state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(preset.displayOptions || {}) };
+  state.eventLogoDataUrl = preset.eventLogo || "";
+  state.eventLogoPalette = state.eventLogoDataUrl ? await extractPaletteFromDataUrl(state.eventLogoDataUrl) : [];
+
+  setThemeBySkinId(template.id, state.currentTheme);
+  syncDisplayOptionControls();
+  updateEventLogoUi();
+
+  await applyTemplate(template, { markRecent: true, broadcast: true, forceMock: false });
+  notify(`Preset loaded: ${preset.name}`);
+}
+
+function bindPresetsPanel() {
+  if (!ui.presetListEl || !ui.savePresetBtn || !ui.presetNameInput) return;
+
+  renderPresetsPanel();
+
+  ui.savePresetBtn.addEventListener("click", () => {
+    if (!state.selectedTemplate) {
+      notify("Select a skin before saving a preset", "warn");
+      return;
+    }
+    const name = (ui.presetNameInput?.value || "").trim() || `Preset ${nowIso().slice(0, 10)}`;
+    saveSkinPreset({
+      name,
+      skinId: state.selectedTemplate.id,
+      sport: state.selectedTemplate.sport,
+      type: state.selectedTemplate.type,
+      theme: state.currentTheme,
+      animation: state.animationStyle,
+      displayOptions: state.displayOptions,
+      eventLogo: state.eventLogoDataUrl
+    });
+    if (ui.presetNameInput) ui.presetNameInput.value = "";
+    renderPresetsPanel();
+    notify(`Preset saved: ${name}`);
+  });
+
+  ui.presetListEl.addEventListener("click", async (event) => {
+    const loadBtn = event.target.closest(".preset-load-btn");
+    const deleteBtn = event.target.closest(".preset-delete-btn");
+    if (loadBtn) {
+      await loadPreset(loadBtn.dataset.presetId);
+    } else if (deleteBtn) {
+      const id = deleteBtn.dataset.presetId;
+      const preset = state.skinPresets.find((p) => p.id === id);
+      deleteSkinPreset(id);
+      renderPresetsPanel();
+      notify(`Preset deleted: ${preset?.name || id}`);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4.4 – Relay Config panel
+// ---------------------------------------------------------------------------
+
+function buildRelayUrlByType(type, { debug = false } = {}) {
+  const template = resolveTemplateForObsType(type);
+  const relayUrl = (ui.relayUrlInput?.value || state.relayConfig.url || "").trim();
+  if (!relayUrl) return { url: "", warning: "Enter a relay URL first." };
+  return generateRelayOverlayUrl({
+    skinId: template.id,
+    type,
+    sport: template.sport,
+    relayUrl,
+    animationStyle: state.animationStyle,
+    theme: state.currentTheme,
+    displayOptions: state.displayOptions,
+    debug,
+    absolute: true,
+    embedPortableState: true
+  });
+}
+
+function exportStateAsRelayJson() {
+  if (!state.selectedTemplate) {
+    notify("Select a skin first", "warn");
+    return;
+  }
+  const payload = buildProtocolPayloadFromState();
+  downloadJson(`relay-state-${state.selectedTemplate.id}-${nowIso().slice(0, 10)}.json`, payload);
+  notify("Relay JSON exported. Host this file at a public URL to use as relay endpoint.");
+}
+
+async function testRelayUrl(rawUrl) {
+  const url = rawUrl?.trim();
+  if (!url) {
+    if (ui.relayTestStatusText) {
+      ui.relayTestStatusText.textContent = "Enter a relay URL first.";
+      ui.relayTestStatusText.dataset.state = "warn";
+    }
+    return;
+  }
+  if (ui.relayTestStatusText) {
+    ui.relayTestStatusText.textContent = "Testing...";
+    ui.relayTestStatusText.dataset.state = "warn";
+  }
+  try {
+    const response = await fetch(url, { method: "GET", cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const hasProtocol = data && typeof data === "object" && data.protocol;
+    const hasSport = data && typeof data === "object" && typeof data.sport === "string";
+    const usable = hasProtocol || hasSport;
+    if (ui.relayTestStatusText) {
+      ui.relayTestStatusText.textContent = usable
+        ? `OK — ${hasProtocol ? "full protocol payload" : "flat matchData"} detected`
+        : "URL reachable but payload format not recognised";
+      ui.relayTestStatusText.dataset.state = usable ? "ok" : "warn";
+    }
+  } catch (error) {
+    if (ui.relayTestStatusText) {
+      ui.relayTestStatusText.textContent = `Error: ${error.message}`;
+      ui.relayTestStatusText.dataset.state = "error";
+    }
+  }
+}
+
+function bindRelayPanel() {
+  const relayConfig = getRelayConfig();
+  state.relayConfig = relayConfig;
+  if (ui.relayUrlInput) ui.relayUrlInput.value = relayConfig.url;
+  if (ui.relayIntervalInput) ui.relayIntervalInput.value = String(relayConfig.intervalSec);
+
+  const saveRelay = () => {
+    const url = (ui.relayUrlInput?.value || "").trim();
+    const intervalSec = Number(ui.relayIntervalInput?.value) || 5;
+    state.relayConfig = setRelayConfig({ url, intervalSec });
+  };
+
+  ui.relayUrlInput?.addEventListener("change", saveRelay);
+  ui.relayIntervalInput?.addEventListener("change", saveRelay);
+
+  ui.copyRelayLiveUrlBtn?.addEventListener("click", async () => {
+    saveRelay();
+    const result = buildRelayUrlByType("live");
+    if (!result.url) { notify(result.warning || "Cannot build relay URL", "warn"); return; }
+    if (result.warning) notify(result.warning, "warn");
+    const copied = await copyText(result.url, ui.skinJsonArea);
+    if (copied) { flashCopyButton(ui.copyRelayLiveUrlBtn); flashMessage("Copied Relay Live URL", "info"); }
+    else notify("Clipboard unavailable. URL written to JSON area", "warn");
+  });
+
+  ui.copyRelaySummaryUrlBtn?.addEventListener("click", async () => {
+    saveRelay();
+    const result = buildRelayUrlByType("summary");
+    if (!result.url) { notify(result.warning || "Cannot build relay URL", "warn"); return; }
+    if (result.warning) notify(result.warning, "warn");
+    const copied = await copyText(result.url, ui.skinJsonArea);
+    if (copied) { flashCopyButton(ui.copyRelaySummaryUrlBtn); flashMessage("Copied Relay Summary URL", "info"); }
+    else notify("Clipboard unavailable. URL written to JSON area", "warn");
+  });
+
+  ui.exportStateRelayBtn?.addEventListener("click", () => {
+    exportStateAsRelayJson();
+  });
+
+  ui.testRelayUrlBtn?.addEventListener("click", () => {
+    saveRelay();
+    testRelayUrl((ui.relayUrlInput?.value || "").trim());
+  });
+}
+
 function renderPhaseRoadmap() {
   if (!ui.moduleRoadmapList || !ui.hookStatusList) {
     return;
@@ -1865,6 +2073,20 @@ function cacheElements() {
   ui.copyPortableLiveUrlBtn = document.getElementById("copyPortableLiveUrlBtn");
   ui.copyPortableSummaryUrlBtn = document.getElementById("copyPortableSummaryUrlBtn");
 
+  // Phase 4.4: Preset panel elements
+  ui.presetNameInput = document.getElementById("presetNameInput");
+  ui.savePresetBtn = document.getElementById("savePresetBtn");
+  ui.presetListEl = document.getElementById("presetListEl");
+
+  // Phase 4.4: Relay config elements
+  ui.relayUrlInput = document.getElementById("relayUrlInput");
+  ui.relayIntervalInput = document.getElementById("relayIntervalInput");
+  ui.copyRelayLiveUrlBtn = document.getElementById("copyRelayLiveUrlBtn");
+  ui.copyRelaySummaryUrlBtn = document.getElementById("copyRelaySummaryUrlBtn");
+  ui.exportStateRelayBtn = document.getElementById("exportStateRelayBtn");
+  ui.testRelayUrlBtn = document.getElementById("testRelayUrlBtn");
+  ui.relayTestStatusText = document.getElementById("relayTestStatusText");
+
   ui.integrationModeSelect = document.getElementById("integrationModeSelect");
   ui.integrationDataSourceText = document.getElementById("integrationDataSourceText");
   ui.integrationLastDockUpdateText = document.getElementById("integrationLastDockUpdateText");
@@ -2029,6 +2251,8 @@ async function initApp() {
   bindObsPanel();
   bindIntegrationPanel();
   bindDataBridgePanel();
+  bindPresetsPanel();
+  bindRelayPanel();
 
   setButtonGroupActive(ui.sportFilter, "all");
   setButtonGroupActive(ui.typeFilter, "all");

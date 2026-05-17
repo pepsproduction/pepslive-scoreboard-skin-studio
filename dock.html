@@ -208,6 +208,16 @@
               <div id="themeEditorRoot"></div>
             </section>
 
+            <section class="panel-block">
+              <h2>Skin Presets</h2>
+              <p class="tiny-note">Save the current skin, theme, and display settings as a named preset for quick switching during events.</p>
+              <div class="inline-row">
+                <input type="text" id="presetNameInput" class="text-input" placeholder="e.g. Cup Final 2026 — Live" />
+                <button type="button" class="capsule-btn primary" id="savePresetBtn">Save Preset</button>
+              </div>
+              <ul id="presetListEl" class="preset-list"></ul>
+            </section>
+
             <section class="panel-block source-export-panel">
               <h2>Browser Source Export</h2>
               <p class="tiny-note">Choose source size, copy production/debug URLs, and add them manually in OBS Browser Source.</p>
@@ -292,6 +302,21 @@
               <div class="inline-row">
                 <button type="button" class="capsule-btn primary" id="copyPortableSummaryUrlBtn" data-copy-feedback="true">Copy Portable Summary URL</button>
               </div>
+              <h3 class="mini-title">Relay Config (Phase 4.4)</h3>
+              <p class="tiny-note">Set a public JSON URL that returns a PepsLive state payload. Overlays with <code>?relay=</code> will poll it for live score updates — works across any origin or OBS storage profile.</p>
+              <div class="inline-grid obs-preset-grid">
+                <label><span>Relay JSON URL</span><input id="relayUrlInput" type="url" class="text-input" placeholder="https://gist.githubusercontent.com/…/raw/state.json" /></label>
+                <label><span>Poll Interval (sec)</span><input id="relayIntervalInput" type="number" class="text-input" value="5" min="2" max="60" /></label>
+              </div>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn primary" id="copyRelayLiveUrlBtn" data-copy-feedback="true">Copy Relay Live URL</button>
+                <button type="button" class="capsule-btn primary" id="copyRelaySummaryUrlBtn" data-copy-feedback="true">Copy Relay Summary URL</button>
+              </div>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn" id="exportStateRelayBtn">Export State as Relay JSON</button>
+                <button type="button" class="capsule-btn" id="testRelayUrlBtn">Test Relay URL</button>
+              </div>
+              <div class="status-chip" id="relayTestStatusText" data-state="warn">not tested</div>
               <h3 class="mini-title">Health Check</h3>
               <div class="status-chip" id="obsHealthStatusText" data-state="warn">Health status: not checked</div>
               <textarea id="obsHealthResultArea" class="json-area small" readonly></textarea>

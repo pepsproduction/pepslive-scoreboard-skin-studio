@@ -4,6 +4,7 @@ import { PEPSLIVE_MESSAGE_TYPES, PEPSLIVE_SCOREBOARD_PROTOCOL, createProtocolPay
 import { SharedStateBridge, getSharedOverlayState } from "../src/shared-state-bridge.js";
 import { evaluateRenderedSlots, getRenderContractByTemplateId } from "../src/template-render-contract.js";
 import { DEFAULT_DISPLAY_OPTIONS, parseDisplayOptionsString, decodePortableState } from "../src/utils.js";
+import { RelayPoller, sanitizeRelayUrl, RELAY_SOURCE_LABEL } from "../src/relay-poller.js";
 
 const DEFAULT_THEME = {
   primaryColor: "#ff7a18",
@@ -110,6 +111,7 @@ const FALLBACK_MOCK = {
 
 let mockDataCache = null;
 let sharedBridge = null;
+let relayPoller = null;
 let currentSkinId = "FB-LIVE-01";
 let currentAnimation = "smooth-broadcast";
 let currentTheme = { ...DEFAULT_THEME };
@@ -134,6 +136,7 @@ function parseQueryParams() {
     themeRaw: params.get("theme"),
     slotsRaw: params.get("slots"),
     stateRaw: params.get("state"),  // Phase 4.3 portable state
+    relayRaw: params.get("relay"),   // Phase 4.4 relay poller URL (percent-encoded)
     isolated: params.get("isolated") === "1",
     debug: params.get("debug") === "1"
   };
@@ -460,6 +463,9 @@ function resolveSourceLabel(sourceValue = "") {
   if (source.includes("portable")) {
     return "Portable URL State";
   }
+  if (source.includes(RELAY_SOURCE_LABEL) || source.includes("relay")) {
+    return "Relay Poller";
+  }
   if (source.includes("dock")) {
     return "PepsLive Dock";
   }
@@ -698,6 +704,43 @@ async function initOverlay() {
       await applyProtocolPayload(storagePayload, "storage-bootstrap");
     }
   }
+
+  // --- Phase 4.4: Start Relay Poller if ?relay= param is present ---
+  const relayUrl = query.relayRaw ? sanitizeRelayUrl(decodeURIComponent(query.relayRaw)) : null;
+  if (relayUrl && !isolatedPreviewMode) {
+    relayPoller = new RelayPoller({
+      url: relayUrl,
+      intervalMs: 5_000,
+      onPayload: async (data) => {
+        // Relay delivers the full protocol payload OR raw matchData.
+        // If it's a full protocol payload use it directly; otherwise wrap it.
+        try {
+          await applyProtocolPayload(data, RELAY_SOURCE_LABEL);
+        } catch (_error) {
+          // Ignore relay parse errors silently
+        }
+      },
+      onError: (_error) => {
+        // Relay errors are silent in overlay (no crash, no fallback needed)
+      },
+      onStatus: (status) => {
+        if (debugEnabled && debugElement) {
+          const relayNote = document.getElementById("overlay-relay-status");
+          if (!relayNote) {
+            const note = document.createElement("div");
+            note.id = "overlay-relay-status";
+            note.style.cssText = "margin-top:4px;padding:2px 4px;background:rgba(99,102,241,0.25);border-radius:4px;font-size:10px;";
+            debugElement.append(note);
+          }
+          const el = document.getElementById("overlay-relay-status");
+          if (el) {
+            el.textContent = `Relay: ${status.running ? "polling" : "stopped"} | errors: ${status.consecutiveErrors}`;
+          }
+        }
+      }
+    });
+    relayPoller.start();
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -705,3 +748,8 @@ document.addEventListener("DOMContentLoaded", () => {
     fallbackRender("init-error");
   });
 });
+
+window.addEventListener("beforeunload", () => {
+  relayPoller?.stop();
+});
+

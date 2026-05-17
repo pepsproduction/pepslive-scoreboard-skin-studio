@@ -324,3 +324,94 @@ export function generatePortableOverlayUrl(opts) {
     warning
   };
 }
+
+// ---------------------------------------------------------------------------
+// Phase 4.4 – Relay Overlay URL
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate an overlay URL that includes a `?relay=` parameter pointing to a
+ * remote JSON state endpoint. The overlay will poll that URL for live updates.
+ *
+ * Can be combined with `?state=` (portable skin config) so the overlay loads
+ * the correct skin immediately while waiting for the first relay poll.
+ *
+ * @param {{
+ *   skinId: string,
+ *   type: string,
+ *   relayUrl: string,
+ *   sport?: string,
+ *   animationStyle?: string,
+ *   theme?: object,
+ *   displayOptions?: object,
+ *   debug?: boolean,
+ *   absolute?: boolean,
+ *   embedPortableState?: boolean
+ * }} opts
+ * @returns {{ url: string, warning: string|null }}
+ */
+export function generateRelayOverlayUrl(opts) {
+  const {
+    skinId,
+    type,
+    relayUrl,
+    sport,
+    animationStyle,
+    theme,
+    displayOptions,
+    debug = false,
+    absolute = true,
+    embedPortableState = true
+  } = opts;
+
+  if (!relayUrl) {
+    return { url: "", warning: "Relay URL is required." };
+  }
+
+  let sanitizedRelay;
+  try {
+    const parsed = new URL(relayUrl.trim());
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      return { url: "", warning: "Relay URL must use http:// or https://" };
+    }
+    sanitizedRelay = parsed.toString();
+  } catch (_error) {
+    return { url: "", warning: "Relay URL is not a valid URL." };
+  }
+
+  const overlayFile = type === "summary" ? "overlays/summary.html" : "overlays/live.html";
+  const basePath = getProjectRootPath();
+  const url = new URL(`${basePath}${overlayFile}`, window.location.href);
+  url.searchParams.set("relay", encodeURIComponent(sanitizedRelay));
+
+  let warning = null;
+
+  // Optionally also embed portable skin config so the overlay loads correctly
+  // on first render even before the first relay poll completes.
+  if (embedPortableState && skinId) {
+    const stateObj = {};
+    if (skinId) stateObj.skinId = skinId;
+    if (sport) stateObj.sport = sport;
+    if (type) stateObj.type = type;
+    if (animationStyle) stateObj.animation = animationStyle;
+    if (theme && Object.keys(theme).length > 0) stateObj.theme = theme;
+    if (displayOptions && Object.keys(displayOptions).length > 0) stateObj.displayOptions = displayOptions;
+
+    const { encoded, oversized, dropped } = encodePortableState(stateObj);
+    url.searchParams.set("state", encoded);
+
+    if (oversized) {
+      warning = `Portable state is oversized (${encoded.length} chars). Relay will still work for live scores.`;
+    } else if (dropped.length > 0) {
+      warning = `Fields dropped from portable state: ${dropped.join(", ")}.`;
+    }
+  }
+
+  if (debug) url.searchParams.set("debug", "1");
+
+  return {
+    url: absolute ? url.toString() : `${url.pathname}${url.search}`,
+    warning
+  };
+}
+

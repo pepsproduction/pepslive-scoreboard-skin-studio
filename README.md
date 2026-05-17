@@ -555,3 +555,89 @@ node scripts/check-phase3-integration.mjs   # PASS (no regressions)
 node --check src/utils.js src/app.js overlays/overlay-core.js src/shared-state-bridge.js
 ```
 
+## Phase 4.4 Relay Poller + Named Skin Presets
+
+### ปัญหาที่แก้
+Phase 4.3 แก้ปัญหา skin/theme เดินทางไปกับ URL แล้ว แต่ **live score ยังต้องพึ่ง same-origin** เพราะ BroadcastChannel/localStorage ไม่ข้ามระหว่าง storage profile ได้ Phase 4.4 แก้ด้วยการเพิ่ม Relay Poller ที่ polling URL สาธารณะ
+
+### Relay Poller
+
+#### ทำงานอย่างไร
+1. **Export** state ปัจจุบันจาก dock.html → Settings → Relay Config → "Export State as Relay JSON"
+2. **Host** ไฟล์ JSON ที่ได้บน URL สาธารณะ HTTPS ใดก็ได้ เช่น:
+   - GitHub Gist (raw URL)
+   - Dropbox public link
+   - GitHub Pages (`data/relay-state.json`)
+   - PHP/Python one-liner ที่ return JSON
+3. **วาง URL** ลงใน "Relay JSON URL" และตั้ง poll interval
+4. **Copy Relay Live URL / Relay Summary URL** → วางใน OBS Browser Source
+5. สำหรับ live score update: อัปเดตไฟล์ JSON ด้วย script หรือ HTTP PUT จากระบบควบคุมคะแนน
+6. Overlay จะ poll ทุก N วินาทีและ update อัตโนมัติ
+
+#### URL ที่ได้
+```text
+overlays/live.html?relay=https%3A%2F%2F...&state=<base64url>
+```
+- `?relay=` = URL ของ relay JSON endpoint
+- `?state=` = skin/theme แบบ portable (โหลดทันทีก่อน poll แรก)
+
+#### Relay JSON format
+JSON ที่ relay endpoint ต้อง return เป็น PepsLive protocol payload หรือ flat matchData:
+
+```json
+{
+  "protocol": "PEPSLIVE_SCOREBOARD_STATE_V1",
+  "version": 1,
+  "source": "relay",
+  "sport": "football",
+  "skinId": "FB-LIVE-01",
+  "matchData": {
+    "homeName": "Dragon FC",
+    "awayName": "Tiger FC",
+    "homeScore": 2,
+    "awayScore": 1,
+    "gameClock": "72:00",
+    "periodLabel": "2H",
+    "statusLabel": "LIVE"
+  }
+}
+```
+
+### Named Skin Presets
+
+บันทึกชื่อ config (skin + theme + display options + animation) สำหรับใช้งานซ้ำได้เร็ว:
+
+1. เลือก skin และปรับ theme ตามต้องการ
+2. เปิด Settings → Skin Presets
+3. พิมพ์ชื่อ preset เช่น "Cup Final 2026 – Live"
+4. กด **Save Preset**
+5. กด **Load** เพื่อสลับไป preset นั้นได้ทุกเมื่อ
+
+Presets เก็บใน localStorage ของ Skin Studio dock (**ไม่ส่งไปที่ overlay** และไม่เกี่ยวกับ relay)
+
+### Relay Poller Technical Details
+- ETag support: ไม่ re-parse ถ้า server return 304 Not Modified
+- Exponential backoff: 2× interval per error, cap ที่ 30 วินาที
+- `sanitizeRelayUrl`: reject ftp/file/non-http protocols
+- `clampRelayInterval`: 2 000 ms – 60 000 ms (2–60 วินาที)
+- Poller หยุดอัตโนมัติเมื่อ OBS Browser Source ถูกซ่อน (beforeunload)
+- Debug box แสดงสถานะ: `Relay: polling | errors: 0`
+
+### QA check
+```bash
+node scripts/check-phase44-relay.mjs   # 59/59 assertions pass
+node scripts/check-portable-url.mjs    # 32/32 PASS
+node scripts/check-phase3-integration.mjs   # PASS
+node --check src/relay-poller.js src/skin-storage.js src/utils.js overlays/overlay-core.js src/app.js
+```
+
+### Sync Strategy Summary (Phase 4.4 complete)
+
+| Method | Cross-origin | Live scores | Effort |
+|---|---|---|---|
+| Same-origin BroadcastChannel | ❌ | ✅ auto | Zero |
+| Portable URL `?state=` | ✅ | ❌ static only | Copy URL once |
+| **Relay Poller `?relay=`** | ✅ | ✅ with uploader | Host JSON + update |
+| Future hosted relay server | ✅ | ✅ fully auto | Phase ถัดไป |
+
+

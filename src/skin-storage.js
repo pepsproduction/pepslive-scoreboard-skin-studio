@@ -138,3 +138,128 @@ export function exportSkinJson(payload) {
     updatedAt: nowIso()
   };
 }
+
+// ---------------------------------------------------------------------------
+// Phase 4.4 – Named Skin Presets
+// ---------------------------------------------------------------------------
+
+const PRESETS_KEY = "pepslive:skinPresets";
+
+/**
+ * Generate a simple unique ID for a preset.
+ * @returns {string}
+ */
+function generatePresetId() {
+  return `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * Get the raw presets map from localStorage.
+ * @returns {Record<string, object>}
+ */
+export function getSkinPresets() {
+  return safeJsonParse(localStorage.getItem(PRESETS_KEY), {});
+}
+
+/**
+ * Get all presets as an array sorted by savedAt descending (newest first).
+ * @returns {Array<object>}
+ */
+export function listSkinPresets() {
+  const map = getSkinPresets();
+  return Object.values(map).sort((a, b) => {
+    const ta = a.savedAt || "";
+    const tb = b.savedAt || "";
+    return ta < tb ? 1 : ta > tb ? -1 : 0;
+  });
+}
+
+/**
+ * Save (or overwrite) a named preset.
+ * If `id` is provided, the existing preset is updated.
+ * Returns the saved preset object.
+ *
+ * @param {{
+ *   id?: string,
+ *   name: string,
+ *   skinId: string,
+ *   sport: string,
+ *   type: string,
+ *   theme?: object,
+ *   animation?: string,
+ *   displayOptions?: object,
+ *   eventLogo?: string
+ * }} preset
+ * @returns {object}
+ */
+export function saveSkinPreset(preset) {
+  const map = getSkinPresets();
+  const id = preset.id || generatePresetId();
+  const now = nowIso();
+  const saved = {
+    id,
+    name: String(preset.name || "Untitled Preset").slice(0, 64),
+    skinId: preset.skinId || "",
+    sport: preset.sport || "football",
+    type: preset.type || "live",
+    theme: preset.theme || {},
+    animation: typeof preset.animation === "string" ? preset.animation : (preset.animation?.style || "smooth-broadcast"),
+    displayOptions: preset.displayOptions || {},
+    eventLogo: preset.eventLogo || "",
+    savedAt: now
+  };
+  map[id] = saved;
+  localStorage.setItem(PRESETS_KEY, JSON.stringify(map));
+  return saved;
+}
+
+/**
+ * Get a single preset by id.
+ * @param {string} id
+ * @returns {object|null}
+ */
+export function getSkinPresetById(id) {
+  if (!id) return null;
+  const map = getSkinPresets();
+  return map[id] || null;
+}
+
+/**
+ * Delete a preset by id.
+ * @param {string} id
+ * @returns {boolean} true if deleted, false if not found
+ */
+export function deleteSkinPreset(id) {
+  const map = getSkinPresets();
+  if (!map[id]) return false;
+  delete map[id];
+  localStorage.setItem(PRESETS_KEY, JSON.stringify(map));
+  return true;
+}
+
+/**
+ * Relay config storage (Phase 4.4).
+ */
+const RELAY_CONFIG_KEY = "pepslive:relayConfig";
+
+/**
+ * Get saved relay config.
+ * @returns {{ url: string, intervalSec: number }}
+ */
+export function getRelayConfig() {
+  return safeJsonParse(localStorage.getItem(RELAY_CONFIG_KEY), { url: "", intervalSec: 5 });
+}
+
+/**
+ * Save relay config.
+ * @param {{ url: string, intervalSec: number }} config
+ */
+export function setRelayConfig(config) {
+  const saved = {
+    url: String(config.url || "").trim(),
+    intervalSec: Math.max(2, Math.min(60, Math.round(Number(config.intervalSec) || 5)))
+  };
+  localStorage.setItem(RELAY_CONFIG_KEY, JSON.stringify(saved));
+  return saved;
+}
+
