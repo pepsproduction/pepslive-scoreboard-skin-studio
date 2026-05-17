@@ -167,6 +167,10 @@ function updatePreviewSummary(template = state.selectedTemplate) {
   if (ui.previewSourceSizeText) {
     const sourcePreset = template ? getSourcePreset(template.type) : null;
     ui.previewSourceSizeText.textContent = sourcePreset ? sourcePreset.label : "-";
+    if (sourcePreset && ui.previewStage) {
+      ui.previewStage.style.setProperty("--preview-aspect-ratio", `${sourcePreset.width} / ${sourcePreset.height}`);
+      ui.previewStage.dataset.sourceType = template.type;
+    }
   }
 }
 
@@ -177,6 +181,9 @@ function syncDisplayOptionControls() {
   const options = { ...DEFAULT_DISPLAY_OPTIONS, ...(state.displayOptions || {}) };
   ui.displayOptionsForm.querySelectorAll("input[data-display-option]").forEach((input) => {
     input.checked = options[input.dataset.displayOption] !== false;
+  });
+  ui.displayOptionsForm.querySelectorAll("select[data-display-option]").forEach((select) => {
+    select.value = options[select.dataset.displayOption] || DEFAULT_DISPLAY_OPTIONS[select.dataset.displayOption] || "full";
   });
 }
 
@@ -637,6 +644,31 @@ async function copyCurrentOverlayDebugUrl(template = state.selectedTemplate, opt
   return copyOverlayUrlForTemplate(template, { ...options, debug: true });
 }
 
+function openSettingsModal() {
+  if (!ui.settingsModal) {
+    return;
+  }
+  if (typeof ui.settingsModal.showModal === "function") {
+    ui.settingsModal.showModal();
+  } else {
+    ui.settingsModal.setAttribute("open", "");
+  }
+  window.requestAnimationFrame(() => {
+    previewEngine?.postLiveUpdate?.();
+  });
+}
+
+function closeSettingsModal() {
+  if (!ui.settingsModal) {
+    return;
+  }
+  if (typeof ui.settingsModal.close === "function") {
+    ui.settingsModal.close();
+  } else {
+    ui.settingsModal.removeAttribute("open");
+  }
+}
+
 async function addSourceToObs(template = state.selectedTemplate) {
   if (!template || !previewEngine) {
     return;
@@ -709,6 +741,20 @@ function bindTopActions() {
     copyCurrentOverlayUrl(undefined, { feedbackButton: ui.copyUrlBtn });
   });
 
+  ui.openSettingsBtn?.addEventListener("click", () => {
+    openSettingsModal();
+  });
+
+  ui.closeSettingsBtn?.addEventListener("click", () => {
+    closeSettingsModal();
+  });
+
+  ui.settingsModal?.addEventListener("click", (event) => {
+    if (event.target === ui.settingsModal) {
+      closeSettingsModal();
+    }
+  });
+
   ui.addSourceBtn.addEventListener("click", () => {
     addSourceToObs();
   });
@@ -762,13 +808,16 @@ function bindPreviewTools() {
 
   ui.displayOptionsForm?.addEventListener("change", (event) => {
     const input = event.target.closest("input[data-display-option]");
-    if (!input) {
+    const select = event.target.closest("select[data-display-option]");
+    if (!input && !select) {
       return;
     }
+    const key = input?.dataset.displayOption || select?.dataset.displayOption;
+    const value = input ? input.checked : select.value;
     state.displayOptions = {
       ...DEFAULT_DISPLAY_OPTIONS,
       ...state.displayOptions,
-      [input.dataset.displayOption]: input.checked
+      [key]: value
     };
     previewEngine.setDisplayOptions(state.displayOptions);
     refreshObsUrlsPanel();
@@ -1069,11 +1118,13 @@ function bindObsPanel() {
 
   ui.livePresetSelect.addEventListener("change", () => {
     state.obsLivePreset = ui.livePresetSelect.value;
+    updatePreviewSummary();
     refreshObsUrlsPanel();
   });
 
   ui.summaryPresetSelect.addEventListener("change", () => {
     state.obsSummaryPreset = ui.summaryPresetSelect.value;
+    updatePreviewSummary();
     refreshObsUrlsPanel();
   });
 
@@ -1428,6 +1479,9 @@ function cacheElements() {
   ui.previewSkinText = document.getElementById("previewSkinText");
   ui.previewSportTypeText = document.getElementById("previewSportTypeText");
   ui.previewSourceSizeText = document.getElementById("previewSourceSizeText");
+  ui.openSettingsBtn = document.getElementById("openSettingsBtn");
+  ui.closeSettingsBtn = document.getElementById("closeSettingsBtn");
+  ui.settingsModal = document.getElementById("settingsModal");
   ui.previewCopyProductionBtn = document.getElementById("previewCopyProductionBtn");
   ui.previewCopyDebugBtn = document.getElementById("previewCopyDebugBtn");
   ui.previewAddSourceBtn = document.getElementById("previewAddSourceBtn");
@@ -1545,7 +1599,10 @@ function initGallery() {
   gallery = new TemplateGallery({
     root: ui.galleryRoot,
     templates: TEMPLATE_REGISTRY,
-    onPreview: async (template) => applyTemplate(template, { markRecent: false, broadcast: false, forceMock: false }),
+    onPreview: async (template) => {
+      await applyTemplate(template, { markRecent: false, broadcast: false, forceMock: false });
+      openSettingsModal();
+    },
     onUse: async (template) => {
       await applyTemplate(template, { markRecent: true, broadcast: true, forceMock: false });
       notify(`Using skin ${template.id}`);

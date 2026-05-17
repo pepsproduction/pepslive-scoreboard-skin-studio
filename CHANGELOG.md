@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## Phase 4.0 - Settings Modal + Source-Ratio Preview
+
+### Studio UX
+- Moved skin tuning controls into a dedicated settings modal with a locked preview column and scrollable controls
+- Updated source preview sizing so live and summary previews follow the selected Browser Source preset ratio
+- Added Browser Source text mode: full text or blank plates for users who want to add their own text/font layers in OBS
+
+### Gallery
+- Switched template cards to real overlay iframe thumbnails so gallery previews match actual skin output more closely
+- Tightened card action labels and button layout to avoid text overflow on narrow cards
+
+### Overlay
+- Added blank text rendering mode while preserving scoreboard structure and transparent background behavior
+
 ## Phase 3.9 - Web Studio Selection Stability + Slot Controls
 
 ### Stability

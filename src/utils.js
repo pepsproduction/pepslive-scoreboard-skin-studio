@@ -24,7 +24,8 @@ export const DEFAULT_DISPLAY_OPTIONS = {
   gameClock: true,
   periodLabel: true,
   statusLabel: true,
-  extraRow: true
+  extraRow: true,
+  textMode: "full"
 };
 
 export function clamp(value, min, max) {
@@ -95,7 +96,7 @@ export function parseThemeString(value) {
 }
 
 export function stringifyDisplayOptions(displayOptions) {
-  return encodeURIComponent(JSON.stringify(displayOptions || {}));
+  return JSON.stringify(displayOptions || {});
 }
 
 export function parseDisplayOptionsString(value) {
@@ -103,9 +104,13 @@ export function parseDisplayOptionsString(value) {
     return null;
   }
   try {
-    return JSON.parse(decodeURIComponent(value));
+    return JSON.parse(value);
   } catch (_error) {
-    return null;
+    try {
+      return JSON.parse(decodeURIComponent(value));
+    } catch (_decodeError) {
+      return null;
+    }
   }
 }
 
@@ -133,7 +138,10 @@ export function generateOverlayUrl({
     url.searchParams.set("theme", stringifyTheme(theme));
   }
 
-  if (displayOptions && Object.values(displayOptions).some((value) => value === false)) {
+  const hasCustomDisplayOptions =
+    displayOptions &&
+    Object.entries(displayOptions).some(([key, value]) => DEFAULT_DISPLAY_OPTIONS[key] !== value);
+  if (hasCustomDisplayOptions) {
     url.searchParams.set("slots", stringifyDisplayOptions(displayOptions));
   }
 

@@ -3,8 +3,12 @@
     grid-template-columns: 250px minmax(0, 1fr) minmax(0, 430px);
   }
 
+  .dock-layout.gallery-layout {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+
   .template-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 }
 
@@ -14,6 +18,23 @@
     grid-template-areas:
       "sidebar main"
       "right right";
+  }
+
+  .dock-layout.gallery-layout {
+    grid-template-areas:
+      "sidebar main";
+  }
+
+  .settings-modal-body {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-preview-column {
+    overflow: visible;
+  }
+
+  .preview-panel {
+    position: relative;
   }
 
   .sidebar {
@@ -60,8 +81,23 @@
       "right";
   }
 
+  .dock-layout.gallery-layout {
+    grid-template-areas:
+      "sidebar"
+      "main";
+  }
+
   .template-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  .settings-modal {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .settings-modal-shell {
+    border-radius: 0;
   }
 
   .gallery-head,
@@ -117,6 +153,14 @@
   }
 
   .slot-toggle-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .slot-toggle.text-mode-toggle {
     grid-template-columns: 1fr;
   }
 }

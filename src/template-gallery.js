@@ -1,3 +1,5 @@
+import { generateOverlayUrl } from "./utils.js";
+
 function escapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -138,10 +140,14 @@ export class TemplateGallery {
                     const isFavorite = this.favorites.includes(template.id);
                     const isSelected = this.selectedTemplateId === template.id;
                     const source = template.recommendedSource || { width: 900, height: 180 };
-                    const thumbData =
-                      template.sport === "basketball"
-                        ? { home: "WOL", away: "HAW", homeScore: "78", awayScore: "74", clock: "Q4" }
-                        : { home: "DRA", away: "TIG", homeScore: "2", awayScore: "1", clock: "45'" };
+                    const thumbUrl = generateOverlayUrl({
+                      skinId: template.id,
+                      type: template.type,
+                      animationStyle: "none",
+                      cacheBust: false,
+                      absolute: false
+                    });
+                    const thumbRatio = `${source.width} / ${source.height}`;
                     return `
                       <article
                         class="template-card ${isSelected ? "is-selected" : ""}"
@@ -149,18 +155,12 @@ export class TemplateGallery {
                         tabindex="0"
                         aria-current="${isSelected ? "true" : "false"}"
                       >
-                        <div class="template-thumb skin-thumb-${template.sport} skin-thumb-${template.type} skin-thumb-${template.id}">
+                        <div class="template-thumb real-template-thumb skin-thumb-${template.sport} skin-thumb-${template.type} skin-thumb-${template.id}" style="--thumb-aspect-ratio: ${thumbRatio}">
                           <div class="thumb-topline">
                             <span class="badge sport">${escapeHtml(template.sport)}</span>
                             <span class="badge type">${escapeHtml(template.type)}</span>
                           </div>
-                          <div class="thumb-scorebug" aria-hidden="true">
-                            <span class="thumb-team home">${thumbData.home}</span>
-                            <span class="thumb-score">${thumbData.homeScore}</span>
-                            <span class="thumb-clock">${thumbData.clock}</span>
-                            <span class="thumb-score">${thumbData.awayScore}</span>
-                            <span class="thumb-team away">${thumbData.away}</span>
-                          </div>
+                          <iframe class="thumb-frame" src="${escapeAttribute(thumbUrl)}" title="${escapeAttribute(template.id)} preview" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
                           <span class="thumb-code">${escapeHtml(template.id)}</span>
                           <span class="thumb-name">${escapeHtml(template.name)}</span>
                           ${isSelected ? '<span class="selected-ribbon">Selected</span>' : ""}
@@ -181,16 +181,12 @@ export class TemplateGallery {
                           </div>
                         </div>
                         <div class="card-actions">
-                          <button type="button" class="capsule-btn tiny primary" data-action="use">Use Skin</button>
-                          <button type="button" class="capsule-btn tiny" data-action="preview">Preview</button>
-                          <button
-                            type="button"
-                            class="capsule-btn tiny ${isFavorite ? "is-fav" : ""}"
-                            data-action="favorite"
-                          >
-                            ${isFavorite ? "Favorited" : "Favorite"}
+                          <button type="button" class="capsule-btn tiny primary" data-action="use">Use</button>
+                          <button type="button" class="capsule-btn tiny" data-action="preview">Customize</button>
+                          <button type="button" class="capsule-btn tiny ${isFavorite ? "is-fav" : ""}" data-action="favorite">
+                            ${isFavorite ? "Saved" : "Fav"}
                           </button>
-                          <button type="button" class="capsule-btn tiny" data-action="copy">Copy URL</button>
+                          <button type="button" class="capsule-btn tiny" data-action="copy">Copy</button>
                         </div>
                       </article>
                     `;

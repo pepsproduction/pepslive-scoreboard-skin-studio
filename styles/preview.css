@@ -1,11 +1,19 @@
 .preview-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--preview-aspect-ratio, 16 / 9);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   overflow: hidden;
   background: #0f172a;
+}
+
+.preview-stage[data-source-type="live"] {
+  max-height: min(48vh, 360px);
+}
+
+.preview-stage[data-source-type="summary"] {
+  max-height: min(58vh, 620px);
 }
 
 .preview-stage iframe {

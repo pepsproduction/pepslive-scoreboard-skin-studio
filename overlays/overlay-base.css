@@ -372,6 +372,23 @@ body {
   min-height: 0;
 }
 
+#overlay-root.text-mode-blank [data-slot="eventName"],
+#overlay-root.text-mode-blank [data-slot="statusLabel"],
+#overlay-root.text-mode-blank [data-slot="homeName"],
+#overlay-root.text-mode-blank [data-slot="awayName"],
+#overlay-root.text-mode-blank [data-slot="homeShortName"],
+#overlay-root.text-mode-blank [data-slot="awayShortName"],
+#overlay-root.text-mode-blank [data-slot="homeScore"],
+#overlay-root.text-mode-blank [data-slot="awayScore"],
+#overlay-root.text-mode-blank [data-slot="gameClock"],
+#overlay-root.text-mode-blank [data-slot="periodLabel"],
+#overlay-root.text-mode-blank .extra-label,
+#overlay-root.text-mode-blank .extra-value,
+#overlay-root.text-mode-blank .logo-fallback-badge {
+  color: transparent !important;
+  text-shadow: none !important;
+}
+
 #overlay-root.slot-inspector-core [data-slot="eventLogo"],
 #overlay-root.slot-inspector-core [data-slot="homeLogo"],
 #overlay-root.slot-inspector-core [data-slot="awayLogo"],

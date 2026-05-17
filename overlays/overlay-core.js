@@ -295,6 +295,7 @@ function applyDisplayOptions(root) {
   root.classList.toggle("hide-period-label", !displayOptions.periodLabel);
   root.classList.toggle("hide-status-label", !displayOptions.statusLabel);
   root.classList.toggle("hide-extra-row", !displayOptions.extraRow);
+  root.classList.toggle("text-mode-blank", displayOptions.textMode === "blank");
 
   const eventRowEmpty = !displayOptions.eventLogo && !displayOptions.eventName && !displayOptions.statusLabel;
   const gameMetaEmpty = !displayOptions.gameClock && !displayOptions.periodLabel;

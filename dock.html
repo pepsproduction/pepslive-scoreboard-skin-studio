@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="th">
   <head>
     <meta charset="UTF-8" />
@@ -13,7 +13,7 @@
       <header class="dock-header glass-panel">
         <div class="brand-block">
           <h1>PepsLive Scoreboard Skin Studio</h1>
-          <p>เว็บสำหรับเลือก Skin Scoreboard, Preview และ Copy URL ไปใช้ใน OBS Browser Source</p>
+          <p>Web studio for choosing scoreboard skins, previewing source ratio, and copying OBS Browser Source URLs.</p>
         </div>
         <div class="header-meta">
           <div class="status-line web-hidden">
@@ -25,7 +25,8 @@
             <strong id="currentSkinLabel">-</strong>
           </div>
           <div class="header-actions">
-            <button type="button" class="capsule-btn primary" id="copyUrlBtn" data-copy-feedback="true">Copy Browser Source URL</button>
+            <button type="button" class="capsule-btn primary" id="openSettingsBtn">Open Skin Settings</button>
+            <button type="button" class="capsule-btn" id="copyUrlBtn" data-copy-feedback="true">Copy Browser Source URL</button>
             <button type="button" class="capsule-btn primary web-hidden" id="addSourceBtn">Add Source</button>
           </div>
         </div>
@@ -33,7 +34,7 @@
 
       <div id="dockMessage" class="dock-message" data-level="info">Loading...</div>
 
-      <div class="dock-layout">
+      <div class="dock-layout gallery-layout">
         <aside class="sidebar glass-panel">
           <section class="side-group">
             <h2>Sport Filter</h2>
@@ -71,274 +72,249 @@
         <main class="main-panel glass-panel">
           <div id="templateGalleryRoot"></div>
         </main>
+      </div>
+    </div>
 
-        <aside class="right-panel glass-panel">
-          <section class="panel-block">
-            <div class="preview-head">
-              <div>
-                <h2>Current Preview</h2>
-                <p class="tiny-note preview-copy">Preview skin ที่เลือก และ Copy URL ไปใส่ Browser Source เองได้ทันที</p>
+    <dialog id="settingsModal" class="settings-modal">
+      <div class="settings-modal-shell glass-panel">
+        <header class="settings-modal-header">
+          <div>
+            <p class="eyebrow">Skin Settings Studio</p>
+            <h2>Preview, tune, and copy the current scoreboard source</h2>
+          </div>
+          <button type="button" class="capsule-btn" id="closeSettingsBtn">Close</button>
+        </header>
+
+        <div class="settings-modal-body">
+          <aside class="settings-preview-column">
+            <section class="panel-block preview-panel">
+              <div class="preview-head">
+                <div>
+                  <h2>Source Preview</h2>
+                  <p class="tiny-note preview-copy">Preview keeps the same ratio as the selected Browser Source preset.</p>
+                </div>
+                <small id="previewStatusText">-</small>
               </div>
-              <small id="previewStatusText">-</small>
-            </div>
-            <div class="preview-meta-bar">
-              <div><strong>Current Skin:</strong> <span id="previewSkinText">-</span></div>
-              <div><strong>Sport/Type:</strong> <span id="previewSportTypeText">-</span></div>
-              <div><strong>Source Preset:</strong> <span id="previewSourceSizeText">-</span></div>
-            </div>
-            <div class="inline-row preview-actions">
-              <button type="button" class="capsule-btn primary" id="previewCopyProductionBtn" data-copy-feedback="true">Copy Browser Source URL</button>
-              <button type="button" class="capsule-btn" id="previewCopyDebugBtn" data-copy-feedback="true">Copy Debug URL</button>
-              <button type="button" class="capsule-btn web-hidden" id="previewAddSourceBtn">Add Source</button>
-            </div>
-            <div id="previewStage" class="preview-stage bg-transparent-grid">
-              <iframe id="overlayPreviewFrame" title="Overlay Preview" loading="eager" allowtransparency="true"></iframe>
-              <div id="safeAreaOverlay" class="safe-layer safe-off"></div>
-            </div>
-            <div class="preview-controls">
-              <label>
-                <span>Background Test Mode</span>
-                <select id="backgroundModeSelect" class="ui-select"></select>
-              </label>
-              <label>
-                <span>Safe Area Preview</span>
-                <select id="safeAreaSelect" class="ui-select"></select>
-              </label>
-              <label>
-                <span>Animation Preset</span>
-                <select id="animationPresetSelect" class="ui-select"></select>
-              </label>
-              <label>
-                <span>Slot Inspector</span>
-                <select id="slotInspectorSelect" class="ui-select"></select>
-              </label>
-              <label>
-                <span>Visual QA Mode</span>
-                <select id="visualQaModeSelect" class="ui-select"></select>
-              </label>
-            </div>
-            <div class="display-options-panel">
-              <div class="mini-title-row">
-                <h3 class="mini-title">Scoreboard Parts</h3>
-                <span class="tiny-note">Team names และ score เป็น core slot ที่แสดงเสมอ</span>
+              <div class="preview-meta-bar">
+                <div><strong>Current Skin:</strong> <span id="previewSkinText">-</span></div>
+                <div><strong>Sport/Type:</strong> <span id="previewSportTypeText">-</span></div>
+                <div><strong>Source Preset:</strong> <span id="previewSourceSizeText">-</span></div>
               </div>
-              <div id="displayOptionsForm" class="slot-toggle-grid">
-                <label class="slot-toggle"><input type="checkbox" data-display-option="eventLogo" checked /> <span>Event Logo</span></label>
-                <label class="slot-toggle"><input type="checkbox" data-display-option="eventName" checked /> <span>Event Name</span></label>
-                <label class="slot-toggle"><input type="checkbox" data-display-option="teamLogos" checked /> <span>Team Logos</span></label>
-                <label class="slot-toggle"><input type="checkbox" data-display-option="teamShortNames" checked /> <span>Short Names</span></label>
-                <label class="slot-toggle"><input type="checkbox" data-display-option="gameClock" checked /> <span>Clock</span></label>
-                <label class="slot-toggle"><input type="checkbox" data-display-option="periodLabel" checked /> <span>Period</span></label>
-                <label class="slot-toggle"><input type="checkbox" data-display-option="statusLabel" checked /> <span>Status</span></label>
-                <label class="slot-toggle"><input type="checkbox" data-display-option="extraRow" checked /> <span>Extra Stats</span></label>
+              <div class="inline-row preview-actions">
+                <button type="button" class="capsule-btn primary" id="previewCopyProductionBtn" data-copy-feedback="true">Copy Browser Source URL</button>
+                <button type="button" class="capsule-btn" id="previewCopyDebugBtn" data-copy-feedback="true">Copy Debug URL</button>
+                <button type="button" class="capsule-btn web-hidden" id="previewAddSourceBtn">Add Source</button>
               </div>
-            </div>
-            <div class="contract-summary">
-              <div class="status-chip" id="contractStatusText" data-state="ok">Render Contract: checking...</div>
-              <label>
+              <div id="previewStage" class="preview-stage bg-transparent-grid">
+                <iframe id="overlayPreviewFrame" title="Overlay Preview" loading="eager" allowtransparency="true"></iframe>
+                <div id="safeAreaOverlay" class="safe-layer safe-off"></div>
+              </div>
+              <div class="contract-summary compact-contract">
+                <div class="status-chip" id="contractStatusText" data-state="ok">Render Contract: checking...</div>
+              </div>
+            </section>
+          </aside>
+
+          <section class="settings-controls-column" aria-label="Scoreboard settings">
+            <section class="panel-block">
+              <h2>Preview Tools</h2>
+              <div class="preview-controls">
+                <label>
+                  <span>Background Test Mode</span>
+                  <select id="backgroundModeSelect" class="ui-select"></select>
+                </label>
+                <label>
+                  <span>Safe Area Preview</span>
+                  <select id="safeAreaSelect" class="ui-select"></select>
+                </label>
+                <label>
+                  <span>Animation Preset</span>
+                  <select id="animationPresetSelect" class="ui-select"></select>
+                </label>
+                <label>
+                  <span>Slot Inspector</span>
+                  <select id="slotInspectorSelect" class="ui-select"></select>
+                </label>
+                <label>
+                  <span>Visual QA Mode</span>
+                  <select id="visualQaModeSelect" class="ui-select"></select>
+                </label>
+              </div>
+              <div class="display-options-panel">
+                <div class="mini-title-row">
+                  <h3 class="mini-title">Scoreboard Parts</h3>
+                  <span class="tiny-note">Team names and scores stay available as core slots.</span>
+                </div>
+                <div id="displayOptionsForm" class="slot-toggle-grid">
+                  <label class="slot-toggle"><input type="checkbox" data-display-option="eventLogo" checked /> <span>Event Logo</span></label>
+                  <label class="slot-toggle"><input type="checkbox" data-display-option="eventName" checked /> <span>Event Name</span></label>
+                  <label class="slot-toggle"><input type="checkbox" data-display-option="teamLogos" checked /> <span>Team Logos</span></label>
+                  <label class="slot-toggle"><input type="checkbox" data-display-option="teamShortNames" checked /> <span>Short Names</span></label>
+                  <label class="slot-toggle"><input type="checkbox" data-display-option="gameClock" checked /> <span>Clock</span></label>
+                  <label class="slot-toggle"><input type="checkbox" data-display-option="periodLabel" checked /> <span>Period</span></label>
+                  <label class="slot-toggle"><input type="checkbox" data-display-option="statusLabel" checked /> <span>Status</span></label>
+                  <label class="slot-toggle"><input type="checkbox" data-display-option="extraRow" checked /> <span>Extra Stats</span></label>
+                  <label class="slot-toggle text-mode-toggle">
+                    <span>Browser Source Text</span>
+                    <select class="ui-select compact-select" data-display-option="textMode">
+                      <option value="full">Full Text</option>
+                      <option value="blank">Blank Plates</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <label class="contract-report-label">
                 <span>Template Contract Report</span>
                 <textarea id="contractReportArea" class="json-area small" readonly></textarea>
               </label>
-            </div>
-          </section>
+            </section>
 
-          <section class="panel-block">
-            <h2>Theme Editor</h2>
-            <div id="themeEditorRoot"></div>
-          </section>
+            <section class="panel-block">
+              <h2>Theme Editor</h2>
+              <div id="themeEditorRoot"></div>
+            </section>
 
-          <section class="panel-block web-hidden">
-            <h2>OBS Source Manager</h2>
-            <div class="obs-mode-grid">
-              <div class="obs-mode-card">
-                <div class="obs-mode-title">WebSocket Mode</div>
-                <div class="tiny-note">Connect to OBS if the websocket bridge is available.</div>
+            <section class="panel-block source-export-panel">
+              <h2>Browser Source Export</h2>
+              <p class="tiny-note">Choose source size, copy production/debug URLs, and add them manually in OBS Browser Source.</p>
+              <div class="obs-mode-grid web-hidden">
+                <div class="obs-mode-card">
+                  <div class="obs-mode-title">WebSocket Mode</div>
+                  <div class="tiny-note">Connect to OBS if the websocket bridge is available.</div>
+                </div>
+                <div class="obs-mode-card">
+                  <div class="obs-mode-title">Manual Mode</div>
+                  <div class="tiny-note">Copy the Production URL and add a Browser Source manually.</div>
+                </div>
               </div>
-              <div class="obs-mode-card">
-                <div class="obs-mode-title">Manual Mode</div>
-                <div class="tiny-note">Copy the Production URL and add a Browser Source manually.</div>
+              <div class="obs-form web-hidden">
+                <label><span>Host</span><input id="obsHost" type="text" placeholder="localhost" /></label>
+                <label><span>Port</span><input id="obsPort" type="text" placeholder="4455" /></label>
+                <label><span>Password</span><input id="obsPassword" type="password" placeholder="OBS WebSocket Password" /></label>
               </div>
-            </div>
-            <div class="obs-form">
-              <label>
-                <span>Host</span>
-                <input id="obsHost" type="text" placeholder="localhost" />
-              </label>
-              <label>
-                <span>Port</span>
-                <input id="obsPort" type="text" placeholder="4455" />
-              </label>
-              <label>
-                <span>Password</span>
-                <input id="obsPassword" type="password" placeholder="OBS WebSocket Password" />
-              </label>
-            </div>
-            <div class="status-chip" id="obsPanelStatusText" data-state="warn">manual mode</div>
-            <div class="meta-grid">
-              <div><strong>Current Scene:</strong> <span id="obsCurrentSceneText">-</span></div>
-              <div><strong>Connection Error:</strong> <span id="obsConnectionErrorText">-</span></div>
-            </div>
-            <div class="inline-row">
-              <button type="button" class="capsule-btn primary" id="obsConnectBtn">Connect OBS</button>
-              <button type="button" class="capsule-btn" id="obsDisconnectBtn">Disconnect OBS</button>
-              <button type="button" class="capsule-btn" id="obsTestBtn">Test Connection</button>
-            </div>
-            <div class="inline-row">
-              <button type="button" class="capsule-btn" id="addLiveSourceBtn">Add Live Source</button>
-              <button type="button" class="capsule-btn" id="addSummarySourceBtn">Add Summary Source</button>
-              <button type="button" class="capsule-btn" id="addBothSourcesBtn">Add Both Sources</button>
-            </div>
-            <div class="inline-row">
-              <label class="inline-label">
-                <span>Refresh Target</span>
-                <select id="obsRefreshTargetSelect" class="ui-select">
-                  <option value="live">Live Source</option>
-                  <option value="summary">Summary Source</option>
-                </select>
-              </label>
-              <button type="button" class="capsule-btn" id="refreshSelectedSourceBtn">Refresh Selected Source</button>
-              <button type="button" class="capsule-btn" id="forceRefreshSourceBtn">Force Refresh Source</button>
-            </div>
-            <div class="inline-row">
-              <button type="button" class="capsule-btn" id="regenerateUrlBtn">Regenerate URL</button>
-              <button type="button" class="capsule-btn" id="copyFreshUrlBtn">Copy Fresh URL</button>
-              <button type="button" class="capsule-btn" id="obsHealthBtn">Source Health Check</button>
-            </div>
-            <div class="inline-grid obs-preset-grid">
-              <label>
-                <span>Live Source Preset</span>
-                <select id="livePresetSelect" class="ui-select"></select>
-              </label>
-              <label>
-                <span>Summary Source Preset</span>
-                <select id="summaryPresetSelect" class="ui-select"></select>
-              </label>
-            </div>
-            <div class="meta-grid">
-              <div><strong>Selected Skin:</strong> <span id="obsSelectedSkinText">-</span></div>
-              <div><strong>Selected Live Preset:</strong> <span id="obsSelectedLivePresetText">-</span></div>
-              <div><strong>Selected Summary Preset:</strong> <span id="obsSelectedSummaryPresetText">-</span></div>
-            </div>
+              <div class="status-chip web-hidden" id="obsPanelStatusText" data-state="warn">manual mode</div>
+              <div class="meta-grid web-hidden">
+                <div><strong>Current Scene:</strong> <span id="obsCurrentSceneText">-</span></div>
+                <div><strong>Connection Error:</strong> <span id="obsConnectionErrorText">-</span></div>
+              </div>
+              <div class="inline-row web-hidden">
+                <button type="button" class="capsule-btn primary" id="obsConnectBtn">Connect OBS</button>
+                <button type="button" class="capsule-btn" id="obsDisconnectBtn">Disconnect OBS</button>
+                <button type="button" class="capsule-btn" id="obsTestBtn">Test Connection</button>
+              </div>
+              <div class="inline-row web-hidden">
+                <button type="button" class="capsule-btn" id="addLiveSourceBtn">Add Live Source</button>
+                <button type="button" class="capsule-btn" id="addSummarySourceBtn">Add Summary Source</button>
+                <button type="button" class="capsule-btn" id="addBothSourcesBtn">Add Both Sources</button>
+              </div>
+              <div class="inline-row web-hidden">
+                <label class="inline-label">
+                  <span>Refresh Target</span>
+                  <select id="obsRefreshTargetSelect" class="ui-select"><option value="live">Live Source</option><option value="summary">Summary Source</option></select>
+                </label>
+                <button type="button" class="capsule-btn" id="refreshSelectedSourceBtn">Refresh Selected Source</button>
+                <button type="button" class="capsule-btn" id="forceRefreshSourceBtn">Force Refresh Source</button>
+              </div>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn" id="regenerateUrlBtn">Regenerate URL</button>
+                <button type="button" class="capsule-btn" id="copyFreshUrlBtn">Copy Fresh URL</button>
+                <button type="button" class="capsule-btn" id="obsHealthBtn">Source Health Check</button>
+              </div>
+              <div class="inline-grid obs-preset-grid">
+                <label><span>Live Source Preset</span><select id="livePresetSelect" class="ui-select"></select></label>
+                <label><span>Summary Source Preset</span><select id="summaryPresetSelect" class="ui-select"></select></label>
+              </div>
+              <div class="meta-grid">
+                <div><strong>Selected Skin:</strong> <span id="obsSelectedSkinText">-</span></div>
+                <div><strong>Selected Live Preset:</strong> <span id="obsSelectedLivePresetText">-</span></div>
+                <div><strong>Selected Summary Preset:</strong> <span id="obsSelectedSummaryPresetText">-</span></div>
+              </div>
+              <h3 class="mini-title">Production & Debug URLs</h3>
+              <label><span>Live Production URL</span><textarea id="liveProductionUrlText" class="json-area small" readonly></textarea></label>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn" id="copyLiveProductionUrlBtn" data-copy-feedback="true">Copy Live Production URL</button>
+                <button type="button" class="capsule-btn" id="copyLiveDebugUrlBtn" data-copy-feedback="true">Copy Live Debug URL</button>
+              </div>
+              <label><span>Summary Production URL</span><textarea id="summaryProductionUrlText" class="json-area small" readonly></textarea></label>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn" id="copySummaryProductionUrlBtn" data-copy-feedback="true">Copy Summary Production URL</button>
+                <button type="button" class="capsule-btn" id="copySummaryDebugUrlBtn" data-copy-feedback="true">Copy Summary Debug URL</button>
+              </div>
+              <h3 class="mini-title">Recommended OBS Settings</h3>
+              <div class="tiny-note">Live: Browser 900x180. Summary: Browser 1920x1080. Transparent CSS is preserved.</div>
+              <label><span>OBS Custom CSS</span><textarea id="obsCustomCssText" class="json-area small" readonly>body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }</textarea></label>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn" id="copyObsCssBtn" data-copy-feedback="true">Copy OBS Custom CSS</button>
+                <button type="button" class="capsule-btn" id="copyLiveUrlBtn" data-copy-feedback="true">Copy Live URL</button>
+                <button type="button" class="capsule-btn" id="copySummaryUrlBtn" data-copy-feedback="true">Copy Summary URL</button>
+              </div>
+              <h3 class="mini-title">Health Check</h3>
+              <div class="status-chip" id="obsHealthStatusText" data-state="warn">Health status: not checked</div>
+              <textarea id="obsHealthResultArea" class="json-area small" readonly></textarea>
+              <h3 class="mini-title">Manual Setup Guide</h3>
+              <div class="tiny-note" id="obsManualGuideText">If OBS WebSocket is unavailable, copy the Production URL above into OBS Browser Source and use the selected preset size.</div>
+            </section>
 
-            <h3 class="mini-title">Production & Debug URLs</h3>
-            <label>
-              <span>Live Production URL</span>
-              <textarea id="liveProductionUrlText" class="json-area small" readonly></textarea>
-            </label>
-            <div class="inline-row">
-              <button type="button" class="capsule-btn" id="copyLiveProductionUrlBtn" data-copy-feedback="true">Copy Live Production URL</button>
-              <button type="button" class="capsule-btn" id="copyLiveDebugUrlBtn" data-copy-feedback="true">Copy Live Debug URL</button>
-            </div>
-            <label>
-              <span>Summary Production URL</span>
-              <textarea id="summaryProductionUrlText" class="json-area small" readonly></textarea>
-            </label>
-            <div class="inline-row">
-              <button type="button" class="capsule-btn" id="copySummaryProductionUrlBtn" data-copy-feedback="true">Copy Summary Production URL</button>
-              <button type="button" class="capsule-btn" id="copySummaryDebugUrlBtn" data-copy-feedback="true">Copy Summary Debug URL</button>
-            </div>
+            <section class="panel-block">
+              <h2>PepsLive Dock Integration</h2>
+              <p class="tiny-note">Monitor/debug only. Match control stays in the original PepsLive Dock UI.</p>
+              <label>
+                <span>Integration Mode</span>
+                <select id="integrationModeSelect" class="ui-select"><option value="Off">Off</option><option value="Listen Only" selected>Listen Only</option><option value="Manual Test">Manual Test</option></select>
+              </label>
+              <div class="status-chip" id="integrationPayloadStatusText" data-state="ok">Payload Status: waiting</div>
+              <div class="meta-grid">
+                <div><strong>Current Data Source:</strong> <span id="integrationDataSourceText">Mock Data</span></div>
+                <div><strong>Last Dock Update:</strong> <span id="integrationLastDockUpdateText">-</span></div>
+                <div><strong>Last Payload Source:</strong> <span id="integrationLastPayloadSourceText">-</span></div>
+                <div><strong>Current Sport:</strong> <span id="integrationCurrentSportText">-</span></div>
+                <div><strong>Current Skin:</strong> <span id="integrationCurrentSkinText">-</span></div>
+              </div>
+              <label><span>Current Match Preview</span><textarea id="integrationCurrentMatchPreviewArea" class="json-area small" readonly></textarea></label>
+            </section>
 
-            <h3 class="mini-title">Recommended OBS Settings</h3>
-            <div class="tiny-note">
-              Live: Source type Browser, Width 900, Height 180. Summary: Source type Browser, Width 1920, Height 1080.
-              Shutdown source when not visible: off. Refresh browser when scene becomes active: on.
-            </div>
-            <label>
-              <span>OBS Custom CSS</span>
-              <textarea id="obsCustomCssText" class="json-area small" readonly>body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }</textarea>
-            </label>
-            <div class="inline-row">
-              <button type="button" class="capsule-btn" id="copyObsCssBtn" data-copy-feedback="true">Copy OBS Custom CSS</button>
-              <button type="button" class="capsule-btn" id="copyLiveUrlBtn" data-copy-feedback="true">Copy Live URL</button>
-              <button type="button" class="capsule-btn" id="copySummaryUrlBtn" data-copy-feedback="true">Copy Summary URL</button>
-            </div>
+            <section class="panel-block">
+              <h2>Data Bridge</h2>
+              <p class="tiny-note">Data ingest/debug only. No score or timer controls are included here.</p>
+              <div class="status-chip" id="bridgeStatusText" data-state="ok">initializing...</div>
+              <div class="meta-grid">
+                <div><strong>Current Protocol:</strong> <span id="currentProtocolText">-</span></div>
+                <div><strong>Last Sync Time:</strong> <span id="lastSyncTimeText">-</span></div>
+              </div>
+              <label>
+                <span>External Payload JSON</span>
+                <textarea id="externalPayloadArea" class="json-area" placeholder='{"protocol":"PEPSLIVE_SCOREBOARD_STATE_V1","version":1,"sport":"football","skinId":"FB-LIVE-01","type":"live","matchData":{"homeScore":1,"awayScore":0}}'></textarea>
+              </label>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn" id="validatePayloadBtn">Validate Payload</button>
+                <button type="button" class="capsule-btn" id="ingestPayloadBtn">Ingest Payload</button>
+                <button type="button" class="capsule-btn" id="sendTestFootballBtn">Send Test Football Payload</button>
+                <button type="button" class="capsule-btn" id="sendTestBasketballBtn">Send Test Basketball Payload</button>
+              </div>
+              <label><span>Validation Result</span><textarea id="payloadValidationResult" class="json-area small" readonly></textarea></label>
+              <label><span>Last Received Payload</span><textarea id="lastReceivedPayloadArea" class="json-area small" readonly></textarea></label>
+              <h3 class="mini-title">Adapter Hooks</h3>
+              <ul id="hookStatusList" class="mini-list"></ul>
+              <h3 class="mini-title">Future Overlay Modules</h3>
+              <ul id="moduleRoadmapList" class="mini-list"></ul>
+            </section>
 
-            <h3 class="mini-title">Health Check</h3>
-            <div class="status-chip" id="obsHealthStatusText" data-state="warn">Health status: not checked</div>
-            <textarea id="obsHealthResultArea" class="json-area small" readonly></textarea>
-
-            <h3 class="mini-title">Manual Setup Guide</h3>
-            <div class="tiny-note" id="obsManualGuideText">
-              If OBS WebSocket is unavailable, copy the Production URL above into OBS Browser Source and use the selected preset size.
-            </div>
+            <section class="panel-block">
+              <h2>Import / Export Skin JSON</h2>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn" id="exportJsonBtn">Export Current Skin JSON</button>
+                <button type="button" class="capsule-btn" id="importJsonBtn">Import Skin JSON</button>
+              </div>
+              <div class="inline-row">
+                <button type="button" class="capsule-btn" id="resetSkinBtn">Reset Skin</button>
+                <button type="button" class="capsule-btn" id="duplicateSkinBtn">Duplicate Skin</button>
+              </div>
+              <textarea id="skinJsonArea" class="json-area" placeholder="Paste skin JSON here"></textarea>
+            </section>
           </section>
-
-          <section class="panel-block">
-            <h2>PepsLive Dock Integration</h2>
-            <p class="tiny-note">Monitor/debug panel only. Match control stays in the original PepsLive Dock UI.</p>
-            <label>
-              <span>Integration Mode</span>
-              <select id="integrationModeSelect" class="ui-select">
-                <option value="Off">Off</option>
-                <option value="Listen Only" selected>Listen Only</option>
-                <option value="Manual Test">Manual Test</option>
-              </select>
-            </label>
-            <div class="status-chip" id="integrationPayloadStatusText" data-state="ok">Payload Status: waiting</div>
-            <div class="meta-grid">
-              <div><strong>Current Data Source:</strong> <span id="integrationDataSourceText">Mock Data</span></div>
-              <div><strong>Last Dock Update:</strong> <span id="integrationLastDockUpdateText">-</span></div>
-              <div><strong>Last Payload Source:</strong> <span id="integrationLastPayloadSourceText">-</span></div>
-              <div><strong>Current Sport:</strong> <span id="integrationCurrentSportText">-</span></div>
-              <div><strong>Current Skin:</strong> <span id="integrationCurrentSkinText">-</span></div>
-            </div>
-            <label>
-              <span>Current Match Preview</span>
-              <textarea id="integrationCurrentMatchPreviewArea" class="json-area small" readonly></textarea>
-            </label>
-          </section>
-
-          <section class="panel-block">
-            <h2>Phase 2.1 Data Bridge</h2>
-            <p class="tiny-note">Data ingest/debug only. This panel does not provide score control or timer control.</p>
-            <div class="status-chip" id="bridgeStatusText" data-state="ok">initializing...</div>
-            <div class="meta-grid">
-              <div><strong>Current Protocol:</strong> <span id="currentProtocolText">-</span></div>
-              <div><strong>Last Sync Time:</strong> <span id="lastSyncTimeText">-</span></div>
-            </div>
-            <label>
-              <span>External Payload JSON</span>
-              <textarea
-                id="externalPayloadArea"
-                class="json-area"
-                placeholder='{"protocol":"PEPSLIVE_SCOREBOARD_STATE_V1","version":1,"sport":"football","skinId":"FB-LIVE-01","type":"live","matchData":{"homeScore":1,"awayScore":0}}'
-              ></textarea>
-            </label>
-            <div class="inline-row">
-              <button type="button" class="capsule-btn" id="validatePayloadBtn">Validate Payload</button>
-              <button type="button" class="capsule-btn" id="ingestPayloadBtn">Ingest Payload</button>
-              <button type="button" class="capsule-btn" id="sendTestFootballBtn">Send Test Football Payload</button>
-              <button type="button" class="capsule-btn" id="sendTestBasketballBtn">Send Test Basketball Payload</button>
-            </div>
-            <label>
-              <span>Validation Result</span>
-              <textarea id="payloadValidationResult" class="json-area small" readonly></textarea>
-            </label>
-            <label>
-              <span>Last Received Payload</span>
-              <textarea id="lastReceivedPayloadArea" class="json-area small" readonly></textarea>
-            </label>
-            <h3 class="mini-title">Adapter Hooks</h3>
-            <ul id="hookStatusList" class="mini-list"></ul>
-            <h3 class="mini-title">Future Overlay Modules</h3>
-            <ul id="moduleRoadmapList" class="mini-list"></ul>
-          </section>
-
-          <section class="panel-block">
-            <h2>Import / Export Skin JSON</h2>
-            <div class="inline-row">
-              <button type="button" class="capsule-btn" id="exportJsonBtn">Export Current Skin JSON</button>
-              <button type="button" class="capsule-btn" id="importJsonBtn">Import Skin JSON</button>
-            </div>
-            <div class="inline-row">
-              <button type="button" class="capsule-btn" id="resetSkinBtn">Reset Skin</button>
-              <button type="button" class="capsule-btn" id="duplicateSkinBtn">Duplicate Skin</button>
-            </div>
-            <textarea id="skinJsonArea" class="json-area" placeholder="Paste skin JSON here"></textarea>
-          </section>
-        </aside>
+        </div>
       </div>
-    </div>
+    </dialog>
 
     <script type="module" src="./src/app.js"></script>
   </body>
