@@ -395,11 +395,11 @@ body {
 
 .thumb-source-window {
   position: absolute;
-  inset: 42px 12px 42px;
+  inset: 42px 12px 58px;
   z-index: 0;
   width: calc(100% - 24px);
   aspect-ratio: var(--source-aspect-ratio, 5 / 1);
-  max-height: calc(100% - 84px);
+  max-height: calc(100% - 100px);
   align-self: center;
   justify-self: center;
   border-radius: 10px;
@@ -1140,18 +1140,38 @@ body {
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   font-weight: 700;
-  z-index: 2;
-  align-self: end;
-  margin: auto 8px 0;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.88);
+  color: rgba(203, 213, 225, 0.82);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .thumb-name {
   font-size: 1rem;
   font-weight: 800;
+  color: #f8fafc;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thumb-caption {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 9px;
   z-index: 2;
-  margin: 0 8px 8px;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.88);
+  display: grid;
+  grid-template-columns: minmax(82px, auto) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.82);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
 .template-meta {
@@ -2069,7 +2089,8 @@ body.skin-studio-embed {
 }
 
 body.skin-studio-embed {
-  overflow: hidden;
+  overflow: auto;
+  padding: 0;
 }
 
 .skin-studio-embed .dock-header {
@@ -2103,6 +2124,36 @@ body.skin-studio-embed {
 .skin-studio-embed .data-bridge-card,
 .skin-studio-embed .integration-card {
   display: none;
+}
+
+.skin-studio-embed .settings-modal {
+  width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+}
+
+.skin-studio-embed .settings-modal-shell {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.skin-studio-embed .settings-modal-body {
+  overflow: auto;
+  padding-right: 6px;
+  align-items: start;
+}
+
+.skin-studio-embed .settings-preview-column,
+.skin-studio-embed .settings-controls-column {
+  overflow: visible;
+}
+
+.skin-studio-embed .settings-controls-column {
+  padding-bottom: 28px;
+}
+
+.skin-studio-embed .preview-panel {
+  position: relative;
 }
 
 @media (max-width: 900px) {

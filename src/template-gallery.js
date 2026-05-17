@@ -202,8 +202,10 @@ export class TemplateGallery {
                           <div class="thumb-source-window" style="--source-aspect-ratio: ${thumbRatio}">
                             <iframe class="thumb-frame" src="${escapeAttribute(thumbUrl)}" title="${escapeAttribute(template.id)} preview" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
                           </div>
-                          <span class="thumb-code">${escapeHtml(template.id)}</span>
-                          <span class="thumb-name">${escapeHtml(template.name)}</span>
+                          <div class="thumb-caption">
+                            <span class="thumb-code">${escapeHtml(template.id)}</span>
+                            <span class="thumb-name">${escapeHtml(template.name)}</span>
+                          </div>
                           ${isSelected ? '<span class="selected-ribbon">Selected</span>' : ""}
                         </div>
                         <div class="template-meta">
