@@ -5,70 +5,142 @@
    ============================================================================= */
 
 /* ---------------------------------------------------------------------------
-   FB-LIVE-01 · Premier Broadcast
-   Wide broadcast bar, white centre panel, gold shimmer accent lines
+   FB-LIVE-01 · Premier Broadcast                               Phase 4.5.1
+   Inspired by Sky Sports / PL broadcast graphics:
+   Deep navy bar → gold top shimmer line → team-colour side tints →
+   dark score block centre → continuous gold shimmer animation
    --------------------------------------------------------------------------- */
 #overlay-root.skin-FB-LIVE-01 {
   align-items: flex-start;
   justify-content: center;
+  padding: 0;
 }
 
 .skin-FB-LIVE-01 .scoreboard-shell {
   position: relative;
-  width: min(98vw, 1200px);
+  width: min(100vw, 1280px);
   min-height: 0;
   border-radius: 0;
   border: 0;
-  background:
-    linear-gradient(90deg,
-      rgba(10, 22, 60, 0.96) 0 22%,
-      rgba(248, 250, 252, 0.94) 22% 78%,
-      rgba(10, 22, 60, 0.96) 78% 100%);
-  color: #07111f;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.46);
+  background: linear-gradient(180deg, #0e1c3a 0%, #091221 100%);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(200, 148, 42, 0.55);
   overflow: hidden;
-  animation: fb01-shimmer 4s linear infinite;
+  gap: 0;
 }
 
-.skin-FB-LIVE-01 .scoreboard-shell::before,
+/* Gold shimmer stripe — top edge */
+.skin-FB-LIVE-01 .scoreboard-shell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(200, 148, 42, 0.6) 8%,
+    #f9d36a 30%,
+    #f0b429 50%,
+    #f9d36a 70%,
+    rgba(200, 148, 42, 0.6) 92%,
+    transparent 100%);
+  animation: fb01-gold-shimmer 2.6s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Subtle underline */
 .skin-FB-LIVE-01 .scoreboard-shell::after {
   content: "";
   position: absolute;
-  right: 0;
+  bottom: 0;
   left: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent 0%, #f9d36a 18%, #f59e0b 50%, #f9d36a 82%, transparent 100%);
+  right: 0;
+  height: 1px;
+  background: rgba(200, 148, 42, 0.32);
   pointer-events: none;
-  animation: fb01-line-pulse 2.8s ease-in-out infinite alternate;
 }
-.skin-FB-LIVE-01 .scoreboard-shell::before { top: 0; }
-.skin-FB-LIVE-01 .scoreboard-shell::after  { bottom: 0; }
 
-.skin-FB-LIVE-01 .event-row,
-.skin-FB-LIVE-01 .team-block,
+.skin-FB-LIVE-01 .event-row {
+  background: rgba(0, 0, 0, 0.32);
+  padding: 5px 16px;
+  border-bottom: 1px solid rgba(200, 148, 42, 0.18);
+  min-height: 24px;
+}
+
+.skin-FB-LIVE-01 .event-name {
+  color: #f9d36a;
+  letter-spacing: 0.12em;
+}
+
+.skin-FB-LIVE-01 .teams-row {
+  padding: 4px 14px 8px;
+  gap: 8px;
+}
+
+/* Team blocks — colour tint fades inward from each side */
+.skin-FB-LIVE-01 .team-block {
+  background: transparent;
+  border: none;
+}
+
+.skin-FB-LIVE-01 .team-block.home {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--home-color) 28%, transparent) 0%,
+    transparent 70%);
+}
+
+.skin-FB-LIVE-01 .team-block.away {
+  background: linear-gradient(270deg,
+    color-mix(in srgb, var(--away-color) 28%, transparent) 0%,
+    transparent 70%);
+}
+
+/* Score centre — dark pill on dark bar */
 .skin-FB-LIVE-01 .score-block {
-  background: rgba(255, 255, 255, 0.72);
-  color: #07111f;
-  border-color: rgba(15, 23, 42, 0.14);
+  background: rgba(0, 0, 0, 0.48);
+  border: 1px solid rgba(200, 148, 42, 0.3);
+  border-radius: 8px;
+  padding: 4px 14px;
+  min-width: 160px;
+}
+
+.skin-FB-LIVE-01 .score-values {
+  color: #f8fafc;
+  text-shadow: 0 0 14px rgba(200, 148, 42, 0.5);
+}
+
+/* Status badge gold style */
+.skin-FB-LIVE-01 .status-badge {
+  background: rgba(200, 148, 42, 0.2);
+  border-color: rgba(200, 148, 42, 0.6);
+  color: #f9d36a;
+  font-weight: 900;
 }
 
 .skin-FB-LIVE-01 .extra-row {
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 0 14px 6px;
+  gap: 4px;
 }
 
 .skin-FB-LIVE-01 .extra-item {
-  color: #f8fafc;
+  background: rgba(0, 0, 0, 0.36);
+  border-color: rgba(200, 148, 42, 0.2);
 }
 
-@keyframes fb01-shimmer {
-  0%, 100% { box-shadow: 0 8px 28px rgba(0, 0, 0, 0.46), 0 0 0 rgba(249, 211, 106, 0); }
-  50%       { box-shadow: 0 8px 36px rgba(0, 0, 0, 0.52), 0 0 32px rgba(249, 211, 106, 0.18); }
+@keyframes fb01-gold-shimmer {
+  from {
+    filter: brightness(0.75);
+    background-position: 0% 0;
+  }
+  to {
+    filter: brightness(1.35);
+    background-position: 0% 0;
+  }
 }
 
-@keyframes fb01-line-pulse {
-  from { opacity: 0.6; filter: brightness(0.85); }
-  to   { opacity: 1;   filter: brightness(1.25); }
-}
+
 
 /* ---------------------------------------------------------------------------
    FB-LIVE-02 · Capsule Pro

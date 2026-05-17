@@ -545,21 +545,22 @@ body {
 
 /* --- Phase 4.5 Thumbnail Styles — unique visual identity per skin --- */
 
-/* FB-LIVE-01 · Premier Broadcast — white centre, gold top/bottom lines */
+/* FB-LIVE-01 · Premier Broadcast — dark navy, gold shimmer top line */
 .skin-thumb-FB-LIVE-01 .thumb-scorebug {
   width: 100%;
-  border-radius: 2px;
-  background: linear-gradient(90deg, rgba(10,22,60,0.9) 0 20%, rgba(248,250,252,0.92) 20% 80%, rgba(10,22,60,0.9) 80%);
-  color: #07111f;
-  box-shadow: 0 -2px 0 #f59e0b inset, 0 2px 0 #f59e0b inset;
-  animation: thumb01-shimmer 3s ease-in-out infinite alternate;
+  border-radius: 0;
+  background: linear-gradient(180deg, #0e1c3a 0%, #091221 100%);
+  color: #f8fafc;
+  box-shadow: 0 -2px 0 rgba(200, 148, 42, 0.7) inset;
+  animation: thumb01-shimmer 2.8s ease-in-out infinite alternate;
 }
 @keyframes thumb01-shimmer {
-  from { box-shadow: 0 -2px 0 rgba(245,158,11,0.7) inset, 0 2px 0 rgba(245,158,11,0.7) inset; }
-  to   { box-shadow: 0 -2px 0 rgba(249,211,106,1)   inset, 0 2px 0 rgba(249,211,106,1) inset; }
+  from { box-shadow: 0 -2px 0 rgba(200, 148, 42, 0.5) inset; }
+  to   { box-shadow: 0 -2px 0 rgba(249, 211, 106, 1)   inset, 0 0 12px rgba(200,148,42,0.3); }
 }
 .skin-thumb-FB-LIVE-01 .thumb-team,
-.skin-thumb-FB-LIVE-01 .thumb-score { color: #07111f; }
+.skin-thumb-FB-LIVE-01 .thumb-score { color: #f8fafc; }
+
 
 /* FB-LIVE-02 · Capsule Pro — pill shape, animated border glow */
 .skin-thumb-FB-LIVE-02 .thumb-scorebug {
