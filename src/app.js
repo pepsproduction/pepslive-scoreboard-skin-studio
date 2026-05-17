@@ -91,6 +91,7 @@ const state = {
   eventLogoDataUrl: "",
   eventLogoPalette: [],
   publishTimer: 0,
+  galleryPreviewTimer: 0,
   // Phase 4.4
   skinPresets: [],
   relayConfig: { url: "", intervalSec: 5 }
@@ -199,9 +200,9 @@ function syncDisplayOptionControls() {
   ui.displayOptionsForm.querySelectorAll("select[data-display-option]").forEach((select) => {
     select.value = options[select.dataset.displayOption] || DEFAULT_DISPLAY_OPTIONS[select.dataset.displayOption] || "full";
   });
-  // Phase 5.0: team name align button group
   if (ui.teamNameAlignGroup) {
-    setButtonGroupActive(ui.teamNameAlignGroup, options.teamNameAlign || "outer");
+    const allowedNameAlign = ["same-left", "same-right", "outer", "inner"];
+    setButtonGroupActive(ui.teamNameAlignGroup, allowedNameAlign.includes(options.teamNameAlign) ? options.teamNameAlign : "outer");
   }
 }
 
@@ -273,7 +274,7 @@ function buildOverlayUrlByType(type, { debug = false, cacheBust = false, forceVe
  * into the ?state= query param, making it work without localStorage sync.
  * @returns {{ url: string, warning: string|null }}
  */
-function buildPortableUrlByType(type, { debug = false } = {}) {
+function buildPortableUrlByType(type, { debug = false, cacheBust = true, forceVersion = null } = {}) {
   const template = resolveTemplateForObsType(type);
   return generatePortableOverlayUrl({
     skinId: template.id,
@@ -284,18 +285,26 @@ function buildPortableUrlByType(type, { debug = false } = {}) {
     displayOptions: state.displayOptions,
     eventLogo: state.eventLogoDataUrl || "",
     debug,
-    absolute: true
+    absolute: true,
+    cacheBust,
+    version: forceVersion ?? state.obsUrlVersion ?? Date.now()
   });
 }
 
 function refreshObsUrlsPanel() {
-  const liveProd = buildOverlayUrlByType("live", { debug: false, cacheBust: false });
-  const liveDebug = buildOverlayUrlByType("live", { debug: true, cacheBust: false });
-  const summaryProd = buildOverlayUrlByType("summary", { debug: false, cacheBust: false });
-  const summaryDebug = buildOverlayUrlByType("summary", { debug: true, cacheBust: false });
+  const versionValue = state.obsUrlVersion || Date.now();
+  const liveDirect = buildOverlayUrlByType("live", { debug: false, cacheBust: false });
+  const summaryDirect = buildOverlayUrlByType("summary", { debug: false, cacheBust: false });
 
-  const portableLiveResult = buildPortableUrlByType("live");
-  const portableSummaryResult = buildPortableUrlByType("summary");
+  const portableLiveResult = buildPortableUrlByType("live", { debug: false, forceVersion: versionValue });
+  const portableLiveDebugResult = buildPortableUrlByType("live", { debug: true, forceVersion: versionValue });
+  const portableSummaryResult = buildPortableUrlByType("summary", { debug: false, forceVersion: versionValue });
+  const portableSummaryDebugResult = buildPortableUrlByType("summary", { debug: true, forceVersion: versionValue });
+
+  const liveProd = portableLiveResult.url;
+  const liveDebug = portableLiveDebugResult.url;
+  const summaryProd = portableSummaryResult.url;
+  const summaryDebug = portableSummaryDebugResult.url;
 
   if (ui.liveProductionUrlText) {
     ui.liveProductionUrlText.value = liveProd;
@@ -319,11 +328,13 @@ function refreshObsUrlsPanel() {
     ui.obsSelectedSummaryPresetText.textContent = getSourcePreset("summary").label;
   }
 
-  return {
+  const urls = {
     liveProd,
     liveDebug,
     summaryProd,
     summaryDebug,
+    liveDirect,
+    summaryDirect,
     portableLive: portableLiveResult.url,
     portableLiveWarning: portableLiveResult.warning,
     portableSummary: portableSummaryResult.url,
@@ -331,9 +342,33 @@ function refreshObsUrlsPanel() {
   };
 
   // Phase 5.0: broadcast skin URLs to any open Dock V1 instance
-  try { broadcastSkinUrlsToDock(); } catch (_e) {}
+  try { broadcastSkinUrlsToDock(urls); } catch (_e) {}
 
   return urls;
+}
+
+function syncGalleryPreviewContext({ refreshFrames = false } = {}) {
+  gallery?.setPreviewContext?.(
+    {
+      theme: state.currentTheme,
+      displayOptions: state.displayOptions,
+      eventLogo: state.eventLogoDataUrl
+    },
+    { refreshFrames }
+  );
+}
+
+function scheduleGalleryPreviewRefresh(delay = 650) {
+  if (!gallery) {
+    return;
+  }
+  if (state.galleryPreviewTimer) {
+    window.clearTimeout(state.galleryPreviewTimer);
+  }
+  state.galleryPreviewTimer = window.setTimeout(() => {
+    state.galleryPreviewTimer = 0;
+    syncGalleryPreviewContext({ refreshFrames: true });
+  }, delay);
 }
 
 /**
@@ -341,17 +376,24 @@ function refreshObsUrlsPanel() {
  * via BroadcastChannel("PEPSLIVE_STUDIO_SYNC").
  * Called whenever skin, theme, or display options change.
  */
-function broadcastSkinUrlsToDock() {
-  const template = resolveTemplateForObsType("live");
-  const portableLive = buildPortableUrlByType("live");
-  const portableSummary = buildPortableUrlByType("summary");
+function broadcastSkinUrlsToDock(urls = null) {
+  const liveTemplate = resolveTemplateForObsType("live");
+  const summaryTemplate = resolveTemplateForObsType("summary");
   const livePreset = getSourcePreset("live");
+  const summaryPreset = getSourcePreset("summary");
+  const nextUrls = urls || refreshObsUrlsPanel();
   broadcastSkinUrls({
-    liveUrl: portableLive.url,
-    summaryUrl: portableSummary.url,
-    skinId: template.id,
-    sport: template.sport,
-    skinName: template.name || template.id,
+    liveUrl: nextUrls.liveProd,
+    liveDebugUrl: nextUrls.liveDebug,
+    summaryUrl: nextUrls.summaryProd,
+    summaryDebugUrl: nextUrls.summaryDebug,
+    liveSkinId: liveTemplate.id,
+    summarySkinId: summaryTemplate.id,
+    skinId: liveTemplate.id,
+    sport: liveTemplate.sport,
+    skinName: liveTemplate.name || liveTemplate.id,
+    liveSource: { width: livePreset.width, height: livePreset.height },
+    summarySource: { width: summaryPreset.width, height: summaryPreset.height },
     obsWidth: livePreset.width,
     obsHeight: livePreset.height
   });
@@ -729,7 +771,11 @@ async function copyOverlayUrlForTemplate(template, { debug = false, feedbackButt
   if (!template || !previewEngine) {
     return false;
   }
-  const url = buildOverlayUrlByType(template.type, { debug, cacheBust: true, forceVersion: Date.now() });
+  const result = buildPortableUrlByType(template.type, { debug, forceVersion: Date.now() });
+  const url = result.url;
+  if (result.warning) {
+    notify(result.warning, "warn");
+  }
   const copied = await copyText(url, fallbackTarget);
   if (copied) {
     flashCopyButton(feedbackButton);
@@ -932,7 +978,9 @@ async function handleEventLogoUpload(file) {
     applyPaletteToTheme(state.eventLogoPalette, { publish: false });
   }
   saveSkinState();
-  publishCurrentStateIfReady();
+  refreshObsUrlsPanel();
+  syncGalleryPreviewContext({ refreshFrames: true });
+  scheduleCurrentStatePublish(220);
   notify("Event logo loaded for current skin");
 }
 
@@ -945,7 +993,9 @@ function clearEventLogo() {
   }
   updateEventLogoUi();
   saveSkinState();
-  publishCurrentStateIfReady();
+  refreshObsUrlsPanel();
+  syncGalleryPreviewContext({ refreshFrames: true });
+  scheduleCurrentStatePublish(220);
   notify("Event logo removed");
 }
 
@@ -955,7 +1005,7 @@ async function addSourceToObs(template = state.selectedTemplate) {
   }
 
   const preset = getSourcePreset(template.type);
-  const url = buildOverlayUrlByType(template.type, { debug: false, cacheBust: true, forceVersion: Date.now() });
+  const url = buildPortableUrlByType(template.type, { debug: false, forceVersion: Date.now() }).url;
 
   if (!obsManager.connected) {
     await copyText(url, ui.skinJsonArea);
@@ -1100,6 +1150,7 @@ function bindPreviewTools() {
     };
     previewEngine.setDisplayOptions(state.displayOptions);
     refreshObsUrlsPanel();
+    scheduleGalleryPreviewRefresh();
     saveSkinState();
     scheduleCurrentStatePublish();
   });
@@ -1117,6 +1168,7 @@ function bindPreviewTools() {
     setButtonGroupActive(ui.teamNameAlignGroup, alignValue);
     previewEngine.setDisplayOptions(state.displayOptions);
     refreshObsUrlsPanel();
+    scheduleGalleryPreviewRefresh();
     saveSkinState();
     scheduleCurrentStatePublish();
   });
@@ -1363,7 +1415,7 @@ async function runObsHealthCheck() {
 async function addObsSourceForType(type) {
   const template = resolveTemplateForObsType(type);
   const preset = getSourcePreset(type);
-  const url = buildOverlayUrlByType(type, { debug: false, cacheBust: true, forceVersion: Date.now() });
+  const url = buildPortableUrlByType(type, { debug: false, forceVersion: Date.now() }).url;
   if (!obsManager.connected) {
     await copyText(url, ui.skinJsonArea);
     notify(`OBS disconnected. Manual mode: copy ${type} URL and add Browser Source manually`, "warn");
@@ -2213,6 +2265,7 @@ function initGallery() {
   });
 
   gallery.setCollections({ favorites: state.favorites, recentlyUsed: state.recentlyUsed });
+  syncGalleryPreviewContext();
   gallery.render();
 }
 
@@ -2248,6 +2301,8 @@ function initThemeEditor() {
         setThemeBySkinId(state.selectedTemplate.id, theme);
         saveSkinState();
       }
+      refreshObsUrlsPanel();
+      scheduleGalleryPreviewRefresh();
       if (!state.applyingRemote) {
         scheduleCurrentStatePublish();
       }
@@ -2330,6 +2385,7 @@ async function initApp() {
     forceMock: false,
     matchDataOverride: sharedPayload?.matchData || null
   });
+  syncGalleryPreviewContext({ refreshFrames: true });
 
   updateProtocolMeta(sharedPayload || buildProtocolPayloadFromState(), sharedState.lastSyncTime || nowIso());
   updateIntegrationPanel(sharedPayload || buildProtocolPayloadFromState(), {

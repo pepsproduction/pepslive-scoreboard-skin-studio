@@ -641,3 +641,11 @@ node --check src/relay-poller.js src/skin-storage.js src/utils.js overlays/overl
 | Future hosted relay server | ✅ | ✅ fully auto | Phase ถัดไป |
 
 
+
+## Phase 4.6 - Stable Skin URLs + Dock V1 Handoff
+
+- ปุ่ม Copy URL หลักใช้ Portable Production URL พร้อม `v=timestamp` เพื่อวางใน OBS Browser Source ได้ตรงขึ้น
+- Skin ที่เลือกจาก URL จะไม่ถูก payload จาก PepsLive Dock V1 เปลี่ยนกลับเป็น template แรกเอง
+- Background Opacity, Display Options, Event Logo และ Auto Theme ถูกส่งไปกับ URL/preview context ของทุก template
+- Skin Studio ส่ง Live/Summary Browser Source URL ล่าสุดให้ PepsLive Dock V1 ผ่าน `PEPSLIVE_STUDIO_SYNC`
+- PepsLive Dock V1 สามารถใช้ URL ล่าสุดจาก Skin Studio เพื่อ Copy URL หรือสร้าง Browser Source ได้ง่ายขึ้น

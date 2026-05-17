@@ -667,38 +667,35 @@ body {
   }
 }
 
-/* ==========================================================================
-   Phase 5.0 — Team Name Alignment
-   Applied via class on #overlay-root:
-     .team-name-align-outer   home name left-flush, away name right-flush
-     .team-name-align-inner   home name right-flush (faces score), away left-flush
-     .team-name-align-center  both names centred
-   ========================================================================== */
+/* Team Name Alignment */
+#overlay-root.team-name-align-same-left .team-block .team-name-box {
+  align-items: flex-start;
+  text-align: left;
+}
 
-/* OUTER (default) — names flush toward the edges */
+#overlay-root.team-name-align-same-right .team-block .team-name-box {
+  align-items: flex-end;
+  text-align: right;
+}
+
 #overlay-root.team-name-align-outer .team-block.home .team-name-box,
 #overlay-root:not([class*="team-name-align"]) .team-block.home .team-name-box {
   align-items: flex-start;
   text-align: left;
 }
+
 #overlay-root.team-name-align-outer .team-block.away .team-name-box,
 #overlay-root:not([class*="team-name-align"]) .team-block.away .team-name-box {
   align-items: flex-end;
   text-align: right;
 }
 
-/* INNER — names face inward toward the score block */
 #overlay-root.team-name-align-inner .team-block.home .team-name-box {
   align-items: flex-end;
   text-align: right;
 }
+
 #overlay-root.team-name-align-inner .team-block.away .team-name-box {
   align-items: flex-start;
   text-align: left;
-}
-
-/* CENTER — names centred within their block */
-#overlay-root.team-name-align-center .team-block .team-name-box {
-  align-items: center;
-  text-align: center;
 }

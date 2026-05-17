@@ -1,9 +1,16 @@
 # CHANGELOG
 
+## Phase 4.6 - Stable Skin URLs + Dock V1 Handoff
+
+- Changed production copy URLs to portable state URLs with cache busters for OBS-ready setup.
+- Preserved URL-selected skins when PepsLive Dock V1 publishes live match payloads without a skinId.
+- Added Studio-to-Dock URL handoff via `PEPSLIVE_STUDIO_SYNC` plus localStorage fallback.
+- Added team-name alignment modes: Left/Left, Right/Right, Outer L/R, Inner R/L.
+- Fixed BB-LIVE-11 scoped CSS typo so basketball gallery styles no longer leak/miss.
 ## Phase 4.4 - Relay Poller + Named Skin Presets
 
 ### Overview
-Closes the final sync gap for OBS Browser Sources running in isolated storage profiles. A **Relay Poller** allows overlays to periodically fetch live score state from any public HTTP JSON endpoint — no BroadcastChannel or localStorage required. **Named Skin Presets** let users save and load complete configurations (skin + theme + display options) during events.
+Closes the final sync gap for OBS Browser Sources running in isolated storage profiles. A **Relay Poller** allows overlays to periodically fetch live score state from any public HTTP JSON endpoint โ€” no BroadcastChannel or localStorage required. **Named Skin Presets** let users save and load complete configurations (skin + theme + display options) during events.
 
 ### New Features
 
@@ -11,20 +18,20 @@ Closes the final sync gap for OBS Browser Sources running in isolated storage pr
 - `RelayPoller` class: polls a user-configured URL for PepsLive state JSON every N ms
 - ETag-based conditional GET (`If-None-Match`) avoids re-parsing identical responses
 - Exponential backoff (up to 30 s) on HTTP errors; resets on success
-- `sanitizeRelayUrl` — validates http/https only, trims whitespace, returns null on failure
-- `clampRelayInterval` — enforces 2 000 ms – 60 000 ms range
+- `sanitizeRelayUrl` โ€” validates http/https only, trims whitespace, returns null on failure
+- `clampRelayInterval` โ€” enforces 2 000 ms โ€“ 60 000 ms range
 - `onStatus` callback exposes running/error state to the debug overlay box
 - Never throws; all errors go to `onError` callback
 
 #### Relay Overlay URL (`src/utils.js`)
-- `generateRelayOverlayUrl` — produces URLs with `?relay=<encoded-url>` plus `?state=` for immediate skin load before the first poll
+- `generateRelayOverlayUrl` โ€” produces URLs with `?relay=<encoded-url>` plus `?state=` for immediate skin load before the first poll
 
 #### Named Skin Presets (`src/skin-storage.js`)
-- `saveSkinPreset(preset)` — saves name + skinId + sport + type + theme + animation + displayOptions + eventLogo; name capped at 64 chars
-- `listSkinPresets()` — returns array sorted newest-first
-- `getSkinPresetById(id)` — single preset lookup
-- `deleteSkinPreset(id)` — remove preset; returns boolean
-- `getRelayConfig` / `setRelayConfig` — persist relay URL and poll interval across sessions
+- `saveSkinPreset(preset)` โ€” saves name + skinId + sport + type + theme + animation + displayOptions + eventLogo; name capped at 64 chars
+- `listSkinPresets()` โ€” returns array sorted newest-first
+- `getSkinPresetById(id)` โ€” single preset lookup
+- `deleteSkinPreset(id)` โ€” remove preset; returns boolean
+- `getRelayConfig` / `setRelayConfig` โ€” persist relay URL and poll interval across sessions
 
 #### Dock UI (`dock.html` + `styles/dock.css`)
 - **Skin Presets** panel above Browser Source Export
@@ -32,17 +39,17 @@ Closes the final sync gap for OBS Browser Sources running in isolated storage pr
   - Rendered preset list with Load / Delete per entry
   - Styled `.preset-list`, `.preset-item`, `.preset-actions`, `.text-input`
 - **Relay Config** section inside Browser Source Export (below Portable State URLs)
-  - Relay JSON URL input + Poll Interval input (2–60 sec)
+  - Relay JSON URL input + Poll Interval input (2โ€“60 sec)
   - Copy Relay Live URL / Copy Relay Summary URL buttons
   - Export State as Relay JSON (downloads the current payload as a ready-to-host file)
   - Test Relay URL (fetches URL, validates format, shows result inline)
 
 #### `src/app.js`
-- `buildRelayUrlByType` — builds live/summary relay URLs from current studio state
-- `exportStateAsRelayJson` — downloads current state as `relay-state-*.json`
-- `testRelayUrl` — fetches URL, validates payload format, shows inline status
-- `renderPresetsPanel` / `bindPresetsPanel` — full preset UI lifecycle
-- `bindRelayPanel` — relay config panel bindings and persistence
+- `buildRelayUrlByType` โ€” builds live/summary relay URLs from current studio state
+- `exportStateAsRelayJson` โ€” downloads current state as `relay-state-*.json`
+- `testRelayUrl` โ€” fetches URL, validates payload format, shows inline status
+- `renderPresetsPanel` / `bindPresetsPanel` โ€” full preset UI lifecycle
+- `bindRelayPanel` โ€” relay config panel bindings and persistence
 
 #### Overlay (`overlays/overlay-core.js`)
 - Reads `?relay=` query param (percent-encoded URL)
@@ -52,26 +59,26 @@ Closes the final sync gap for OBS Browser Sources running in isolated storage pr
 - Debug overlay box shows relay status: `Relay: polling | errors: 0`
 
 ### QA
-- `scripts/check-phase44-relay.mjs` — **59/59 assertions pass**
+- `scripts/check-phase44-relay.mjs` โ€” **59/59 assertions pass**
   - `clampRelayInterval`: NaN, null, out-of-range, valid, string
   - `sanitizeRelayUrl`: null/empty, garbage, file/ftp (rejected), http/https (accepted), normalisation
   - Skin Presets: save / list / sort / delete round-trip; name cap; non-existent delete
   - `generateRelayOverlayUrl`: missing/bad relay, valid relay + state combo, live/summary, debug flag, decode round-trip
   - Source file completeness and export names
-- `scripts/check-portable-url.mjs` — 32/32 PASS (no regressions)
-- `scripts/check-phase3-integration.mjs` — PASS (no regressions)
-- `node --check` — clean for all 6 modified files
+- `scripts/check-portable-url.mjs` โ€” 32/32 PASS (no regressions)
+- `scripts/check-phase3-integration.mjs` โ€” PASS (no regressions)
+- `node --check` โ€” clean for all 6 modified files
 
 ### Relay Quick-Start Guide
-1. **Export** current state from dock → Settings → Relay Config → "Export State as Relay JSON"
+1. **Export** current state from dock โ’ Settings โ’ Relay Config โ’ "Export State as Relay JSON"
 2. **Host** the JSON file at any public HTTPS URL (GitHub Gist raw, Dropbox, etc.)
 3. **Paste** the URL into "Relay JSON URL" field and set poll interval
-4. **Copy** Relay Live URL / Relay Summary URL → paste into OBS Browser Source
+4. **Copy** Relay Live URL / Relay Summary URL โ’ paste into OBS Browser Source
 5. For live score updates, **update the JSON file** via any HTTP PUT/PATCH tool or scripted uploader
 6. Overlays poll the URL and pick up changes within the configured interval
 
 ### Limitations (unchanged)
-- Relay poller **only works when `?relay=` is in the Browser Source URL** — same-origin BroadcastChannel/localStorage still used when relay param is absent
+- Relay poller **only works when `?relay=` is in the Browser Source URL** โ€” same-origin BroadcastChannel/localStorage still used when relay param is absent
 - Updating the relay JSON file itself still requires a manual upload step or an external uploader script
 - A future Phase (hosted relay server) would automate this push step
 
@@ -99,7 +106,7 @@ Adds a first-class **Portable State URL** strategy so that OBS Browser Sources c
 
 ### Overlay Changes (`overlays/overlay-core.js`)
 - Priority loading order is now:
-  1. **`?state=` portable param** (Phase 4.3) — highest priority; locks out localStorage override on first load
+  1. **`?state=` portable param** (Phase 4.3) โ€” highest priority; locks out localStorage override on first load
   2. Legacy `?skin` / `?theme` / `?slots` individual params
   3. Shared state (localStorage / BroadcastChannel)
   4. Mock data fallback
@@ -108,18 +115,18 @@ Adds a first-class **Portable State URL** strategy so that OBS Browser Sources c
 - Live score updates still arrive via BroadcastChannel/postMessage if the dock is same-origin
 
 ### QA
-- `scripts/check-portable-url.mjs` — 32/32 assertions pass:
+- `scripts/check-portable-url.mjs` โ€” 32/32 assertions pass:
   - Round-trip encode/decode for skin/theme/displayOptions
   - Base64url safety (no `+`, `/`, trailing `=`)
-  - Invalid state fallback (null, garbage, corrupt, array) — never throws
+  - Invalid state fallback (null, garbage, corrupt, array) โ€” never throws
   - EventLogo size budget (small included, oversized dropped)
   - Overlay file existence + no absolute path leaks
   - State completeness including `teamLogoPosition` and boolean `extraRow`
-- `scripts/check-phase3-integration.mjs` — still PASS (no regressions)
-- `node --check` — clean for all 4 modified files
+- `scripts/check-phase3-integration.mjs` โ€” still PASS (no regressions)
+- `node --check` โ€” clean for all 4 modified files
 
 ### Limitations (unchanged)
-- Skin Studio is a skin selector only — no score/timer controls
+- Skin Studio is a skin selector only โ€” no score/timer controls
 - Portable URL carries **static** skin/theme/displayOptions only
 - Live score updates still require same-origin or a future hosted JSON relay/backend bridge
 
@@ -222,10 +229,10 @@ Adds a first-class **Portable State URL** strategy so that OBS Browser Sources c
 - Verified GitHub Pages-style paths for overlay endpoints
 
 ### Known Limitations
-- โปรเจกต์นี้ยังไม่ใช่ระบบควบคุมคะแนน (ไม่มีปุ่มเพิ่ม/ลดคะแนน)
-- โปรเจกต์นี้ยังไม่มีระบบจัดการทีม/ทัวร์นาเมนต์
-- ข้อมูลจริงต้องมาจาก PepsLive Dock UI เดิม หรือ shared payload protocol
-- การใช้งาน OBS WebSocket ต้องตั้งค่าฝั่ง OBS ให้ถูกต้องก่อน (host/port/password/permissions)
+- เนเธเธฃเน€เธเธเธ•เนเธเธตเนเธขเธฑเธเนเธกเนเนเธเนเธฃเธฐเธเธเธเธงเธเธเธธเธกเธเธฐเนเธเธ (เนเธกเนเธกเธตเธเธธเนเธกเน€เธเธดเนเธก/เธฅเธ”เธเธฐเนเธเธ)
+- เนเธเธฃเน€เธเธเธ•เนเธเธตเนเธขเธฑเธเนเธกเนเธกเธตเธฃเธฐเธเธเธเธฑเธ”เธเธฒเธฃเธ—เธตเธก/เธ—เธฑเธงเธฃเนเธเธฒเน€เธกเธเธ•เน
+- เธเนเธญเธกเธนเธฅเธเธฃเธดเธเธ•เนเธญเธเธกเธฒเธเธฒเธ PepsLive Dock UI เน€เธ”เธดเธก เธซเธฃเธทเธญ shared payload protocol
+- เธเธฒเธฃเนเธเนเธเธฒเธ OBS WebSocket เธ•เนเธญเธเธ•เธฑเนเธเธเนเธฒเธเธฑเนเธ OBS เนเธซเนเธ–เธนเธเธ•เนเธญเธเธเนเธญเธ (host/port/password/permissions)
 
 ## Phase 3.0 - PepsLive Dock UI Integration
 

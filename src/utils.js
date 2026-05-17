@@ -27,7 +27,7 @@ export const DEFAULT_DISPLAY_OPTIONS = {
   statusLabel: true,
   extraRow: true,
   textMode: "full",
-  teamNameAlign: "outer"   // Phase 5.0: outer | inner | center
+  teamNameAlign: "outer" // same-left | same-right | outer | inner
 };
 
 export function clamp(value, min, max) {
@@ -218,7 +218,9 @@ export function encodePortableState(stateObj, { includeEventLogo = false } = {})
   const jsonWithoutLogo = JSON.stringify(withoutLogo);
   let jsonToEncode = jsonWithoutLogo;
 
-  if (includeEventLogo && clean.eventLogo) {
+  if (includeEventLogo && clean.eventLogo && String(clean.eventLogo).length > PORTABLE_STATE_SIZE_LIMIT) {
+    dropped.push("eventLogo");
+  } else if (includeEventLogo && clean.eventLogo) {
     const jsonWithLogo = JSON.stringify(clean);
     if (jsonWithLogo.length <= PORTABLE_STATE_SIZE_LIMIT) {
       jsonToEncode = jsonWithLogo;
@@ -279,7 +281,10 @@ export function decodePortableState(raw) {
  *   teamLogoPosition?: string,
  *   eventLogo?: string,
  *   debug?: boolean,
- *   absolute?: boolean
+ *   absolute?: boolean,
+ *   cacheBust?: boolean,
+ *   version?: string|number,
+ *   isolated?: boolean
  * }} opts
  * @returns {{ url: string, warning: string|null }}
  */
@@ -293,7 +298,10 @@ export function generatePortableOverlayUrl(opts) {
     displayOptions,
     eventLogo,
     debug = false,
-    absolute = true
+    absolute = true,
+    cacheBust = true,
+    version = Date.now(),
+    isolated = false
   } = opts;
 
   const stateObj = {};
@@ -312,6 +320,8 @@ export function generatePortableOverlayUrl(opts) {
   const url = new URL(`${basePath}${overlayFile}`, window.location.href);
   url.searchParams.set("state", encoded);
   if (debug) url.searchParams.set("debug", "1");
+  if (isolated) url.searchParams.set("isolated", "1");
+  if (cacheBust) url.searchParams.set("v", String(version || Date.now()));
 
   let warning = null;
   if (oversized) {

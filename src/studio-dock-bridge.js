@@ -1,65 +1,53 @@
-/**
- * studio-dock-bridge.js  —  Phase 5.0
- *
- * Bidirectional BroadcastChannel bridge between:
- *   PepsLive Scoreboard Skin Studio  (this file)
- *   PepsLive Dock V1                 (pepslive-dock)
- *
- * Channels:
- *   "PEPSLIVE_SCOREBOARD"   Dock → Studio  (match data, already Phase 4.x)
- *   "PEPSLIVE_STUDIO_SYNC"  Studio → Dock  (skin overlay URLs)   ← NEW
- *
- * Protocol message sent by Studio:
- * {
- *   type:       "studio:skin-url-ready",
- *   protocol:   "PEPSLIVE_STUDIO_SYNC_V1",
- *   timestamp:  "<ISO string>",
- *   liveUrl:    "<full overlay URL for OBS Browser Source (live)>",
- *   summaryUrl: "<full overlay URL for OBS Browser Source (summary)>",
- *   skinId:     "FB-LIVE-01",
- *   sport:      "football",
- *   skinName:   "Premier Broadcast",
- *   obsWidth:   900,
- *   obsHeight:  180,
- *   customCss:  "body { background-color: rgba(0,0,0,0); margin: 0; overflow: hidden; }"
- * }
- */
-
-export const STUDIO_SYNC_CHANNEL = "PEPSLIVE_STUDIO_SYNC";
+﻿export const STUDIO_SYNC_CHANNEL = "PEPSLIVE_STUDIO_SYNC";
 export const STUDIO_SYNC_PROTOCOL = "PEPSLIVE_STUDIO_SYNC_V1";
+export const STUDIO_SYNC_STORAGE_KEY = "pepslive.scoreboardSkinStudio.lastUrls";
+export const STUDIO_SYNC_EVENT_NAME = "pepslive:scoreboard-skin-studio-urls-updated";
+export const DOCK_STATE_CHANNEL = "pepslive-scoreboard-state-v1";
 
-let _channel = null;
-let _lastPayload = null;
-let _listeners = [];
+let studioChannel = null;
+let lastPayload = null;
+let listeners = [];
 
-function getChannel() {
-  if (!_channel) {
-    try {
-      _channel = new BroadcastChannel(STUDIO_SYNC_CHANNEL);
-    } catch (_e) {
-      return null;
-    }
-  }
-  return _channel;
+function safeWarn(message, error) {
+  try {
+    console.warn(`[StudioDockBridge] ${message}`, error || "");
+  } catch (_error) {}
 }
 
-/**
- * Broadcast current skin overlay URLs to any listening Dock V1 instances.
- * Safe to call whenever skin or theme changes.
- *
- * @param {object} payload
- * @param {string} payload.liveUrl
- * @param {string} payload.summaryUrl
- * @param {string} payload.skinId
- * @param {string} payload.sport
- * @param {string} payload.skinName
- * @param {number} payload.obsWidth
- * @param {number} payload.obsHeight
- */
-export function broadcastSkinUrls(payload) {
-  const ch = getChannel();
-  if (!ch) return false;
+function getStudioChannel() {
+  if (studioChannel) {
+    return studioChannel;
+  }
+  try {
+    studioChannel = new BroadcastChannel(STUDIO_SYNC_CHANNEL);
+    return studioChannel;
+  } catch (error) {
+    safeWarn("BroadcastChannel unavailable; localStorage handoff will still be used", error);
+    return null;
+  }
+}
 
+function writeLastPayload(payload) {
+  try {
+    localStorage.setItem(STUDIO_SYNC_STORAGE_KEY, JSON.stringify(payload));
+    return true;
+  } catch (error) {
+    safeWarn("Unable to persist Studio URLs to localStorage", error);
+    return false;
+  }
+}
+
+function dispatchLastPayload(payload) {
+  try {
+    window.dispatchEvent(new CustomEvent(STUDIO_SYNC_EVENT_NAME, { detail: payload }));
+    return true;
+  } catch (error) {
+    safeWarn("Unable to dispatch Studio URL event", error);
+    return false;
+  }
+}
+
+export function broadcastSkinUrls(payload) {
   const message = {
     type: "studio:skin-url-ready",
     protocol: STUDIO_SYNC_PROTOCOL,
@@ -68,40 +56,42 @@ export function broadcastSkinUrls(payload) {
     ...payload
   };
 
-  _lastPayload = message;
+  lastPayload = message;
+  const stored = writeLastPayload(message);
+  const dispatched = dispatchLastPayload(message);
+  let broadcasted = false;
 
-  try {
-    ch.postMessage(message);
-    return true;
-  } catch (_e) {
-    return false;
+  const channel = getStudioChannel();
+  if (channel) {
+    try {
+      channel.postMessage(message);
+      broadcasted = true;
+    } catch (error) {
+      safeWarn("Unable to broadcast Studio URLs", error);
+    }
   }
+
+  return broadcasted || stored || dispatched;
 }
 
-/**
- * Listen for Dock → Studio state (match data).
- * Wraps the existing PEPSLIVE_SCOREBOARD channel so
- * the studio doesn't need to open it separately.
- *
- * @param {function} onMessage
- * @returns {function} unsubscribe
- */
 export function listenForDockUpdates(onMessage) {
   let dockChannel = null;
   try {
-    dockChannel = new BroadcastChannel("PEPSLIVE_SCOREBOARD");
-  } catch (_e) {
+    dockChannel = new BroadcastChannel(DOCK_STATE_CHANNEL);
+  } catch (error) {
+    safeWarn("Dock state channel unavailable", error);
     return () => {};
   }
 
   function handler(event) {
-    if (event.data && typeof event.data === "object") {
-      onMessage(event.data);
+    const message = event.data;
+    if (message && typeof message === "object") {
+      onMessage(message);
     }
   }
 
   dockChannel.addEventListener("message", handler);
-  _listeners.push({ channel: dockChannel, handler });
+  listeners.push({ channel: dockChannel, handler });
 
   return () => {
     dockChannel.removeEventListener("message", handler);
@@ -109,22 +99,29 @@ export function listenForDockUpdates(onMessage) {
   };
 }
 
-/** Return the last payload broadcast (for diagnostics). */
 export function getLastBroadcast() {
-  return _lastPayload;
+  if (lastPayload) {
+    return lastPayload;
+  }
+  try {
+    return JSON.parse(localStorage.getItem(STUDIO_SYNC_STORAGE_KEY) || "null");
+  } catch (_error) {
+    return null;
+  }
 }
 
-/** Close all channels — call on page unload. */
 export function closeStudioDockBridge() {
-  _listeners.forEach(({ channel, handler }) => {
+  listeners.forEach(({ channel, handler }) => {
     try {
       channel.removeEventListener("message", handler);
       channel.close();
-    } catch (_e) {}
+    } catch (_error) {}
   });
-  _listeners = [];
-  if (_channel) {
-    try { _channel.close(); } catch (_e) {}
-    _channel = null;
+  listeners = [];
+  if (studioChannel) {
+    try {
+      studioChannel.close();
+    } catch (_error) {}
+    studioChannel = null;
   }
 }

@@ -1,4 +1,4 @@
-import { generateOverlayUrl } from "./utils.js";
+import { DEFAULT_DISPLAY_OPTIONS, generatePortableOverlayUrl } from "./utils.js";
 
 function escapeHtml(value) {
   return String(value || "")
@@ -21,6 +21,11 @@ export class TemplateGallery {
     this.favorites = [];
     this.recentlyUsed = [];
     this.selectedTemplateId = "";
+    this.previewContext = {
+      theme: {},
+      displayOptions: { ...DEFAULT_DISPLAY_OPTIONS },
+      eventLogo: ""
+    };
     this.filters = {
       sport: "all",
       type: "all",
@@ -41,9 +46,49 @@ export class TemplateGallery {
     this.render();
   }
 
+  setPreviewContext(context = {}, { refreshFrames = false } = {}) {
+    this.previewContext = {
+      ...this.previewContext,
+      ...context,
+      displayOptions: { ...DEFAULT_DISPLAY_OPTIONS, ...(context.displayOptions || this.previewContext.displayOptions || {}) }
+    };
+    if (refreshFrames) {
+      this.refreshThumbnailFrames();
+    }
+  }
+
   setFilter(nextFilter) {
     this.filters = { ...this.filters, ...nextFilter };
     this.render();
+  }
+
+  buildThumbnailUrl(template) {
+    return generatePortableOverlayUrl({
+      skinId: template.id,
+      type: template.type,
+      sport: template.sport,
+      animationStyle: "none",
+      theme: this.previewContext.theme || {},
+      displayOptions: this.previewContext.displayOptions || DEFAULT_DISPLAY_OPTIONS,
+      eventLogo: this.previewContext.eventLogo || "",
+      cacheBust: false,
+      isolated: true,
+      absolute: false
+    }).url;
+  }
+
+  refreshThumbnailFrames() {
+    this.root?.querySelectorAll(".template-card[data-template-id] .thumb-frame").forEach((frame) => {
+      const templateId = frame.closest(".template-card")?.dataset.templateId;
+      const template = this.templates.find((item) => item.id === templateId);
+      if (!template) {
+        return;
+      }
+      const nextUrl = this.buildThumbnailUrl(template);
+      if (frame.getAttribute("src") !== nextUrl) {
+        frame.setAttribute("src", nextUrl);
+      }
+    });
   }
 
   filterTemplates() {
@@ -140,14 +185,7 @@ export class TemplateGallery {
                     const isFavorite = this.favorites.includes(template.id);
                     const isSelected = this.selectedTemplateId === template.id;
                     const source = template.recommendedSource || { width: 900, height: 180 };
-                    const thumbUrl = generateOverlayUrl({
-                      skinId: template.id,
-                      type: template.type,
-                      animationStyle: "none",
-                      cacheBust: false,
-                      absolute: false,
-                      isolated: true
-                    });
+                    const thumbUrl = this.buildThumbnailUrl(template);
                     const thumbRatio = `${source.width} / ${source.height}`;
                     return `
                       <article

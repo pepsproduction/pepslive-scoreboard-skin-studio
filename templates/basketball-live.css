@@ -391,8 +391,8 @@
   transition: opacity 0.3s;
 }
 
-.skin-FB-LIVE-11 .team-block.home::before { background: var(--home-color); }
-.skin-FB-LIVE-11 .team-block.away::before { background: var(--away-color); }
+.skin-BB-LIVE-11 .team-block.home::before { background: var(--home-color); }
+.skin-BB-LIVE-11 .team-block.away::before { background: var(--away-color); }
 
 .skin-BB-LIVE-11 .team-name {
   font-family: 'Rajdhani', sans-serif;

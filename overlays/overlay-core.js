@@ -1,4 +1,4 @@
-import { getTemplateById } from "../templates/template-registry.js";
+import { TEMPLATE_REGISTRY, getTemplateById } from "../templates/template-registry.js";
 import { validateIncomingPayload } from "../src/payload-validator.js";
 import { PEPSLIVE_MESSAGE_TYPES, PEPSLIVE_SCOREBOARD_PROTOCOL, createProtocolPayload } from "../src/pepslive-payload-protocol.js";
 import { SharedStateBridge, getSharedOverlayState } from "../src/shared-state-bridge.js";
@@ -127,6 +127,7 @@ let lastRenderedMode = "";
 let displayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
 let postMessageRenderTimer = 0;
 let isolatedPreviewMode = false;
+let skinLockedToUrl = false;
 
 function parseQueryParams() {
   const params = new URLSearchParams(window.location.search);
@@ -181,6 +182,43 @@ function applyTheme(theme) {
   root.style.setProperty("--border-width", `${Number(merged.borderWidth)}px`);
   root.style.setProperty("--glass-blur", `${Number(merged.glassBlur)}px`);
   currentTheme = merged;
+}
+
+function findTemplateBySportType(sport, type) {
+  return (
+    TEMPLATE_REGISTRY.find((item) => item.sport === sport && item.type === type) ||
+    TEMPLATE_REGISTRY.find((item) => item.type === type) ||
+    TEMPLATE_REGISTRY[0]
+  );
+}
+
+function shouldPreserveUrlSkin(sourceLabel) {
+  if (!skinLockedToUrl) {
+    return false;
+  }
+  return !["initial", "overlay-portable", "overlay-local", "post-message", "overlay-postmessage"].includes(sourceLabel);
+}
+
+function resolveTemplateForIncomingPayload(payload, sourceLabel) {
+  if (!shouldPreserveUrlSkin(sourceLabel)) {
+    return getTemplateById(payload.skinId);
+  }
+
+  const lockedTemplate = getTemplateById(currentSkinId || payload.skinId);
+  if (lockedTemplate.sport === payload.sport && lockedTemplate.type === payload.type) {
+    return lockedTemplate;
+  }
+
+  return findTemplateBySportType(payload.sport, lockedTemplate.type || payload.type || "live");
+}
+
+function mergeIncomingTheme(payload, sourceLabel) {
+  const incomingTheme = payload.theme || {};
+  const keepStudioTheme =
+    shouldPreserveUrlSkin(sourceLabel) ||
+    payload.source === "pepslive-dock" ||
+    payload.source === RELAY_SOURCE_LABEL;
+  return keepStudioTheme ? { ...currentTheme, ...incomingTheme } : incomingTheme;
 }
 
 function modeFromBody() {
@@ -307,9 +345,9 @@ function applyDisplayOptions(root) {
   root.classList.toggle("logo-position-outer", displayOptions.teamLogoPosition === "outer");
   root.classList.toggle("logo-position-inner", displayOptions.teamLogoPosition === "inner");
 
-  // Phase 5.0: team name alignment
-  const align = displayOptions.teamNameAlign || "outer";
-  ["outer", "inner", "center"].forEach((mode) => {
+  const allowedNameAlign = ["same-left", "same-right", "outer", "inner"];
+  const align = allowedNameAlign.includes(displayOptions.teamNameAlign) ? displayOptions.teamNameAlign : "outer";
+  ["same-left", "same-right", "outer", "inner"].forEach((mode) => {
     root.classList.toggle(`team-name-align-${mode}`, align === mode);
   });
 
@@ -518,12 +556,12 @@ async function applyProtocolPayload(rawPayload, sourceLabel = "unknown") {
 
   const payload = validation.normalizedPayload;
   currentSourceLabel = resolveSourceLabel(payload.source || sourceLabel);
-  currentSkinId = payload.skinId;
+  const template = resolveTemplateForIncomingPayload(payload, sourceLabel);
+  currentSkinId = template.id;
   currentAnimation = payload.animation?.style || currentAnimation;
-  applyTheme(payload.theme || {});
+  applyTheme(mergeIncomingTheme(payload, sourceLabel));
   currentData = payload.matchData;
 
-  const template = getTemplateById(payload.skinId);
   renderScoreboard(template, currentData);
   updateDebugBox({
     protocolStatus: payload.protocol,
@@ -652,6 +690,7 @@ async function initOverlay() {
   // --- Phase 4.3: Parse portable state first (highest priority) ---
   const portableState = decodePortableState(query.stateRaw);
   const hasPortableState = !!portableState;
+  skinLockedToUrl = hasPortableState || !!query.skinId;
 
   if (hasPortableState) {
     // Portable state takes priority over everything else for skin/theme/displayOptions
