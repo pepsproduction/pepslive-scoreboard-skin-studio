@@ -163,4 +163,12 @@
   .slot-toggle.text-mode-toggle {
     grid-template-columns: 1fr;
   }
+
+  .event-logo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-logo-preview {
+    min-height: 160px;
+  }
 }

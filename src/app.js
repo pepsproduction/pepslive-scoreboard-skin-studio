@@ -79,7 +79,9 @@ const state = {
   integrationLastDockUpdate: "",
   integrationLastPayloadSource: "",
   integrationPayloadStatus: "Payload Status: waiting",
-  displayOptions: { ...DEFAULT_DISPLAY_OPTIONS }
+  displayOptions: { ...DEFAULT_DISPLAY_OPTIONS },
+  eventLogoDataUrl: "",
+  eventLogoPalette: []
 };
 
 const OBS_CUSTOM_CSS = "body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }";
@@ -185,6 +187,34 @@ function syncDisplayOptionControls() {
   ui.displayOptionsForm.querySelectorAll("select[data-display-option]").forEach((select) => {
     select.value = options[select.dataset.displayOption] || DEFAULT_DISPLAY_OPTIONS[select.dataset.displayOption] || "full";
   });
+}
+
+function updateEventLogoUi() {
+  if (ui.eventLogoPreview) {
+    ui.eventLogoPreview.innerHTML = state.eventLogoDataUrl
+      ? `<img src="${state.eventLogoDataUrl}" alt="Event logo preview" />`
+      : `<span>No event logo</span>`;
+  }
+  if (ui.eventPaletteSwatches) {
+    ui.eventPaletteSwatches.innerHTML = state.eventLogoPalette.length
+      ? state.eventLogoPalette.map((color) => `<button type="button" class="palette-swatch" data-color="${color}" style="--swatch:${color}" title="${color}"></button>`).join("")
+      : `<span class="tiny-note">Upload a logo to extract colors.</span>`;
+  }
+  if (ui.eventLogoStatusText) {
+    ui.eventLogoStatusText.textContent = state.eventLogoDataUrl
+      ? "Event logo is active for preview/current skin."
+      : "No event logo override.";
+  }
+}
+
+function applyEventLogoToMatchData(matchData) {
+  if (!matchData) {
+    return matchData;
+  }
+  return {
+    ...matchData,
+    eventLogo: state.eventLogoDataUrl || matchData.eventLogo || ""
+  };
 }
 
 function getSourcePreset(type) {
@@ -427,6 +457,7 @@ function applyContractReport(report) {
 
 function buildProtocolPayloadFromState(partial = {}) {
   const template = state.selectedTemplate || TEMPLATE_REGISTRY[0];
+  const matchData = applyEventLogoToMatchData(partial.matchData || state.activeMatchData || {});
   return createProtocolPayload({
     source: partial.source || "PepsLiveScoreboardSkinStudio",
     timestamp: partial.timestamp || nowIso(),
@@ -435,7 +466,7 @@ function buildProtocolPayloadFromState(partial = {}) {
     type: partial.type || template.type,
     theme: partial.theme || state.currentTheme,
     animation: partial.animation || { style: state.animationStyle },
-    matchData: partial.matchData || state.activeMatchData || {},
+    matchData,
     displayOptions: partial.displayOptions || state.displayOptions
   });
 }
@@ -452,7 +483,8 @@ function saveSkinState() {
     animation: {
       style: state.animationStyle
     },
-    displayOptions: state.displayOptions
+    displayOptions: state.displayOptions,
+    eventLogo: state.eventLogoDataUrl
   });
   state.currentSkin = payload;
 }
@@ -493,7 +525,7 @@ async function applyTemplate(template, options = {}) {
   refreshObsUrlsPanel();
   saveSkinState();
 
-  state.activeMatchData = matchDataOverride || (await resolveMatchDataForTemplate(template, { forceMock }));
+  state.activeMatchData = applyEventLogoToMatchData(matchDataOverride || (await resolveMatchDataForTemplate(template, { forceMock })));
   previewEngine.setMatchData(state.activeMatchData);
   updateIntegrationPanel(buildProtocolPayloadFromState(), {
     dataSource: matchDataOverride ? state.integrationDataSource : INTEGRATION_DATA_SOURCES.MOCK,
@@ -521,10 +553,7 @@ async function applyTemplate(template, options = {}) {
   }
 
   if (broadcast && state.bridge && !state.applyingRemote) {
-    const payload = buildProtocolPayloadFromState();
-    state.lastProtocolPayload = payload;
-    state.bridge.publishState(payload);
-    updateProtocolMeta(payload, payload.timestamp);
+    publishCurrentStateIfReady();
   }
 }
 
@@ -669,6 +698,131 @@ function closeSettingsModal() {
   }
 }
 
+function publishCurrentStateIfReady() {
+  if (!state.bridge || !state.selectedTemplate || state.applyingRemote) {
+    return;
+  }
+  const payload = buildProtocolPayloadFromState();
+  state.lastProtocolPayload = payload;
+  state.bridge.publishState(payload);
+  updateProtocolMeta(payload, payload.timestamp);
+}
+
+function rgbToHex(r, g, b) {
+  return `#${[r, g, b].map((value) => Math.max(0, Math.min(255, value)).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function extractPaletteFromDataUrl(dataUrl) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      const size = 96;
+      const scale = Math.min(size / image.width, size / image.height, 1);
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) {
+        resolve([]);
+        return;
+      }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const buckets = new Map();
+      for (let index = 0; index < pixels.length; index += 16) {
+        const alpha = pixels[index + 3];
+        if (alpha < 160) {
+          continue;
+        }
+        const r = pixels[index];
+        const g = pixels[index + 1];
+        const b = pixels[index + 2];
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const saturation = max - min;
+        if (saturation < 18 && max > 220) {
+          continue;
+        }
+        const qr = Math.round(r / 32) * 32;
+        const qg = Math.round(g / 32) * 32;
+        const qb = Math.round(b / 32) * 32;
+        const key = `${qr},${qg},${qb}`;
+        const current = buckets.get(key) || { count: 0, score: 0, color: rgbToHex(qr, qg, qb) };
+        current.count += 1;
+        current.score += saturation + Math.abs(128 - max) * 0.15;
+        buckets.set(key, current);
+      }
+      const colors = Array.from(buckets.values())
+        .sort((a, b) => b.count * b.score - a.count * a.score)
+        .map((item) => item.color)
+        .filter((color, index, list) => list.indexOf(color) === index)
+        .slice(0, 5);
+      resolve(colors);
+    };
+    image.onerror = () => resolve([]);
+    image.src = dataUrl;
+  });
+}
+
+function applyPaletteToTheme(colors = state.eventLogoPalette) {
+  if (!colors.length) {
+    return;
+  }
+  const nextTheme = {
+    ...state.currentTheme,
+    primaryColor: colors[0] || state.currentTheme.primaryColor,
+    accentColor: colors[1] || colors[0] || state.currentTheme.accentColor,
+    homeColor: colors[0] || state.currentTheme.homeColor,
+    awayColor: colors[2] || colors[1] || state.currentTheme.awayColor
+  };
+  themeEditor.setTheme(nextTheme);
+  notify("Logo palette applied to scoreboard theme");
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Cannot read file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleEventLogoUpload(file) {
+  if (!file) {
+    return;
+  }
+  if (!file.type.startsWith("image/")) {
+    notify("Please choose an image file for the event logo", "warn");
+    return;
+  }
+  const dataUrl = await readFileAsDataUrl(file);
+  state.eventLogoDataUrl = dataUrl;
+  state.eventLogoPalette = await extractPaletteFromDataUrl(dataUrl);
+  state.activeMatchData = applyEventLogoToMatchData(state.activeMatchData || {});
+  previewEngine.setMatchData(state.activeMatchData);
+  updateEventLogoUi();
+  if (ui.eventLogoAutoTheme?.checked) {
+    applyPaletteToTheme();
+  }
+  saveSkinState();
+  publishCurrentStateIfReady();
+  notify("Event logo loaded for current skin");
+}
+
+function clearEventLogo() {
+  state.eventLogoDataUrl = "";
+  state.eventLogoPalette = [];
+  if (state.activeMatchData) {
+    state.activeMatchData = { ...state.activeMatchData, eventLogo: "" };
+    previewEngine.setMatchData(state.activeMatchData);
+  }
+  updateEventLogoUi();
+  saveSkinState();
+  publishCurrentStateIfReady();
+  notify("Event logo removed");
+}
+
 async function addSourceToObs(template = state.selectedTemplate) {
   if (!template || !previewEngine) {
     return;
@@ -791,8 +945,7 @@ function bindPreviewTools() {
       saveSkinState();
     }
     if (!state.applyingRemote) {
-      state.bridge?.publishAnimation({ style: state.animationStyle });
-      state.bridge?.publishTheme(state.currentTheme);
+      publishCurrentStateIfReady();
     }
   });
 
@@ -823,6 +976,34 @@ function bindPreviewTools() {
     refreshObsUrlsPanel();
     saveSkinState();
   });
+
+  ui.eventLogoInput?.addEventListener("change", async () => {
+    const file = ui.eventLogoInput.files?.[0];
+    try {
+      await handleEventLogoUpload(file);
+    } catch (error) {
+      notify(`Event logo failed: ${error.message}`, "error");
+    } finally {
+      ui.eventLogoInput.value = "";
+    }
+  });
+
+  ui.clearEventLogoBtn?.addEventListener("click", () => {
+    clearEventLogo();
+  });
+
+  ui.applyEventPaletteBtn?.addEventListener("click", () => {
+    applyPaletteToTheme();
+  });
+
+  ui.eventPaletteSwatches?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-color]");
+    if (!button) {
+      return;
+    }
+    const color = button.dataset.color;
+    themeEditor.setTheme({ ...state.currentTheme, primaryColor: color, accentColor: color });
+  });
 }
 
 function bindSkinJsonActions() {
@@ -839,6 +1020,7 @@ function bindSkinJsonActions() {
         style: state.animationStyle
       },
       displayOptions: state.displayOptions,
+      eventLogo: state.eventLogoDataUrl,
       createdAt: state.currentSkin?.createdAt
     });
     ui.skinJsonArea.value = JSON.stringify(payload, null, 2);
@@ -858,7 +1040,10 @@ function bindSkinJsonActions() {
       state.currentTheme = { ...DEFAULT_THEME, ...(parsed.theme || {}) };
       state.animationStyle = parsed.animation?.style || state.currentTheme.animationStyle || "smooth-broadcast";
       state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(parsed.displayOptions || {}) };
+      state.eventLogoDataUrl = parsed.eventLogo || "";
+      state.eventLogoPalette = state.eventLogoDataUrl ? await extractPaletteFromDataUrl(state.eventLogoDataUrl) : [];
       syncDisplayOptionControls();
+      updateEventLogoUi();
       setThemeBySkinId(template.id, state.currentTheme);
       await applyTemplate(template, { markRecent: true, broadcast: true, forceMock: false });
       notify(`Import Skin success: ${template.id}`);
@@ -877,13 +1062,17 @@ function bindSkinJsonActions() {
       type: state.selectedTemplate.type,
       theme: DEFAULT_THEME,
       animation: { style: DEFAULT_THEME.animationStyle },
-      displayOptions: { ...DEFAULT_DISPLAY_OPTIONS }
+      displayOptions: { ...DEFAULT_DISPLAY_OPTIONS },
+      eventLogo: ""
     });
     state.currentSkin = resetPayload;
     state.currentTheme = { ...DEFAULT_THEME };
     state.animationStyle = DEFAULT_THEME.animationStyle;
     state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
+    state.eventLogoDataUrl = "";
+    state.eventLogoPalette = [];
     syncDisplayOptionControls();
+    updateEventLogoUi();
     setThemeBySkinId(state.selectedTemplate.id, state.currentTheme);
     await applyTemplate(state.selectedTemplate, { markRecent: false, broadcast: true, forceMock: false });
     notify("Reset Skin complete");
@@ -1500,6 +1689,13 @@ function cacheElements() {
   ui.slotInspectorSelect = document.getElementById("slotInspectorSelect");
   ui.visualQaModeSelect = document.getElementById("visualQaModeSelect");
   ui.displayOptionsForm = document.getElementById("displayOptionsForm");
+  ui.eventLogoInput = document.getElementById("eventLogoInput");
+  ui.clearEventLogoBtn = document.getElementById("clearEventLogoBtn");
+  ui.applyEventPaletteBtn = document.getElementById("applyEventPaletteBtn");
+  ui.eventLogoAutoTheme = document.getElementById("eventLogoAutoTheme");
+  ui.eventLogoPreview = document.getElementById("eventLogoPreview");
+  ui.eventPaletteSwatches = document.getElementById("eventPaletteSwatches");
+  ui.eventLogoStatusText = document.getElementById("eventLogoStatusText");
   ui.contractStatusText = document.getElementById("contractStatusText");
   ui.contractReportArea = document.getElementById("contractReportArea");
 
@@ -1659,8 +1855,7 @@ function initThemeEditor() {
         saveSkinState();
       }
       if (!state.applyingRemote) {
-        state.bridge?.publishTheme(theme);
-        state.bridge?.publishAnimation({ style: state.animationStyle });
+        publishCurrentStateIfReady();
       }
     },
     onPresetChange: (preset) => {
@@ -1728,7 +1923,10 @@ async function initApp() {
   state.currentTheme = { ...DEFAULT_THEME, ...initialTheme };
   state.animationStyle = sharedPayload?.animation?.style || state.currentTheme.animationStyle || DEFAULT_THEME.animationStyle;
   state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(state.currentSkin?.displayOptions || {}) };
+  state.eventLogoDataUrl = state.currentSkin?.eventLogo || "";
+  state.eventLogoPalette = state.eventLogoDataUrl ? await extractPaletteFromDataUrl(state.eventLogoDataUrl) : [];
   syncDisplayOptionControls();
+  updateEventLogoUi();
 
   await applyTemplate(initialTemplate, {
     markRecent: false,

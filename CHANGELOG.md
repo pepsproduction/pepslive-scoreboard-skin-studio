@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## Phase 4.1 - Theme Stability + Event Logo Palette
+
+### Fixes
+- Fixed theme/background opacity updates so they publish the full currently selected skin state instead of a theme-only patch that could fall back to an older skin
+- Kept preview, shared state, and copied URL generation aligned with the selected skin during theme edits
+
+### Event Logo
+- Added local event logo upload for the current skin preview
+- Added automatic palette extraction from the event logo and one-click palette application to the theme
+- Event logo is stored in the current skin JSON/local state and can be cleared without affecting team data
+
 ## Phase 4.0 - Settings Modal + Source-Ratio Preview
 
 ### Studio UX

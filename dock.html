@@ -171,6 +171,31 @@
 
             <section class="panel-block">
               <h2>Theme Editor</h2>
+              <div class="event-logo-panel">
+                <div>
+                  <h3 class="mini-title">Event Logo & Auto Theme</h3>
+                  <p class="tiny-note">Upload an event logo for this skin preview. Colors can be pulled into the theme, then adjusted manually.</p>
+                </div>
+                <div class="event-logo-grid">
+                  <div id="eventLogoPreview" class="event-logo-preview"><span>No event logo</span></div>
+                  <div class="event-logo-controls">
+                    <label>
+                      <span>Event Logo Image</span>
+                      <input id="eventLogoInput" type="file" accept="image/*" />
+                    </label>
+                    <label class="slot-toggle compact-toggle">
+                      <input id="eventLogoAutoTheme" type="checkbox" checked />
+                      <span>Auto apply logo colors</span>
+                    </label>
+                    <div id="eventPaletteSwatches" class="palette-swatches"></div>
+                    <div class="inline-row">
+                      <button type="button" class="capsule-btn" id="applyEventPaletteBtn">Apply Palette</button>
+                      <button type="button" class="capsule-btn" id="clearEventLogoBtn">Clear Logo</button>
+                    </div>
+                    <p id="eventLogoStatusText" class="tiny-note">No event logo override.</p>
+                  </div>
+                </div>
+              </div>
               <div id="themeEditorRoot"></div>
             </section>
 

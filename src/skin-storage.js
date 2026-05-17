@@ -62,6 +62,7 @@ export function setCurrentSkin(skin) {
     theme: skin.theme || {},
     animation: skin.animation || {},
     displayOptions: skin.displayOptions || {},
+    eventLogo: skin.eventLogo || "",
     createdAt: current?.createdAt || now,
     updatedAt: now
   };
@@ -132,6 +133,7 @@ export function exportSkinJson(payload) {
     theme: payload.theme || {},
     animation: payload.animation || {},
     displayOptions: payload.displayOptions || {},
+    eventLogo: payload.eventLogo || "",
     createdAt: payload.createdAt || nowIso(),
     updatedAt: nowIso()
   };
