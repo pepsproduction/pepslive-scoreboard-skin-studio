@@ -126,3 +126,121 @@
 .skin-FB-SUM-10 .event-row {
   justify-content: space-between;
 }
+
+/* Phase 3.8 visual signatures */
+.skin-FB-SUM-01 .scoreboard-shell {
+  width: min(88vw, 1120px);
+  min-height: 560px;
+  justify-content: center;
+  text-align: center;
+}
+
+.skin-FB-SUM-01 .teams-row {
+  grid-template-columns: 1fr minmax(320px, auto) 1fr;
+}
+
+.skin-FB-SUM-02 .scoreboard-shell {
+  width: min(92vw, 1200px);
+  min-height: 500px;
+}
+
+.skin-FB-SUM-02 .team-block {
+  min-height: 160px;
+  justify-content: center;
+  text-align: center;
+}
+
+.skin-FB-SUM-03 .scoreboard-shell {
+  width: min(78vw, 820px);
+  min-height: 720px;
+  justify-content: space-between;
+  border-width: 3px;
+}
+
+.skin-FB-SUM-03 .teams-row {
+  grid-template-columns: 1fr;
+}
+
+.skin-FB-SUM-03 .score-block {
+  min-width: 100%;
+}
+
+.skin-FB-SUM-04 .scoreboard-shell {
+  width: min(88vw, 980px);
+  align-self: stretch;
+}
+
+.skin-FB-SUM-04 .event-row {
+  justify-content: flex-start;
+}
+
+.skin-FB-SUM-04 .extra-row {
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.skin-FB-SUM-05 .scoreboard-shell {
+  width: min(86vw, 1040px);
+  min-height: 520px;
+  border-radius: 6px;
+}
+
+.skin-FB-SUM-05 .score-block {
+  padding: 16px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.skin-FB-SUM-06 .scoreboard-shell {
+  width: min(82vw, 960px);
+  min-height: 540px;
+  outline: 1px solid rgba(250, 204, 21, 0.38);
+  outline-offset: -14px;
+}
+
+.skin-FB-SUM-06 .extra-row {
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+}
+
+.skin-FB-SUM-07 .scoreboard-shell {
+  width: min(90vw, 1180px);
+  min-height: 560px;
+  border-radius: 4px;
+}
+
+.skin-FB-SUM-07 .event-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 12px;
+}
+
+.skin-FB-SUM-08 .scoreboard-shell {
+  width: min(92vw, 1240px);
+  min-height: 520px;
+  justify-content: center;
+}
+
+.skin-FB-SUM-08 .team-block {
+  background: transparent;
+  border-color: transparent;
+}
+
+.skin-FB-SUM-09 .scoreboard-shell {
+  width: min(78vw, 760px);
+  min-height: 760px;
+  border-radius: 30px;
+}
+
+.skin-FB-SUM-09 .event-row,
+.skin-FB-SUM-09 .extra-row {
+  justify-content: center;
+}
+
+.skin-FB-SUM-10 .scoreboard-shell {
+  width: min(90vw, 1160px);
+  min-height: 520px;
+  justify-content: space-between;
+}
+
+.skin-FB-SUM-10 .score-block {
+  border-bottom: 4px solid var(--accent-color);
+  padding-bottom: 14px;
+}

@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## Phase 3.8 - Template Visual Differentiation + Overlay Flicker Polish
+
+### Overlay stability
+- Reduced preview iframe reloads when incoming payloads keep the same skin/type
+- Updated overlay rendering to patch existing slots instead of rebuilding the full scoreboard DOM on every state update
+- Kept animation classes stable during normal score/time updates to reduce visible flicker in OBS Browser Source
+
+### Template visuals
+- Added per-template gallery thumbnail signatures so cards better represent each skin family
+- Expanded football and basketball live/summary CSS signatures for clearer differences across all 40 templates
+- Added mobile overlay safeguards for narrow preview and dock testing viewports
+
+### QA
+- Verified JavaScript syntax, Phase 3 integration script, and HTTP smoke routes for dock/live/summary overlays
+
 ## Phase 2.5 - Final QA + GitHub Pages Deployment Check
 
 ### Core Features

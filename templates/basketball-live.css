@@ -170,3 +170,168 @@
 .skin-BB-LIVE-10 .extra-value {
   font-size: 0.68rem;
 }
+
+/* Phase 3.8 visual signatures */
+.skin-BB-LIVE-01 .scoreboard-shell {
+  width: min(94vw, 1040px);
+  min-height: 0;
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.92), rgba(88, 28, 135, 0.42)),
+    rgba(15, 23, 42, 0.7);
+}
+
+.skin-BB-LIVE-01 .score-block {
+  border-left: 3px solid var(--accent-color);
+  border-right: 3px solid var(--accent-color);
+}
+
+#overlay-root.skin-BB-LIVE-02 {
+  align-items: flex-end;
+}
+
+.skin-BB-LIVE-02 .scoreboard-shell {
+  margin-bottom: 18px;
+  min-height: 0;
+}
+
+.skin-BB-LIVE-02 .event-row {
+  order: 2;
+}
+
+.skin-BB-LIVE-03 .scoreboard-shell {
+  width: min(88vw, 860px);
+}
+
+.skin-BB-LIVE-03 .score-block {
+  min-width: 280px;
+  padding: 8px 18px;
+  background: rgba(250, 204, 21, 0.1);
+}
+
+.skin-BB-LIVE-04 .scoreboard-shell {
+  width: min(88vw, 920px);
+}
+
+.skin-BB-LIVE-04 .extra-item:first-child {
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+}
+
+.skin-BB-LIVE-05 .scoreboard-shell {
+  border-bottom-width: 5px;
+  border-bottom-color: var(--accent-color);
+}
+
+.skin-BB-LIVE-05 .extra-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 8px;
+}
+
+.skin-BB-LIVE-06 .scoreboard-shell {
+  width: min(92vw, 980px);
+  min-height: 0;
+}
+
+.skin-BB-LIVE-06 .teams-row {
+  gap: 4px;
+}
+
+#overlay-root.skin-BB-LIVE-07 {
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.skin-BB-LIVE-07 .scoreboard-shell {
+  width: min(74vw, 820px);
+  margin-left: 8px;
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+}
+
+.skin-BB-LIVE-08 .scoreboard-shell {
+  width: min(70vw, 820px);
+  margin-left: auto;
+}
+
+.skin-BB-LIVE-08 .teams-row {
+  grid-template-columns: 1fr;
+}
+
+.skin-BB-LIVE-08 .score-block {
+  order: -1;
+}
+
+.skin-BB-LIVE-09 .scoreboard-shell {
+  min-height: 0;
+}
+
+.skin-BB-LIVE-09 .team-block {
+  flex-direction: column;
+  text-align: center;
+}
+
+.skin-BB-LIVE-09 .team-short {
+  display: none;
+}
+
+#overlay-root.skin-BB-LIVE-10 {
+  justify-content: flex-start;
+  padding: 14px;
+}
+
+.skin-BB-LIVE-10 .scoreboard-shell {
+  width: min(44vw, 420px);
+  min-height: 0;
+}
+
+.skin-BB-LIVE-10 .teams-row {
+  grid-template-columns: 1fr 1fr;
+}
+
+.skin-BB-LIVE-10 .scoreboard-shell {
+  gap: 3px;
+  max-height: 164px;
+  overflow: hidden;
+  padding: 4px 6px 22px;
+  position: relative;
+}
+
+.skin-BB-LIVE-10 .score-block {
+  padding: 2px 6px;
+}
+
+.skin-BB-LIVE-10 .team-block {
+  gap: 4px;
+  padding: 2px 4px;
+}
+
+.skin-BB-LIVE-10 .score-values {
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+}
+
+.skin-BB-LIVE-10 .event-name,
+.skin-BB-LIVE-10 .status-badge,
+.skin-BB-LIVE-10 .game-meta {
+  font-size: 0.58rem;
+}
+
+.skin-BB-LIVE-10 .team-name {
+  font-size: 0.68rem;
+}
+
+.skin-BB-LIVE-10 .team-short {
+  font-size: 0.52rem;
+}
+
+.skin-BB-LIVE-10 .logo-slot {
+  width: 22px;
+  height: 22px;
+}
+
+.skin-BB-LIVE-10 .extra-row {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  left: 6px;
+  gap: 2px;
+}

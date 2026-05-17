@@ -138,6 +138,10 @@ export class TemplateGallery {
                     const isFavorite = this.favorites.includes(template.id);
                     const isSelected = this.selectedTemplateId === template.id;
                     const source = template.recommendedSource || { width: 900, height: 180 };
+                    const thumbData =
+                      template.sport === "basketball"
+                        ? { home: "WOL", away: "HAW", homeScore: "78", awayScore: "74", clock: "Q4" }
+                        : { home: "DRA", away: "TIG", homeScore: "2", awayScore: "1", clock: "45'" };
                     return `
                       <article
                         class="template-card ${isSelected ? "is-selected" : ""}"
@@ -145,10 +149,17 @@ export class TemplateGallery {
                         tabindex="0"
                         aria-current="${isSelected ? "true" : "false"}"
                       >
-                        <div class="template-thumb skin-thumb-${template.sport} skin-thumb-${template.type}">
+                        <div class="template-thumb skin-thumb-${template.sport} skin-thumb-${template.type} skin-thumb-${template.id}">
                           <div class="thumb-topline">
                             <span class="badge sport">${escapeHtml(template.sport)}</span>
                             <span class="badge type">${escapeHtml(template.type)}</span>
+                          </div>
+                          <div class="thumb-scorebug" aria-hidden="true">
+                            <span class="thumb-team home">${thumbData.home}</span>
+                            <span class="thumb-score">${thumbData.homeScore}</span>
+                            <span class="thumb-clock">${thumbData.clock}</span>
+                            <span class="thumb-score">${thumbData.awayScore}</span>
+                            <span class="thumb-team away">${thumbData.away}</span>
                           </div>
                           <span class="thumb-code">${escapeHtml(template.id)}</span>
                           <span class="thumb-name">${escapeHtml(template.name)}</span>

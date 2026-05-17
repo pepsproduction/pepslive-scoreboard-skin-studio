@@ -125,3 +125,114 @@
 .skin-BB-SUM-10 .extra-row {
   grid-template-columns: 1fr;
 }
+
+/* Phase 3.8 visual signatures */
+.skin-BB-SUM-01 .scoreboard-shell {
+  min-height: 560px;
+  justify-content: center;
+  text-align: center;
+}
+
+.skin-BB-SUM-01 .teams-row {
+  grid-template-columns: 1fr minmax(340px, auto) 1fr;
+}
+
+.skin-BB-SUM-02 .scoreboard-shell {
+  width: min(92vw, 1180px);
+  min-height: 540px;
+}
+
+.skin-BB-SUM-02 .extra-row {
+  padding: 14px;
+  background: rgba(2, 6, 23, 0.34);
+}
+
+.skin-BB-SUM-03 .scoreboard-shell {
+  width: min(78vw, 820px);
+  min-height: 640px;
+  border-top-width: 8px;
+  border-top-color: var(--accent-color);
+}
+
+.skin-BB-SUM-03 .score-block {
+  min-width: 100%;
+}
+
+.skin-BB-SUM-04 .scoreboard-shell {
+  width: min(86vw, 1040px);
+  min-height: 560px;
+}
+
+.skin-BB-SUM-04 .event-row {
+  justify-content: flex-start;
+}
+
+.skin-BB-SUM-04 .extra-row {
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.skin-BB-SUM-05 .scoreboard-shell {
+  width: min(90vw, 1160px);
+  min-height: 540px;
+}
+
+.skin-BB-SUM-05 .team-block {
+  min-height: 150px;
+  justify-content: center;
+}
+
+.skin-BB-SUM-06 .scoreboard-shell {
+  width: min(80vw, 840px);
+  min-height: 700px;
+  border-radius: 34px;
+}
+
+.skin-BB-SUM-06 .teams-row {
+  grid-template-columns: 1fr;
+}
+
+.skin-BB-SUM-07 .scoreboard-shell {
+  width: min(92vw, 1220px);
+  min-height: 500px;
+  border-radius: 3px;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.45);
+}
+
+.skin-BB-SUM-07 .event-row {
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.skin-BB-SUM-08 .scoreboard-shell {
+  width: min(90vw, 1120px);
+  min-height: 540px;
+  outline: 1px solid rgba(255, 255, 255, 0.16);
+  outline-offset: -16px;
+}
+
+.skin-BB-SUM-08 .extra-row {
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+}
+
+.skin-BB-SUM-09 .scoreboard-shell {
+  width: min(92vw, 1280px);
+  min-height: 520px;
+  justify-content: center;
+}
+
+.skin-BB-SUM-09 .team-block {
+  background: transparent;
+  border-color: transparent;
+}
+
+.skin-BB-SUM-10 .scoreboard-shell {
+  width: min(76vw, 780px);
+  min-height: 740px;
+  justify-content: space-between;
+}
+
+.skin-BB-SUM-10 .event-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  padding-bottom: 12px;
+}
