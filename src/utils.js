@@ -16,6 +16,17 @@ export const ANIMATION_PRESETS = ["none", "fade", "slide-left", "slide-top", "po
 export const SLOT_INSPECTOR_MODES = ["Off", "Core Slots", "All Slots"];
 export const VISUAL_QA_MODES = ["Off", "Slot Grid", "Contrast Boost", "Overflow Check"];
 
+export const DEFAULT_DISPLAY_OPTIONS = {
+  eventLogo: true,
+  eventName: true,
+  teamLogos: true,
+  teamShortNames: true,
+  gameClock: true,
+  periodLabel: true,
+  statusLabel: true,
+  extraRow: true
+};
+
 export function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -83,11 +94,27 @@ export function parseThemeString(value) {
   }
 }
 
+export function stringifyDisplayOptions(displayOptions) {
+  return encodeURIComponent(JSON.stringify(displayOptions || {}));
+}
+
+export function parseDisplayOptionsString(value) {
+  if (!value) {
+    return null;
+  }
+  try {
+    return JSON.parse(decodeURIComponent(value));
+  } catch (_error) {
+    return null;
+  }
+}
+
 export function generateOverlayUrl({
   skinId,
   type,
   animationStyle,
   theme,
+  displayOptions,
   cacheBust = true,
   absolute = true,
   debug = false,
@@ -104,6 +131,10 @@ export function generateOverlayUrl({
 
   if (theme && Object.keys(theme).length > 0) {
     url.searchParams.set("theme", stringifyTheme(theme));
+  }
+
+  if (displayOptions && Object.values(displayOptions).some((value) => value === false)) {
+    url.searchParams.set("slots", stringifyDisplayOptions(displayOptions));
   }
 
   if (debug) {

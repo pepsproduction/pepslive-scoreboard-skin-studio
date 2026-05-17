@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## Phase 3.9 - Web Studio Selection Stability + Slot Controls
+
+### Stability
+- Fixed preview flicker by avoiding iframe reloads when switching skins within the same overlay type
+- Prevented old shared/localStorage payloads from overriding an explicit `?skin=` query during overlay startup
+- Stopped preview postMessage updates from publishing back into shared state, avoiding feedback loops
+
+### Web Studio UX
+- Shifted the main page copy toward a regular web studio/manual Browser Source workflow
+- Hid direct OBS WebSocket/Add Source controls from the main flow while keeping manual URL copy available
+- Added Scoreboard Parts toggles for Event Logo, Event Name, Team Logos, Short Names, Clock, Period, Status, and Extra Stats
+
+### Template polish
+- Added stronger image-inspired visual treatments for selected football/basketball live and summary templates
+- Kept team names and scores as always-on core slots while optional parts auto-collapse cleanly
+
 ## Phase 3.8 - Template Visual Differentiation + Overlay Flicker Polish
 
 ### Overlay stability

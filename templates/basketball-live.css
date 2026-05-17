@@ -335,3 +335,73 @@
   left: 6px;
   gap: 2px;
 }
+
+/* Phase 3.9 pattern polish: segmented broadcast and court-scorebug families */
+.skin-BB-LIVE-01 .scoreboard-shell {
+  border: 0;
+  border-radius: 9px;
+  background: #030712;
+}
+
+.skin-BB-LIVE-01 .teams-row {
+  grid-template-columns: 1fr minmax(180px, auto) 1fr;
+  gap: 0;
+}
+
+.skin-BB-LIVE-01 .team-block {
+  min-height: 56px;
+  border: 0;
+  border-radius: 0;
+}
+
+.skin-BB-LIVE-01 .team-block.home {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--home-color) 76%, #020617), color-mix(in srgb, var(--home-color) 42%, #020617));
+}
+
+.skin-BB-LIVE-01 .team-block.away {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--away-color) 42%, #020617), color-mix(in srgb, var(--away-color) 76%, #020617));
+}
+
+.skin-BB-LIVE-01 .score-block {
+  align-self: stretch;
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.92);
+  border: 0;
+  padding-inline: 18px;
+}
+
+.skin-BB-LIVE-02 .scoreboard-shell {
+  border: 0;
+  border-radius: 12px;
+  background:
+    linear-gradient(90deg, rgba(17, 24, 39, 0.92) 0 48%, rgba(127, 29, 29, 0.76) 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent);
+}
+
+.skin-BB-LIVE-02 .extra-row {
+  grid-template-columns: repeat(6, minmax(64px, 1fr));
+}
+
+.skin-BB-LIVE-04 .score-block {
+  border-radius: 4px;
+  background: linear-gradient(180deg, #ef4444, #991b1b);
+  color: white;
+}
+
+.skin-BB-LIVE-04 .score-block::after {
+  content: "SHOT";
+}
+
+.skin-BB-LIVE-07 .scoreboard-shell {
+  background:
+    linear-gradient(120deg, rgba(88, 28, 135, 0.84), rgba(2, 6, 23, 0.82) 45%, rgba(153, 27, 27, 0.84)),
+    radial-gradient(circle at 50% 110%, rgba(255, 255, 255, 0.18), transparent 30%);
+}
+
+.skin-BB-LIVE-09 .teams-row {
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, auto) minmax(220px, 1fr);
+}
+
+.skin-BB-LIVE-09 .logo-slot {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08), 0 8px 16px rgba(0, 0, 0, 0.28);
+}

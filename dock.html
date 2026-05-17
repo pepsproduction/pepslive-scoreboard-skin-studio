@@ -13,10 +13,10 @@
       <header class="dock-header glass-panel">
         <div class="brand-block">
           <h1>PepsLive Scoreboard Skin Studio</h1>
-          <p>Dock UI for selecting scoreboard skins/templates only</p>
+          <p>เว็บสำหรับเลือก Skin Scoreboard, Preview และ Copy URL ไปใช้ใน OBS Browser Source</p>
         </div>
         <div class="header-meta">
-          <div class="status-line">
+          <div class="status-line web-hidden">
             <span>OBS Status:</span>
             <strong id="obsStatusText" class="disconnected">Disconnected</strong>
           </div>
@@ -25,8 +25,8 @@
             <strong id="currentSkinLabel">-</strong>
           </div>
           <div class="header-actions">
-            <button type="button" class="capsule-btn" id="copyUrlBtn" data-copy-feedback="true">Copy Production URL</button>
-            <button type="button" class="capsule-btn primary" id="addSourceBtn">Add Source</button>
+            <button type="button" class="capsule-btn primary" id="copyUrlBtn" data-copy-feedback="true">Copy Browser Source URL</button>
+            <button type="button" class="capsule-btn primary web-hidden" id="addSourceBtn">Add Source</button>
           </div>
         </div>
       </header>
@@ -77,7 +77,7 @@
             <div class="preview-head">
               <div>
                 <h2>Current Preview</h2>
-                <p class="tiny-note preview-copy">Preview the active skin with real overlay data before sending it to OBS.</p>
+                <p class="tiny-note preview-copy">Preview skin ที่เลือก และ Copy URL ไปใส่ Browser Source เองได้ทันที</p>
               </div>
               <small id="previewStatusText">-</small>
             </div>
@@ -87,9 +87,9 @@
               <div><strong>Source Preset:</strong> <span id="previewSourceSizeText">-</span></div>
             </div>
             <div class="inline-row preview-actions">
-              <button type="button" class="capsule-btn primary" id="previewCopyProductionBtn" data-copy-feedback="true">Copy Production URL</button>
+              <button type="button" class="capsule-btn primary" id="previewCopyProductionBtn" data-copy-feedback="true">Copy Browser Source URL</button>
               <button type="button" class="capsule-btn" id="previewCopyDebugBtn" data-copy-feedback="true">Copy Debug URL</button>
-              <button type="button" class="capsule-btn" id="previewAddSourceBtn">Add Source</button>
+              <button type="button" class="capsule-btn web-hidden" id="previewAddSourceBtn">Add Source</button>
             </div>
             <div id="previewStage" class="preview-stage bg-transparent-grid">
               <iframe id="overlayPreviewFrame" title="Overlay Preview" loading="eager" allowtransparency="true"></iframe>
@@ -117,6 +117,22 @@
                 <select id="visualQaModeSelect" class="ui-select"></select>
               </label>
             </div>
+            <div class="display-options-panel">
+              <div class="mini-title-row">
+                <h3 class="mini-title">Scoreboard Parts</h3>
+                <span class="tiny-note">Team names และ score เป็น core slot ที่แสดงเสมอ</span>
+              </div>
+              <div id="displayOptionsForm" class="slot-toggle-grid">
+                <label class="slot-toggle"><input type="checkbox" data-display-option="eventLogo" checked /> <span>Event Logo</span></label>
+                <label class="slot-toggle"><input type="checkbox" data-display-option="eventName" checked /> <span>Event Name</span></label>
+                <label class="slot-toggle"><input type="checkbox" data-display-option="teamLogos" checked /> <span>Team Logos</span></label>
+                <label class="slot-toggle"><input type="checkbox" data-display-option="teamShortNames" checked /> <span>Short Names</span></label>
+                <label class="slot-toggle"><input type="checkbox" data-display-option="gameClock" checked /> <span>Clock</span></label>
+                <label class="slot-toggle"><input type="checkbox" data-display-option="periodLabel" checked /> <span>Period</span></label>
+                <label class="slot-toggle"><input type="checkbox" data-display-option="statusLabel" checked /> <span>Status</span></label>
+                <label class="slot-toggle"><input type="checkbox" data-display-option="extraRow" checked /> <span>Extra Stats</span></label>
+              </div>
+            </div>
             <div class="contract-summary">
               <div class="status-chip" id="contractStatusText" data-state="ok">Render Contract: checking...</div>
               <label>
@@ -131,7 +147,7 @@
             <div id="themeEditorRoot"></div>
           </section>
 
-          <section class="panel-block">
+          <section class="panel-block web-hidden">
             <h2>OBS Source Manager</h2>
             <div class="obs-mode-grid">
               <div class="obs-mode-card">

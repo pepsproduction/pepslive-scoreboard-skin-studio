@@ -379,3 +379,108 @@
 .skin-FB-LIVE-08 .extra-value {
   font-size: 0.48rem;
 }
+
+/* Phase 3.9 pattern polish: image-inspired scorebug families */
+.skin-FB-LIVE-01 .scoreboard-shell {
+  position: relative;
+  width: min(96vw, 1180px);
+  border-radius: 0;
+  border: 0;
+  background:
+    linear-gradient(90deg, rgba(15, 31, 82, 0.96) 0 22%, rgba(248, 250, 252, 0.9) 22% 78%, rgba(15, 31, 82, 0.96) 78%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent);
+  color: #07111f;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.36);
+}
+
+.skin-FB-LIVE-01 .scoreboard-shell::before,
+.skin-FB-LIVE-01 .scoreboard-shell::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  left: 18px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #f9d36a 12%, #f59e0b 50%, #f9d36a 88%, transparent);
+  pointer-events: none;
+}
+
+.skin-FB-LIVE-01 .scoreboard-shell::before {
+  top: 0;
+}
+
+.skin-FB-LIVE-01 .scoreboard-shell::after {
+  bottom: 0;
+}
+
+.skin-FB-LIVE-01 .event-row,
+.skin-FB-LIVE-01 .team-block,
+.skin-FB-LIVE-01 .score-block {
+  background: rgba(255, 255, 255, 0.7);
+  color: #07111f;
+  border-color: rgba(15, 23, 42, 0.16);
+}
+
+.skin-FB-LIVE-01 .extra-item {
+  color: #f8fafc;
+}
+
+.skin-FB-LIVE-03 .scoreboard-shell {
+  position: relative;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.skin-FB-LIVE-03 .teams-row {
+  grid-template-columns: 1fr minmax(170px, auto) 1fr;
+}
+
+.skin-FB-LIVE-03 .team-block {
+  min-height: 62px;
+  border: 0;
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
+}
+
+.skin-FB-LIVE-03 .team-block.away {
+  clip-path: polygon(22px 0, 100% 0, 100% 100%, 22px 100%, 0 50%);
+}
+
+.skin-FB-LIVE-03 .score-block {
+  align-self: stretch;
+  justify-content: center;
+  padding-inline: 20px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-color) 88%, #f8fafc), color-mix(in srgb, var(--primary-color) 78%, #111827));
+  color: #07111f;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+}
+
+.skin-FB-LIVE-05 .scoreboard-shell {
+  background:
+    linear-gradient(90deg, rgba(0, 87, 255, 0.5), rgba(15, 23, 42, 0.82) 48%, rgba(255, 94, 0, 0.52)),
+    radial-gradient(circle at 12% 28%, rgba(56, 189, 248, 0.32), transparent 32%),
+    radial-gradient(circle at 88% 28%, rgba(251, 146, 60, 0.32), transparent 32%);
+}
+
+.skin-FB-LIVE-05 .team-block.home {
+  border-color: rgba(56, 189, 248, 0.55);
+}
+
+.skin-FB-LIVE-05 .team-block.away {
+  border-color: rgba(251, 146, 60, 0.55);
+}
+
+.skin-FB-LIVE-07 .scoreboard-shell {
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(2, 6, 23, 0.94), rgba(39, 39, 42, 0.86));
+}
+
+.skin-FB-LIVE-07 .event-row {
+  justify-content: center;
+  order: -1;
+}
+
+.skin-FB-LIVE-07 .team-block {
+  border-radius: 4px;
+  background: rgba(3, 7, 18, 0.64);
+}

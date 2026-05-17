@@ -89,6 +89,10 @@
   .obs-preset-grid {
     grid-template-columns: 1fr;
   }
+
+  .mini-title-row {
+    display: grid;
+  }
 }
 
 @media (max-width: 560px) {
@@ -110,5 +114,9 @@
 
   .card-actions .capsule-btn {
     width: 100%;
+  }
+
+  .slot-toggle-grid {
+    grid-template-columns: 1fr;
   }
 }

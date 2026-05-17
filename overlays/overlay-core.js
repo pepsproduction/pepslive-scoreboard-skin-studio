@@ -3,6 +3,7 @@ import { validateIncomingPayload } from "../src/payload-validator.js";
 import { PEPSLIVE_MESSAGE_TYPES, PEPSLIVE_SCOREBOARD_PROTOCOL, createProtocolPayload } from "../src/pepslive-payload-protocol.js";
 import { SharedStateBridge, getSharedOverlayState } from "../src/shared-state-bridge.js";
 import { evaluateRenderedSlots, getRenderContractByTemplateId } from "../src/template-render-contract.js";
+import { DEFAULT_DISPLAY_OPTIONS, parseDisplayOptionsString } from "../src/utils.js";
 
 const DEFAULT_THEME = {
   primaryColor: "#ff7a18",
@@ -121,6 +122,8 @@ let lastContractReport = null;
 let currentSourceLabel = "Mock Data";
 let lastRenderedTemplateId = "";
 let lastRenderedMode = "";
+let displayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
+let postMessageRenderTimer = 0;
 
 function parseQueryParams() {
   const params = new URLSearchParams(window.location.search);
@@ -128,6 +131,7 @@ function parseQueryParams() {
     skinId: params.get("skin"),
     animationStyle: params.get("animation"),
     themeRaw: params.get("theme"),
+    slotsRaw: params.get("slots"),
     debug: params.get("debug") === "1"
   };
 }
@@ -280,6 +284,24 @@ function applyInspectorAndQaClass(root) {
   root.classList.add(VISUAL_QA_CLASS_MAP[visualQaMode] || VISUAL_QA_CLASS_MAP.Off);
 }
 
+function applyDisplayOptions(root) {
+  displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(displayOptions || {}) };
+
+  root.classList.toggle("hide-event-logo", !displayOptions.eventLogo);
+  root.classList.toggle("hide-event-name", !displayOptions.eventName);
+  root.classList.toggle("hide-team-logos", !displayOptions.teamLogos);
+  root.classList.toggle("hide-team-short-names", !displayOptions.teamShortNames);
+  root.classList.toggle("hide-game-clock", !displayOptions.gameClock);
+  root.classList.toggle("hide-period-label", !displayOptions.periodLabel);
+  root.classList.toggle("hide-status-label", !displayOptions.statusLabel);
+  root.classList.toggle("hide-extra-row", !displayOptions.extraRow);
+
+  const eventRowEmpty = !displayOptions.eventLogo && !displayOptions.eventName && !displayOptions.statusLabel;
+  const gameMetaEmpty = !displayOptions.gameClock && !displayOptions.periodLabel;
+  root.classList.toggle("event-row-empty", eventRowEmpty);
+  root.classList.toggle("game-meta-empty", gameMetaEmpty);
+}
+
 function collectRenderedSlotNames(root) {
   return Array.from(root.querySelectorAll("[data-slot]"))
     .map((node) => node.getAttribute("data-slot"))
@@ -357,6 +379,7 @@ function renderScoreboard(template, data) {
   }
 
   applyInspectorAndQaClass(root);
+  applyDisplayOptions(root);
 
   const slotNames = collectRenderedSlotNames(root);
   const contractReport = evaluateRenderedSlots(template.id, slotNames);
@@ -500,6 +523,26 @@ function buildPayloadFromLocalState() {
   });
 }
 
+function schedulePostMessageRender() {
+  if (postMessageRenderTimer) {
+    window.clearTimeout(postMessageRenderTimer);
+  }
+  postMessageRenderTimer = window.setTimeout(async () => {
+    postMessageRenderTimer = 0;
+    const activeTemplate = getTemplateById(currentSkinId || "FB-LIVE-01");
+    const composedPayload = createProtocolPayload({
+      source: "overlay-postmessage",
+      sport: activeTemplate.sport,
+      skinId: activeTemplate.id,
+      type: activeTemplate.type,
+      theme: currentTheme,
+      animation: { style: currentAnimation },
+      matchData: currentData || {}
+    });
+    await applyProtocolPayload(composedPayload, "post-message");
+  }, 16);
+}
+
 function setupSharedBridge() {
   sharedBridge = new SharedStateBridge({
     role: "overlay",
@@ -534,9 +577,20 @@ function setupSharedBridge() {
 }
 
 function setupPostMessageBridge() {
-  window.addEventListener("message", async (event) => {
+  window.addEventListener("message", (event) => {
     const payload = event.data || {};
-    const template = getTemplateById(currentSkinId || "FB-LIVE-01");
+    const handledTypes = new Set([
+      "pepslive:update-theme",
+      "pepslive:update-animation",
+      "pepslive:update-skin",
+      "pepslive:update-data",
+      "pepslive:set-slot-inspector",
+      "pepslive:set-visual-qa-mode",
+      "pepslive:update-display-options"
+    ]);
+    if (!handledTypes.has(payload.type)) {
+      return;
+    }
 
     if (payload.type === "pepslive:update-theme" && payload.theme) {
       applyTheme(payload.theme);
@@ -556,19 +610,11 @@ function setupPostMessageBridge() {
     if (payload.type === "pepslive:set-visual-qa-mode") {
       visualQaMode = payload.mode || "Off";
     }
+    if (payload.type === "pepslive:update-display-options" && payload.displayOptions && typeof payload.displayOptions === "object") {
+      displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...payload.displayOptions };
+    }
 
-    const activeTemplate = getTemplateById(currentSkinId || template.id);
-    const composedPayload = createProtocolPayload({
-      source: "overlay-postmessage",
-      sport: activeTemplate.sport,
-      skinId: activeTemplate.id,
-      type: activeTemplate.type,
-      theme: currentTheme,
-      animation: { style: currentAnimation },
-      matchData: currentData || {}
-    });
-    await applyProtocolPayload(composedPayload, "post-message");
-    sharedBridge?.publishState(composedPayload);
+    schedulePostMessageRender();
   });
 }
 
@@ -576,6 +622,7 @@ async function initOverlay() {
   const query = parseQueryParams();
   debugEnabled = query.debug;
   ensureDebugBox();
+  displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(parseDisplayOptionsString(query.slotsRaw) || {}) };
 
   const sharedState = getSharedOverlayState();
   const sharedPayload = sharedState.currentPayload;
@@ -589,11 +636,11 @@ async function initOverlay() {
 
   const queryTheme = parseThemeFromQuery(query.themeRaw);
   const storedTheme = getStoredTheme(currentSkinId);
-  applyTheme({ ...storedTheme, ...(sharedPayload?.theme || {}), ...queryTheme });
+  applyTheme({ ...storedTheme, ...(!query.skinId ? sharedPayload?.theme || {} : {}), ...queryTheme });
 
-  currentData = sharedPayload?.matchData || null;
+  const fallbackTemplate = getTemplateById(currentSkinId);
+  currentData = sharedPayload?.matchData?.sport === fallbackTemplate.sport ? sharedPayload.matchData : null;
   if (!currentData) {
-    const fallbackTemplate = getTemplateById(currentSkinId);
     currentData = await getMockBySport(fallbackTemplate.sport);
   }
 
@@ -604,7 +651,7 @@ async function initOverlay() {
   setupPostMessageBridge();
 
   const storagePayload = getSharedOverlayState().currentPayload;
-  if (storagePayload) {
+  if (storagePayload && !query.skinId) {
     await applyProtocolPayload(storagePayload, "storage-bootstrap");
   }
 }

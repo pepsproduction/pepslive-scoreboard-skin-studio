@@ -244,3 +244,43 @@
   border-bottom: 4px solid var(--accent-color);
   padding-bottom: 14px;
 }
+
+/* Phase 3.9 pattern polish: final cards, posters, and split boards */
+.skin-FB-SUM-01 .scoreboard-shell {
+  border: 0;
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.92) 0 34%, rgba(14, 165, 233, 0.78) 34% 66%, rgba(2, 6, 23, 0.92) 66%),
+    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.16), transparent 34%);
+}
+
+.skin-FB-SUM-01 .score-block {
+  border-radius: 18px;
+  padding: 18px 30px;
+  background: linear-gradient(180deg, #38bdf8, #0369a1);
+  color: #020617;
+}
+
+.skin-FB-SUM-02 .teams-row {
+  gap: 0;
+}
+
+.skin-FB-SUM-02 .team-block {
+  clip-path: polygon(0 0, calc(100% - 34px) 0, 100% 50%, calc(100% - 34px) 100%, 0 100%);
+}
+
+.skin-FB-SUM-02 .team-block.away {
+  clip-path: polygon(34px 0, 100% 0, 100% 100%, 34px 100%, 0 50%);
+}
+
+.skin-FB-SUM-03 .scoreboard-shell {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.96)),
+    radial-gradient(circle at 50% 0, rgba(251, 146, 60, 0.28), transparent 34%);
+}
+
+.skin-FB-SUM-08 .score-block {
+  min-width: min(86vw, 460px);
+  border-radius: 20px;
+  background: rgba(2, 6, 23, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}

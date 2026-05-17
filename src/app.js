@@ -32,6 +32,7 @@ import { DEFAULT_THEME, ThemeEditor } from "./theme-editor.js";
 import {
   ANIMATION_PRESETS,
   BACKGROUND_MODES,
+  DEFAULT_DISPLAY_OPTIONS,
   SAFE_AREA_MODES,
   SLOT_INSPECTOR_MODES,
   STYLE_TAGS,
@@ -77,7 +78,8 @@ const state = {
   integrationDataSource: INTEGRATION_DATA_SOURCES.MOCK,
   integrationLastDockUpdate: "",
   integrationLastPayloadSource: "",
-  integrationPayloadStatus: "Payload Status: waiting"
+  integrationPayloadStatus: "Payload Status: waiting",
+  displayOptions: { ...DEFAULT_DISPLAY_OPTIONS }
 };
 
 const OBS_CUSTOM_CSS = "body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }";
@@ -168,6 +170,16 @@ function updatePreviewSummary(template = state.selectedTemplate) {
   }
 }
 
+function syncDisplayOptionControls() {
+  if (!ui.displayOptionsForm) {
+    return;
+  }
+  const options = { ...DEFAULT_DISPLAY_OPTIONS, ...(state.displayOptions || {}) };
+  ui.displayOptionsForm.querySelectorAll("input[data-display-option]").forEach((input) => {
+    input.checked = options[input.dataset.displayOption] !== false;
+  });
+}
+
 function getSourcePreset(type) {
   if (type === "summary") {
     return SUMMARY_SOURCE_PRESETS[state.obsSummaryPreset] || SUMMARY_SOURCE_PRESETS["summary-fhd"];
@@ -195,6 +207,7 @@ function buildOverlayUrlByType(type, { debug = false, cacheBust = false, forceVe
     type,
     animationStyle: state.animationStyle,
     theme: state.currentTheme,
+    displayOptions: state.displayOptions,
     cacheBust,
     absolute: true,
     debug,
@@ -415,7 +428,8 @@ function buildProtocolPayloadFromState(partial = {}) {
     type: partial.type || template.type,
     theme: partial.theme || state.currentTheme,
     animation: partial.animation || { style: state.animationStyle },
-    matchData: partial.matchData || state.activeMatchData || {}
+    matchData: partial.matchData || state.activeMatchData || {},
+    displayOptions: partial.displayOptions || state.displayOptions
   });
 }
 
@@ -430,7 +444,8 @@ function saveSkinState() {
     theme: state.currentTheme,
     animation: {
       style: state.animationStyle
-    }
+    },
+    displayOptions: state.displayOptions
   });
   state.currentSkin = payload;
 }
@@ -458,6 +473,7 @@ async function applyTemplate(template, options = {}) {
   previewEngine.setAnimation(state.animationStyle);
   previewEngine.setSlotInspectorMode(state.slotInspectorMode);
   previewEngine.setVisualQaMode(state.visualQaMode);
+  previewEngine.setDisplayOptions(state.displayOptions);
   themeEditor.setTheme(state.currentTheme, { silent: true });
   ui.animationPreset.value = state.animationStyle;
   ui.slotInspectorSelect.value = state.slotInspectorMode;
@@ -743,6 +759,21 @@ function bindPreviewTools() {
     state.visualQaMode = ui.visualQaModeSelect.value;
     previewEngine.setVisualQaMode(state.visualQaMode);
   });
+
+  ui.displayOptionsForm?.addEventListener("change", (event) => {
+    const input = event.target.closest("input[data-display-option]");
+    if (!input) {
+      return;
+    }
+    state.displayOptions = {
+      ...DEFAULT_DISPLAY_OPTIONS,
+      ...state.displayOptions,
+      [input.dataset.displayOption]: input.checked
+    };
+    previewEngine.setDisplayOptions(state.displayOptions);
+    refreshObsUrlsPanel();
+    saveSkinState();
+  });
 }
 
 function bindSkinJsonActions() {
@@ -758,6 +789,7 @@ function bindSkinJsonActions() {
       animation: {
         style: state.animationStyle
       },
+      displayOptions: state.displayOptions,
       createdAt: state.currentSkin?.createdAt
     });
     ui.skinJsonArea.value = JSON.stringify(payload, null, 2);
@@ -776,6 +808,8 @@ function bindSkinJsonActions() {
       const template = getTemplateById(parsed.skinId);
       state.currentTheme = { ...DEFAULT_THEME, ...(parsed.theme || {}) };
       state.animationStyle = parsed.animation?.style || state.currentTheme.animationStyle || "smooth-broadcast";
+      state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(parsed.displayOptions || {}) };
+      syncDisplayOptionControls();
       setThemeBySkinId(template.id, state.currentTheme);
       await applyTemplate(template, { markRecent: true, broadcast: true, forceMock: false });
       notify(`Import Skin success: ${template.id}`);
@@ -793,11 +827,14 @@ function bindSkinJsonActions() {
       sport: state.selectedTemplate.sport,
       type: state.selectedTemplate.type,
       theme: DEFAULT_THEME,
-      animation: { style: DEFAULT_THEME.animationStyle }
+      animation: { style: DEFAULT_THEME.animationStyle },
+      displayOptions: { ...DEFAULT_DISPLAY_OPTIONS }
     });
     state.currentSkin = resetPayload;
     state.currentTheme = { ...DEFAULT_THEME };
     state.animationStyle = DEFAULT_THEME.animationStyle;
+    state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
+    syncDisplayOptionControls();
     setThemeBySkinId(state.selectedTemplate.id, state.currentTheme);
     await applyTemplate(state.selectedTemplate, { markRecent: false, broadcast: true, forceMock: false });
     notify("Reset Skin complete");
@@ -1408,6 +1445,7 @@ function cacheElements() {
   ui.animationPreset = document.getElementById("animationPresetSelect");
   ui.slotInspectorSelect = document.getElementById("slotInspectorSelect");
   ui.visualQaModeSelect = document.getElementById("visualQaModeSelect");
+  ui.displayOptionsForm = document.getElementById("displayOptionsForm");
   ui.contractStatusText = document.getElementById("contractStatusText");
   ui.contractReportArea = document.getElementById("contractReportArea");
 
@@ -1545,6 +1583,7 @@ function initPreview() {
   previewEngine.setSafeAreaMode(SAFE_AREA_MODES[0]);
   previewEngine.setSlotInspectorMode(state.slotInspectorMode);
   previewEngine.setVisualQaMode(state.visualQaMode);
+  previewEngine.setDisplayOptions(state.displayOptions);
 }
 
 function initThemeEditor() {
@@ -1631,6 +1670,8 @@ async function initApp() {
   const initialTheme = getThemeBySkinId(initialTemplate.id) || sharedPayload?.theme || state.currentSkin?.theme || DEFAULT_THEME;
   state.currentTheme = { ...DEFAULT_THEME, ...initialTheme };
   state.animationStyle = sharedPayload?.animation?.style || state.currentTheme.animationStyle || DEFAULT_THEME.animationStyle;
+  state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(state.currentSkin?.displayOptions || {}) };
+  syncDisplayOptionControls();
 
   await applyTemplate(initialTemplate, {
     markRecent: false,

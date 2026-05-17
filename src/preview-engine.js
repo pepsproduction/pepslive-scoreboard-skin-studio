@@ -1,4 +1,4 @@
-﻿import { BACKGROUND_MODES, SAFE_AREA_MODES, generateOverlayUrl } from "./utils.js";
+import { BACKGROUND_MODES, DEFAULT_DISPLAY_OPTIONS, SAFE_AREA_MODES, generateOverlayUrl } from "./utils.js";
 
 const BACKGROUND_CLASS_MAP = {
   "Transparent Grid": "bg-transparent-grid",
@@ -31,6 +31,7 @@ export class PreviewEngine {
       theme: {},
       matchData: null,
       animationStyle: "smooth-broadcast",
+      displayOptions: { ...DEFAULT_DISPLAY_OPTIONS },
       backgroundMode: BACKGROUND_MODES[0],
       safeAreaMode: SAFE_AREA_MODES[0],
       slotInspectorMode: "Off",
@@ -72,13 +73,16 @@ export class PreviewEngine {
     const previousTemplateId = this.state.template?.id || "";
     const previousTemplateType = this.state.template?.type || "";
     this.state.template = template;
-    if (!this.frameLoaded || previousTemplateId !== template.id || previousTemplateType !== template.type) {
+    if (!this.frameLoaded || previousTemplateType !== template.type) {
       this.reloadFrame();
     } else {
       this.postMessage({
         type: "pepslive:update-skin",
         skinId: template.id
       });
+      if (previousTemplateId !== template.id) {
+        this.postLiveUpdate();
+      }
     }
     this.updateStatus(`Preview: ${template.id} (${template.type})`);
   }
@@ -91,6 +95,14 @@ export class PreviewEngine {
   setAnimation(animationStyle) {
     this.state.animationStyle = animationStyle;
     this.postMessage({ type: "pepslive:update-animation", animationStyle });
+  }
+
+  setDisplayOptions(displayOptions) {
+    this.state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(displayOptions || {}) };
+    this.postMessage({
+      type: "pepslive:update-display-options",
+      displayOptions: this.state.displayOptions
+    });
   }
 
   setMatchData(matchData) {
@@ -150,6 +162,7 @@ export class PreviewEngine {
       type: this.state.template.type,
       animationStyle: this.state.animationStyle,
       theme: this.state.theme,
+      displayOptions: this.state.displayOptions,
       cacheBust,
       absolute
     });
@@ -194,6 +207,10 @@ export class PreviewEngine {
     this.postMessage({
       type: "pepslive:set-visual-qa-mode",
       mode: this.state.visualQaMode
+    });
+    this.postMessage({
+      type: "pepslive:update-display-options",
+      displayOptions: this.state.displayOptions
     });
     if (this.state.matchData) {
       this.postMessage({

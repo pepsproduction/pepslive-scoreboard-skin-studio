@@ -331,6 +331,47 @@ body {
   display: none !important;
 }
 
+#overlay-root.hide-event-logo [data-slot="eventLogo"],
+#overlay-root.hide-event-name [data-slot="eventName"],
+#overlay-root.hide-team-logos [data-slot="homeLogo"],
+#overlay-root.hide-team-logos [data-slot="awayLogo"],
+#overlay-root.hide-team-short-names [data-slot="homeShortName"],
+#overlay-root.hide-team-short-names [data-slot="awayShortName"],
+#overlay-root.hide-game-clock [data-slot="gameClock"],
+#overlay-root.hide-period-label [data-slot="periodLabel"],
+#overlay-root.hide-status-label [data-slot="statusLabel"],
+#overlay-root.hide-extra-row [data-slot="extraRow"],
+#overlay-root.event-row-empty [data-slot="eventRow"],
+#overlay-root.game-meta-empty .game-meta {
+  display: none !important;
+}
+
+#overlay-root.hide-team-logos .team-block {
+  justify-content: center;
+  padding-inline: 14px;
+}
+
+#overlay-root.hide-team-short-names .team-name-box {
+  gap: 0;
+}
+
+#overlay-root.hide-extra-row .scoreboard-shell {
+  gap: 8px;
+}
+
+#overlay-root.event-row-empty .scoreboard-shell {
+  padding-top: 10px;
+}
+
+#overlay-root.game-meta-empty .score-block {
+  gap: 0;
+}
+
+#overlay-root.mode-live.hide-extra-row .scoreboard-shell,
+#overlay-root.mode-live.event-row-empty .scoreboard-shell {
+  min-height: 0;
+}
+
 #overlay-root.slot-inspector-core [data-slot="eventLogo"],
 #overlay-root.slot-inspector-core [data-slot="homeLogo"],
 #overlay-root.slot-inspector-core [data-slot="awayLogo"],
