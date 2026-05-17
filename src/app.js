@@ -49,10 +49,18 @@ import {
   nowIso,
   setButtonGroupActive
 } from "./utils.js";
-import { broadcastSkinUrls, closeStudioDockBridge } from "./studio-dock-bridge.js";
+import { broadcastSkinUrls, closeStudioDockBridge, postStudioEmbedReady } from "./studio-dock-bridge.js";
 
 const adapters = createDefaultAdapters();
 const dockAdapter = adapters.find((item) => item.source === "pepslive-dock");
+const pageQuery = new URLSearchParams(window.location.search);
+const IS_EMBED_MODE = pageQuery.get("embed") === "1" || pageQuery.get("dockEmbed") === "1";
+
+if (IS_EMBED_MODE) {
+  document.documentElement.classList.add("skin-studio-embed");
+  document.body?.classList.add("skin-studio-embed");
+}
+
 const INTEGRATION_MODES = ["Off", "Listen Only", "Manual Test"];
 const INTEGRATION_DATA_SOURCES = {
   MOCK: "Mock Data",
@@ -395,7 +403,10 @@ function broadcastSkinUrlsToDock(urls = null) {
     liveSource: { width: livePreset.width, height: livePreset.height },
     summarySource: { width: summaryPreset.width, height: summaryPreset.height },
     obsWidth: livePreset.width,
-    obsHeight: livePreset.height
+    obsHeight: livePreset.height,
+    embedMode: IS_EMBED_MODE,
+    theme: state.currentTheme,
+    displayOptions: state.displayOptions
   });
 }
 
@@ -2397,6 +2408,15 @@ async function initApp() {
     setIntegrationPayloadStatus("Payload Status: integration is Off", "warn");
   } else {
     setIntegrationPayloadStatus("Payload Status: listening", "ok");
+  }
+  if (IS_EMBED_MODE) {
+    postStudioEmbedReady({
+      app: "PepsLive Scoreboard Skin Studio",
+      skinId: state.selectedTemplate?.id || "",
+      skinName: state.selectedTemplate?.name || "",
+      sport: state.selectedTemplate?.sport || ""
+    });
+    broadcastSkinUrlsToDock();
   }
   notify("Ready: choose template and use skin");
 }

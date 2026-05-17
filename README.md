@@ -649,3 +649,19 @@ node --check src/relay-poller.js src/skin-storage.js src/utils.js overlays/overl
 - Background Opacity, Display Options, Event Logo และ Auto Theme ถูกส่งไปกับ URL/preview context ของทุก template
 - Skin Studio ส่ง Live/Summary Browser Source URL ล่าสุดให้ PepsLive Dock V1 ผ่าน `PEPSLIVE_STUDIO_SYNC`
 - PepsLive Dock V1 สามารถใช้ URL ล่าสุดจาก Skin Studio เพื่อ Copy URL หรือสร้าง Browser Source ได้ง่ายขึ้น
+
+## Phase 5.0 Embedded Mode for PepsLive Dock V1
+
+Skin Studio supports an embedded popup mode for PepsLive Dock V1:
+
+```text
+dock.html?embed=1&from=dock-v1
+```
+
+In embedded mode:
+
+- the header is hidden for a tighter popup layout
+- OBS/Data Bridge panels are hidden to keep the popup focused on skin selection and styling
+- current Live/Summary Browser Source URLs are sent to the parent Dock by `postMessage`
+- BroadcastChannel and localStorage handoff still work as fallbacks
+- score/team/time data still comes from PepsLive Dock V1 or the shared payload protocol

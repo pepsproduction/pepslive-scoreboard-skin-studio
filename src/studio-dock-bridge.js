@@ -47,6 +47,18 @@ function dispatchLastPayload(payload) {
   }
 }
 
+function postLastPayloadToParent(payload) {
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(payload, "*");
+      return true;
+    }
+  } catch (error) {
+    safeWarn("Unable to post Studio URLs to parent window", error);
+  }
+  return false;
+}
+
 export function broadcastSkinUrls(payload) {
   const message = {
     type: "studio:skin-url-ready",
@@ -59,6 +71,7 @@ export function broadcastSkinUrls(payload) {
   lastPayload = message;
   const stored = writeLastPayload(message);
   const dispatched = dispatchLastPayload(message);
+  const postedToParent = postLastPayloadToParent(message);
   let broadcasted = false;
 
   const channel = getStudioChannel();
@@ -71,7 +84,16 @@ export function broadcastSkinUrls(payload) {
     }
   }
 
-  return broadcasted || stored || dispatched;
+  return postedToParent || broadcasted || stored || dispatched;
+}
+
+export function postStudioEmbedReady(payload = {}) {
+  return postLastPayloadToParent({
+    type: "studio:embed-ready",
+    protocol: STUDIO_SYNC_PROTOCOL,
+    timestamp: new Date().toISOString(),
+    ...payload
+  });
 }
 
 export function listenForDockUpdates(onMessage) {

@@ -2058,3 +2058,64 @@ textarea:focus {
   border: 1px solid rgba(0, 255, 255, 0.3);
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
 }
+
+/* Embedded mode used inside PepsLive Dock V1 Skin popup. */
+html.skin-studio-embed,
+body.skin-studio-embed {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(255, 122, 24, 0.15), transparent 28%),
+    linear-gradient(180deg, #07101a 0%, #030711 100%);
+}
+
+body.skin-studio-embed {
+  overflow: hidden;
+}
+
+.skin-studio-embed .dock-header {
+  display: none;
+}
+
+.skin-studio-embed .dock-app {
+  min-height: 100vh;
+  padding: 10px;
+}
+
+.skin-studio-embed .dock-layout {
+  min-height: calc(100vh - 20px);
+  grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.skin-studio-embed .right-panel {
+  max-height: calc(100vh - 20px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.skin-studio-embed .sidebar,
+.skin-studio-embed .main-panel,
+.skin-studio-embed .right-panel {
+  border-radius: 18px;
+}
+
+.skin-studio-embed .source-manager,
+.skin-studio-embed .data-bridge-card,
+.skin-studio-embed .integration-card {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .skin-studio-embed .dock-layout {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  body.skin-studio-embed {
+    overflow: auto;
+  }
+
+  .skin-studio-embed .right-panel {
+    max-height: none;
+  }
+}

@@ -264,3 +264,11 @@ Adds a first-class **Portable State URL** strategy so that OBS Browser Sources c
 
 ### Documentation
 - Added Phase 3.0 integration docs in README with field mapping table and usage examples
+
+## Phase 5.0 - Embedded Dock V1 Handoff
+
+- Added `?embed=1` support for Skin Studio when opened inside PepsLive Dock V1.
+- Added parent-window `postMessage` handoff for generated Live/Summary overlay URLs.
+- Kept BroadcastChannel/localStorage URL handoff as fallbacks.
+- Added compact embedded layout styles for the Dock V1 Skin popup.
+- No scoring, timer, or match-control logic was added to Skin Studio.
