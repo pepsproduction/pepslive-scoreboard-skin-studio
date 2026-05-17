@@ -5,13 +5,16 @@ const FOOTBALL_MODES = ["Football 7-a-side", "Football 11-a-side", "Futsal"];
 const BASKETBALL_MODES = ["5x5 Full Court", "3x3 Street", "School League"];
 
 export const TEMPLATE_REGISTRY = [
+  // ---------------------------------------------------------------------------
+  // FOOTBALL — LIVE
+  // ---------------------------------------------------------------------------
   {
     id: "FB-LIVE-01",
     sport: "football",
     type: "live",
-    name: "Minimal Broadcast Bar",
-    description: "แถบสกอร์แนวมินิมอลสำหรับภาพถ่ายทอดสด",
-    tags: ["Minimal", "Broadcast", "Compact"],
+    name: "Premier Broadcast",
+    description: "แถบถ่ายทอดสดระดับ Premier พื้นขาวกลาง ขอบทองชิมเมอร์",
+    tags: ["Broadcast", "Premium", "Animated", "Compact"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
@@ -19,9 +22,9 @@ export const TEMPLATE_REGISTRY = [
     id: "FB-LIVE-02",
     sport: "football",
     type: "live",
-    name: "Premier Compact",
-    description: "สไตล์คอมแพคเหมาะกับมุมล่างของจอ",
-    tags: ["Compact", "Premium", "Local"],
+    name: "Capsule Pro",
+    description: "สกอร์บั๊กทรงแคปซูลพรีเมียม ขอบเรืองแสงแบบ loop",
+    tags: ["Capsule", "Animated", "Compact", "Broadcast"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
@@ -29,9 +32,9 @@ export const TEMPLATE_REGISTRY = [
     id: "FB-LIVE-03",
     sport: "football",
     type: "live",
-    name: "Capsule Scorebug",
-    description: "โครงแบบแคปซูลสำหรับงานสตรีมที่ต้องการความนุ่มนวล",
-    tags: ["Broadcast", "Glass", "Compact"],
+    name: "Arrow Cut Live",
+    description: "แถบแนว arrow clip-path เฉียงคมคาย มีแสงชิมเมอร์ทีม",
+    tags: ["Animated", "Tournament", "Broadcast", "Neon"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
@@ -39,9 +42,9 @@ export const TEMPLATE_REGISTRY = [
     id: "FB-LIVE-04",
     sport: "football",
     type: "live",
-    name: "Glass Corner",
-    description: "การ์ดใสมุมจอแบบ Glass พร้อมเงา",
-    tags: ["Glass", "Premium", "Large"],
+    name: "Corner Glass HUD",
+    description: "การ์ด Glass มุมจอแบบ HUD หายใจขึ้นลงเหมือน AR overlay",
+    tags: ["Glass", "Animated", "Premium", "Compact"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
@@ -49,9 +52,9 @@ export const TEMPLATE_REGISTRY = [
     id: "FB-LIVE-05",
     sport: "football",
     type: "live",
-    name: "Neon Edge",
-    description: "เส้นขอบนีออนเด่นชัดเหมาะงาน eSports ฟุตบอล",
-    tags: ["Neon", "Social", "Broadcast"],
+    name: "Rivalry Neon",
+    description: "ไฟนีออน Blue vs Orange ตลอดเวลา เหมาะงาน Derby Match",
+    tags: ["Neon", "Animated", "Broadcast", "Tournament"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
@@ -59,9 +62,9 @@ export const TEMPLATE_REGISTRY = [
     id: "FB-LIVE-06",
     sport: "football",
     type: "live",
-    name: "Team Color Split",
-    description: "แยกสีทีมซ้ายขวาให้เห็นชัดระหว่างเกม",
-    tags: ["Broadcast", "Tournament", "Large"],
+    name: "Club Divide",
+    description: "แบ่งสีทีมซ้าย-ขวา สีเข้มจางแบบ wave loop",
+    tags: ["Animated", "Broadcast", "Tournament", "Large"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
@@ -69,9 +72,9 @@ export const TEMPLATE_REGISTRY = [
     id: "FB-LIVE-07",
     sport: "football",
     type: "live",
-    name: "Logo Focus Bar",
-    description: "เน้นโลโก้ทีมเป็นหลักในแถบคะแนน",
-    tags: ["Premium", "Broadcast", "Large"],
+    name: "Stadium Focus",
+    description: "แถบมืดระดับสนามใหญ่ โลโก้ทีมเรืองแสง glow pulse",
+    tags: ["Animated", "Premium", "Broadcast", "Large"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
@@ -79,9 +82,9 @@ export const TEMPLATE_REGISTRY = [
     id: "FB-LIVE-08",
     sport: "football",
     type: "live",
-    name: "Vertical Mini",
-    description: "ดีไซน์แนวตั้งขนาดเล็กสำหรับมุมจอ",
-    tags: ["Compact", "Minimal", "Social"],
+    name: "Corner Compact",
+    description: "การ์ดเล็กมุมจอ สกอร์แนวตั้ง หายใจเบาตลอดเวลา",
+    tags: ["Animated", "Compact", "Social", "Minimal"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
@@ -89,9 +92,9 @@ export const TEMPLATE_REGISTRY = [
     id: "FB-LIVE-09",
     sport: "football",
     type: "live",
-    name: "Stadium LED",
-    description: "กลิ่นอายป้าย LED สนามแข่งพร้อมตัวอักษรเด่น",
-    tags: ["Tournament", "Broadcast", "Neon"],
+    name: "Matrix LED",
+    description: "พื้นผิว LED stripe มีไฟ scan ผ่านตลอดเวลา",
+    tags: ["Animated", "Neon", "Broadcast", "Tournament"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
@@ -99,18 +102,22 @@ export const TEMPLATE_REGISTRY = [
     id: "FB-LIVE-10",
     sport: "football",
     type: "live",
-    name: "Local League Clean",
-    description: "ลุคสะอาดตาเหมาะลีกท้องถิ่น",
-    tags: ["Local", "Minimal", "Compact"],
+    name: "Clean League",
+    description: "ลุคสะอาด เรียบ เหมาะลีกท้องถิ่น มีแสงเรืองเบาๆ",
+    tags: ["Animated", "Minimal", "Local", "Compact"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
+
+  // ---------------------------------------------------------------------------
+  // FOOTBALL — SUMMARY
+  // ---------------------------------------------------------------------------
   {
     id: "FB-SUM-01",
     sport: "football",
     type: "summary",
     name: "Full Time Center",
-    description: "สรุปผลเต็มเวลาแบบ centered card",
+    description: "สรุปผลเต็มเวลาแบบ centered card ระดับ broadcast",
     tags: ["Broadcast", "Large", "Premium"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: FOOTBALL_MODES
@@ -120,7 +127,7 @@ export const TEMPLATE_REGISTRY = [
     sport: "football",
     type: "summary",
     name: "Half Time Split",
-    description: "บอร์ดพักครึ่งแบบ split panel",
+    description: "บอร์ดพักครึ่งแบบ split panel สี home/away",
     tags: ["Minimal", "Broadcast", "Compact"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: FOOTBALL_MODES
@@ -130,7 +137,7 @@ export const TEMPLATE_REGISTRY = [
     sport: "football",
     type: "summary",
     name: "Match Poster Board",
-    description: "โปสเตอร์แมตช์แบบเต็มเฟรม",
+    description: "โปสเตอร์แมตช์แบบเต็มเฟรม เหมาะงาน Social",
     tags: ["Premium", "Social", "Large"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: FOOTBALL_MODES
@@ -140,7 +147,7 @@ export const TEMPLATE_REGISTRY = [
     sport: "football",
     type: "summary",
     name: "Goal Scorer Board",
-    description: "บอร์ดสรุปผู้ทำประตู",
+    description: "บอร์ดสรุปผู้ทำประตู ขอบซ้ายสีทีม",
     tags: ["Tournament", "Broadcast", "Local"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: FOOTBALL_MODES
@@ -160,7 +167,7 @@ export const TEMPLATE_REGISTRY = [
     sport: "football",
     type: "summary",
     name: "Tournament Result Card",
-    description: "สรุปผลการแข่งขันทัวร์นาเมนต์พร้อม badge",
+    description: "สรุปผลทัวร์นาเมนต์พร้อม sponsor badge",
     tags: ["Tournament", "Large", "Broadcast"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: FOOTBALL_MODES
@@ -180,7 +187,7 @@ export const TEMPLATE_REGISTRY = [
     sport: "football",
     type: "summary",
     name: "Big Score Clash",
-    description: "โชว์คะแนนใหญ่สำหรับแมตช์เดือด",
+    description: "โชว์คะแนนตัวใหญ่พิเศษสำหรับแมตช์เดือด",
     tags: ["Large", "Broadcast", "Tournament"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: FOOTBALL_MODES
@@ -205,13 +212,17 @@ export const TEMPLATE_REGISTRY = [
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
+
+  // ---------------------------------------------------------------------------
+  // BASKETBALL — LIVE
+  // ---------------------------------------------------------------------------
   {
     id: "BB-LIVE-01",
     sport: "basketball",
     type: "live",
-    name: "NBA Compact Bar",
-    description: "แถบสกอร์บาสคอมแพคโทนอเมริกัน",
-    tags: ["Broadcast", "Compact", "Premium"],
+    name: "Arena Bar",
+    description: "แถบสกอร์สไตล์อาร์นา NBA badge flash แบบ loop",
+    tags: ["Animated", "Broadcast", "Compact", "Premium"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },
@@ -219,9 +230,9 @@ export const TEMPLATE_REGISTRY = [
     id: "BB-LIVE-02",
     sport: "basketball",
     type: "live",
-    name: "Bottom Broadcast Strip",
-    description: "strip ยาวสำหรับวางด้านล่างภาพแข่ง",
-    tags: ["Broadcast", "Large", "Tournament"],
+    name: "Court Strip",
+    description: "strip แนวกว้างพร้อม highlight sweep ตลอดเวลา",
+    tags: ["Animated", "Broadcast", "Large", "Tournament"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },
@@ -229,9 +240,9 @@ export const TEMPLATE_REGISTRY = [
     id: "BB-LIVE-03",
     sport: "basketball",
     type: "live",
-    name: "Quarter Focus",
-    description: "เน้น quarter และ game clock ชัดเจน",
-    tags: ["Minimal", "Broadcast", "Compact"],
+    name: "Quarter Burst",
+    description: "Quarter badge pop bounce loop เน้น game clock",
+    tags: ["Animated", "Minimal", "Broadcast", "Compact"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },
@@ -239,9 +250,9 @@ export const TEMPLATE_REGISTRY = [
     id: "BB-LIVE-04",
     sport: "basketball",
     type: "live",
-    name: "Shot Clock Slot",
-    description: "เพิ่มโซน shot clock ให้เด่น",
-    tags: ["Tournament", "Broadcast", "Large"],
+    name: "Shot Clock Pro",
+    description: "เน้น shot clock ด้วย blink animation แบบ loop",
+    tags: ["Animated", "Tournament", "Broadcast", "Large"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },
@@ -249,9 +260,9 @@ export const TEMPLATE_REGISTRY = [
     id: "BB-LIVE-05",
     sport: "basketball",
     type: "live",
-    name: "Team Foul Bar",
-    description: "โฟกัสฟาวล์ทีมในแถบด้านล่าง",
-    tags: ["Local", "Broadcast", "Compact"],
+    name: "Foul Tracker",
+    description: "โฟกัสฟาวล์ทีม มี scan sweep เบาๆ ตลอดเวลา",
+    tags: ["Animated", "Local", "Broadcast", "Compact"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },
@@ -259,9 +270,9 @@ export const TEMPLATE_REGISTRY = [
     id: "BB-LIVE-06",
     sport: "basketball",
     type: "live",
-    name: "Timeout Dot Style",
-    description: "แสดง timeout แบบจุดสี",
-    tags: ["Minimal", "Social", "Compact"],
+    name: "Timeout Dots",
+    description: "แสดง timeout แบบจุดสีพร้อม dot wave animation",
+    tags: ["Animated", "Minimal", "Social", "Compact"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },
@@ -269,9 +280,9 @@ export const TEMPLATE_REGISTRY = [
     id: "BB-LIVE-07",
     sport: "basketball",
     type: "live",
-    name: "Street Neon",
-    description: "ลุคนีออนสตรีทสำหรับ 3x3",
-    tags: ["Neon", "Social", "Tournament"],
+    name: "Street Ball Neon",
+    description: "ลุคนีออนสตรีท 3x3 มีไฟ flicker จริงๆ ตลอดเวลา",
+    tags: ["Animated", "Neon", "Social", "Tournament"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },
@@ -279,9 +290,9 @@ export const TEMPLATE_REGISTRY = [
     id: "BB-LIVE-08",
     sport: "basketball",
     type: "live",
-    name: "Glass Court",
-    description: "สไตล์ glass panel พร้อมขอบโปร่ง",
-    tags: ["Glass", "Premium", "Large"],
+    name: "Crystal Court",
+    description: "Glass panel โปร่งใส shimmer แบบ crystal loop",
+    tags: ["Animated", "Glass", "Premium", "Large"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },
@@ -289,9 +300,9 @@ export const TEMPLATE_REGISTRY = [
     id: "BB-LIVE-09",
     sport: "basketball",
     type: "live",
-    name: "Logo Heavy Scorebug",
-    description: "เน้นโลโก้ทีมขนาดใหญ่ด้านข้าง",
-    tags: ["Premium", "Broadcast", "Large"],
+    name: "Team Identity",
+    description: "โลโก้ทีมขนาดใหญ่ glow scale loop แบบมืออาชีพ",
+    tags: ["Animated", "Premium", "Broadcast", "Large"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },
@@ -299,12 +310,16 @@ export const TEMPLATE_REGISTRY = [
     id: "BB-LIVE-10",
     sport: "basketball",
     type: "live",
-    name: "Minimal 3x3",
-    description: "สกอร์บาส 3x3 แบบเรียบง่าย",
-    tags: ["Minimal", "Local", "Compact"],
+    name: "3x3 Clean",
+    description: "สกอร์บาส 3x3 เรียบง่าย quiet breathe animation",
+    tags: ["Animated", "Minimal", "Local", "Compact"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },
+
+  // ---------------------------------------------------------------------------
+  // BASKETBALL — SUMMARY
+  // ---------------------------------------------------------------------------
   {
     id: "BB-SUM-01",
     sport: "basketball",
@@ -320,7 +335,7 @@ export const TEMPLATE_REGISTRY = [
     sport: "basketball",
     type: "summary",
     name: "Quarter Breakdown",
-    description: "การ์ดแยกคะแนนราย quarter",
+    description: "การ์ดแยกคะแนนราย quarter ครบทุก period",
     tags: ["Tournament", "Local", "Broadcast"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: BASKETBALL_MODES
@@ -360,7 +375,7 @@ export const TEMPLATE_REGISTRY = [
     sport: "basketball",
     type: "summary",
     name: "Street Final Card",
-    description: "การ์ดฟินิชโทน street",
+    description: "การ์ดฟินิชโทน street สำหรับ 3x3",
     tags: ["Neon", "Social", "Large"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: BASKETBALL_MODES
@@ -380,7 +395,7 @@ export const TEMPLATE_REGISTRY = [
     sport: "basketball",
     type: "summary",
     name: "Sponsor Result Frame",
-    description: "กรอบสปอนเซอร์สำหรับสรุปผล",
+    description: "กรอบสปอนเซอร์สำหรับสรุปผลการแข่งขัน",
     tags: ["Premium", "Local", "Social"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: BASKETBALL_MODES
@@ -390,7 +405,7 @@ export const TEMPLATE_REGISTRY = [
     sport: "basketball",
     type: "summary",
     name: "Big Number Result",
-    description: "โชว์คะแนนตัวเลขใหญ่พิเศษ",
+    description: "โชว์คะแนนตัวเลขใหญ่พิเศษ สำหรับ tournament",
     tags: ["Large", "Tournament", "Broadcast"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: BASKETBALL_MODES
@@ -400,7 +415,7 @@ export const TEMPLATE_REGISTRY = [
     sport: "basketball",
     type: "summary",
     name: "Social Recap Board",
-    description: "รีแคปผลเกมพร้อมบล็อกข้อความโซเชียล",
+    description: "รีแคปผลเกมสำหรับโซเชียล พร้อมข้อมูลสรุป",
     tags: ["Social", "Compact", "Minimal"],
     recommendedSource: SUMMARY_SOURCE,
     compatibleModes: BASKETBALL_MODES

@@ -1,16 +1,84 @@
+/* =============================================================================
+   football-live.css  —  Phase 4.5
+   One clean rule block per skin. No duplicates.
+   Continuous-loop animations defined inline per skin.
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   FB-LIVE-01 · Premier Broadcast
+   Wide broadcast bar, white centre panel, gold shimmer accent lines
+   --------------------------------------------------------------------------- */
+#overlay-root.skin-FB-LIVE-01 {
+  align-items: flex-start;
+  justify-content: center;
+}
+
 .skin-FB-LIVE-01 .scoreboard-shell {
-  border-radius: 10px;
-  padding: 8px 12px;
+  position: relative;
+  width: min(98vw, 1200px);
+  min-height: 0;
+  border-radius: 0;
+  border: 0;
+  background:
+    linear-gradient(90deg,
+      rgba(10, 22, 60, 0.96) 0 22%,
+      rgba(248, 250, 252, 0.94) 22% 78%,
+      rgba(10, 22, 60, 0.96) 78% 100%);
+  color: #07111f;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.46);
+  overflow: hidden;
+  animation: fb01-shimmer 4s linear infinite;
+}
+
+.skin-FB-LIVE-01 .scoreboard-shell::before,
+.skin-FB-LIVE-01 .scoreboard-shell::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, #f9d36a 18%, #f59e0b 50%, #f9d36a 82%, transparent 100%);
+  pointer-events: none;
+  animation: fb01-line-pulse 2.8s ease-in-out infinite alternate;
+}
+.skin-FB-LIVE-01 .scoreboard-shell::before { top: 0; }
+.skin-FB-LIVE-01 .scoreboard-shell::after  { bottom: 0; }
+
+.skin-FB-LIVE-01 .event-row,
+.skin-FB-LIVE-01 .team-block,
+.skin-FB-LIVE-01 .score-block {
+  background: rgba(255, 255, 255, 0.72);
+  color: #07111f;
+  border-color: rgba(15, 23, 42, 0.14);
 }
 
 .skin-FB-LIVE-01 .extra-row {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.skin-FB-LIVE-01 .extra-item {
+  color: #f8fafc;
+}
+
+@keyframes fb01-shimmer {
+  0%, 100% { box-shadow: 0 8px 28px rgba(0, 0, 0, 0.46), 0 0 0 rgba(249, 211, 106, 0); }
+  50%       { box-shadow: 0 8px 36px rgba(0, 0, 0, 0.52), 0 0 32px rgba(249, 211, 106, 0.18); }
+}
+
+@keyframes fb01-line-pulse {
+  from { opacity: 0.6; filter: brightness(0.85); }
+  to   { opacity: 1;   filter: brightness(1.25); }
+}
+
+/* ---------------------------------------------------------------------------
+   FB-LIVE-02 · Capsule Pro
+   Rounded pill shape, compact, breathing border glow
+   --------------------------------------------------------------------------- */
 .skin-FB-LIVE-02 .scoreboard-shell {
-  width: min(86vw, 980px);
+  width: min(92vw, 820px);
   border-radius: 28px;
-  padding: 8px 18px;
+  padding: 7px 18px;
+  animation: fb02-border-breathe 3s ease-in-out infinite alternate;
 }
 
 .skin-FB-LIVE-02 .teams-row {
@@ -21,72 +89,198 @@
   border-radius: 999px;
 }
 
-.skin-FB-LIVE-03 .scoreboard-shell {
-  border-radius: 999px;
-  padding: 10px 20px;
+.skin-FB-LIVE-02 .event-row {
+  order: 2;
+  justify-content: center;
+  font-size: 0.82rem;
 }
 
-.skin-FB-LIVE-03 .event-row {
-  order: 2;
-  opacity: 0.86;
+@keyframes fb02-border-breathe {
+  from { border-color: color-mix(in srgb, var(--primary-color) 35%, transparent); box-shadow: 0 8px 22px rgba(15,23,42,0.38), 0 0 14px color-mix(in srgb, var(--accent-color) 18%, transparent); }
+  to   { border-color: color-mix(in srgb, var(--primary-color) 75%, transparent); box-shadow: 0 12px 32px rgba(15,23,42,0.5),  0 0 28px color-mix(in srgb, var(--accent-color) 42%, transparent); }
+}
+
+/* ---------------------------------------------------------------------------
+   FB-LIVE-03 · Arrow Cut Live
+   Chevron clip-path team blocks, gradient score block, shimmer sweep
+   --------------------------------------------------------------------------- */
+.skin-FB-LIVE-03 .scoreboard-shell {
+  position: relative;
+  width: min(92vw, 780px);
+  min-height: 0;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.skin-FB-LIVE-03 .teams-row {
+  grid-template-columns: 1fr minmax(160px, auto) 1fr;
+}
+
+.skin-FB-LIVE-03 .team-block {
+  min-height: 62px;
+  border: 0;
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
+  animation: fb03-team-shimmer 3.5s ease-in-out infinite alternate;
+}
+
+.skin-FB-LIVE-03 .team-block.away {
+  clip-path: polygon(22px 0, 100% 0, 100% 100%, 22px 100%, 0 50%);
+}
+
+.skin-FB-LIVE-03 .score-block {
+  align-self: stretch;
+  justify-content: center;
+  padding-inline: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent-color) 88%, #f8fafc),
+    color-mix(in srgb, var(--primary-color) 78%, #111827));
+  color: #07111f;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
 }
 
 .skin-FB-LIVE-03 .extra-row {
-  order: 3;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  transform: scale(0.9);
+  transform-origin: top center;
+}
+
+@keyframes fb03-team-shimmer {
+  from { filter: brightness(0.92); }
+  to   { filter: brightness(1.08); }
+}
+
+/* ---------------------------------------------------------------------------
+   FB-LIVE-04 · Corner Glass HUD
+   Positioned corner card, glass breathing effect
+   --------------------------------------------------------------------------- */
+#overlay-root.skin-FB-LIVE-04 {
+  justify-content: flex-end;
+  padding: 24px;
 }
 
 .skin-FB-LIVE-04 .scoreboard-shell {
-  width: min(72vw, 800px);
-  margin-left: auto;
+  width: min(48vw, 560px);
+  min-height: 0;
   border-radius: 20px;
-  background: color-mix(in srgb, var(--secondary-color) 48%, transparent);
+  background: color-mix(in srgb, var(--secondary-color) 52%, transparent);
+  animation: fb04-glass-breathe 4s ease-in-out infinite;
 }
 
 .skin-FB-LIVE-04 .teams-row {
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr;
 }
 
 .skin-FB-LIVE-04 .score-block {
-  min-width: 160px;
+  width: 100%;
+  order: -1;
+  min-width: 0;
 }
 
+@keyframes fb04-glass-breathe {
+  0%, 100% { backdrop-filter: blur(10px) saturate(1);   box-shadow: 0 14px 32px rgba(15,23,42,0.42), 0 0 18px color-mix(in srgb, var(--accent-color) 18%, transparent); }
+  50%       { backdrop-filter: blur(16px) saturate(1.2); box-shadow: 0 18px 40px rgba(15,23,42,0.58), 0 0 34px color-mix(in srgb, var(--accent-color) 34%, transparent); }
+}
+
+/* ---------------------------------------------------------------------------
+   FB-LIVE-05 · Rivalry Neon
+   Blue vs Orange gradient, continuous neon border pulse
+   --------------------------------------------------------------------------- */
 .skin-FB-LIVE-05 .scoreboard-shell {
-  border-width: 2px;
-  border-color: color-mix(in srgb, var(--accent-color) 90%, transparent);
-  box-shadow:
-    0 0 25px color-mix(in srgb, var(--accent-color) 70%, transparent),
-    0 10px 28px rgba(0, 0, 0, 0.6);
+  width: min(90vw, 940px);
+  clip-path: polygon(18px 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
+  border-width: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 87, 255, 0.52), rgba(15, 23, 42, 0.84) 48%, rgba(255, 94, 0, 0.54)),
+    radial-gradient(circle at 12% 28%, rgba(56, 189, 248, 0.32), transparent 32%),
+    radial-gradient(circle at 88% 28%, rgba(251, 146, 60, 0.32), transparent 32%);
+  animation: fb05-neon-pulse 2.4s ease-in-out infinite alternate;
 }
 
-.skin-FB-LIVE-05 .team-block {
-  background: color-mix(in srgb, var(--secondary-color) 58%, transparent);
+.skin-FB-LIVE-05 .team-block.home {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: color-mix(in srgb, var(--home-color) 22%, transparent);
+}
+
+.skin-FB-LIVE-05 .team-block.away {
+  border-color: rgba(251, 146, 60, 0.55);
+  background: color-mix(in srgb, var(--away-color) 22%, transparent);
 }
 
 .skin-FB-LIVE-05 .score-values {
-  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-color) 70%, transparent);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--accent-color) 75%, transparent);
 }
 
+.skin-FB-LIVE-05 .status-badge {
+  border-radius: 2px;
+  color: #d9f99d;
+}
+
+@keyframes fb05-neon-pulse {
+  from { filter: brightness(0.94); box-shadow: 0 10px 28px rgba(15,23,42,0.5), 0 0 24px rgba(56,189,248,0.22), 0 0 24px rgba(251,146,60,0.22); }
+  to   { filter: brightness(1.06); box-shadow: 0 14px 36px rgba(15,23,42,0.6), 0 0 48px rgba(56,189,248,0.46), 0 0 48px rgba(251,146,60,0.46); }
+}
+
+/* ---------------------------------------------------------------------------
+   FB-LIVE-06 · Club Divide
+   Home/away color split, intensity wave
+   --------------------------------------------------------------------------- */
 .skin-FB-LIVE-06 .scoreboard-shell {
   background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--home-color) 26%, transparent) 0%,
-      color-mix(in srgb, var(--home-color) 26%, transparent) 45%,
-      color-mix(in srgb, var(--away-color) 26%, transparent) 55%,
-      color-mix(in srgb, var(--away-color) 26%, transparent) 100%
-    );
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--home-color) 28%, transparent) 0 44%,
+      color-mix(in srgb, var(--away-color) 28%, transparent) 56% 100%);
+  animation: fb06-divide-wave 3.6s ease-in-out infinite alternate;
+}
+
+.skin-FB-LIVE-06 .teams-row {
+  gap: 0;
 }
 
 .skin-FB-LIVE-06 .team-block {
+  min-height: 58px;
   background: transparent;
   border-color: transparent;
 }
 
 .skin-FB-LIVE-06 .score-block {
-  background: rgba(10, 18, 34, 0.78);
+  background: rgba(10, 18, 34, 0.82);
   border-radius: 16px;
   padding: 6px 16px;
+}
+
+@keyframes fb06-divide-wave {
+  from {
+    background:
+      linear-gradient(90deg,
+        color-mix(in srgb, var(--home-color) 22%, transparent) 0 44%,
+        color-mix(in srgb, var(--away-color) 22%, transparent) 56% 100%);
+  }
+  to {
+    background:
+      linear-gradient(90deg,
+        color-mix(in srgb, var(--home-color) 40%, transparent) 0 44%,
+        color-mix(in srgb, var(--away-color) 40%, transparent) 56% 100%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   FB-LIVE-07 · Stadium Focus
+   Dark pro bar, logo slots glow pulse, centered layout
+   --------------------------------------------------------------------------- */
+.skin-FB-LIVE-07 .scoreboard-shell {
+  width: min(98vw, 1160px);
+  min-height: 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(2, 6, 23, 0.96), rgba(30, 41, 59, 0.9));
+}
+
+.skin-FB-LIVE-07 .event-row {
+  justify-content: center;
+  order: -1;
 }
 
 .skin-FB-LIVE-07 .teams-row {
@@ -94,74 +288,125 @@
 }
 
 .skin-FB-LIVE-07 .team-block {
-  gap: 14px;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  border-radius: 4px;
+  background: rgba(3, 7, 18, 0.64);
+}
+
+.skin-FB-LIVE-07 .team-short {
+  display: none;
 }
 
 .skin-FB-LIVE-07 .logo-slot {
   width: calc(var(--logo-slot-size) * 1.15);
   height: calc(var(--logo-slot-size) * 1.15);
   border-width: 2px;
+  animation: fb07-logo-glow 2.8s ease-in-out infinite alternate;
 }
 
-.skin-FB-LIVE-08 {
-  --scoreboard-scale: 0.74;
+@keyframes fb07-logo-glow {
+  from { box-shadow: 0 0 8px  color-mix(in srgb, var(--accent-color) 28%, transparent); }
+  to   { box-shadow: 0 0 22px color-mix(in srgb, var(--accent-color) 68%, transparent); }
+}
+
+/* ---------------------------------------------------------------------------
+   FB-LIVE-08 · Corner Compact
+   Small vertical card, corner position, subtle scale breathe
+   --------------------------------------------------------------------------- */
+#overlay-root.skin-FB-LIVE-08 {
+  justify-content: flex-end;
+  align-items: flex-start;
 }
 
 .skin-FB-LIVE-08 .scoreboard-shell {
-  width: min(38vw, 380px);
-  margin-left: auto;
-  min-height: 176px;
-  padding: 8px 10px;
-}
-
-.skin-FB-LIVE-08 .event-row {
-  flex-direction: row;
-  align-items: center;
+  width: min(34vw, 310px);
+  min-height: 0;
+  max-height: 164px;
+  gap: 3px;
+  padding: 4px 6px 22px;
+  overflow: hidden;
+  position: relative;
+  animation: fb08-compact-breathe 4s ease-in-out infinite;
 }
 
 .skin-FB-LIVE-08 .teams-row {
-  grid-template-columns: 1fr auto 1fr;
-  gap: 6px;
-}
-
-.skin-FB-LIVE-08 .score-block {
-  width: auto;
-  min-width: 0;
-}
-
-.skin-FB-LIVE-08 .extra-row {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: 1fr 1fr;
 }
 
 .skin-FB-LIVE-08 .team-block {
-  padding: 6px 8px;
+  gap: 4px;
+  padding: 2px 4px;
+}
+
+.skin-FB-LIVE-08 .score-block {
+  order: -1;
+  width: 100%;
+  min-width: 0;
+  padding: 2px 6px;
 }
 
 .skin-FB-LIVE-08 .score-values {
-  font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
 }
 
-.skin-FB-LIVE-08 .team-name {
-  font-size: 0.88rem;
+.skin-FB-LIVE-08 .team-name   { font-size: 0.68rem; }
+.skin-FB-LIVE-08 .team-short  { font-size: 0.52rem; }
+.skin-FB-LIVE-08 .logo-slot   { width: 22px; height: 22px; }
+
+.skin-FB-LIVE-08 .event-name,
+.skin-FB-LIVE-08 .status-badge,
+.skin-FB-LIVE-08 .game-meta   { font-size: 0.58rem; }
+
+.skin-FB-LIVE-08 .extra-row {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 2px;
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  left: 6px;
 }
 
-.skin-FB-LIVE-08 .logo-slot {
-  width: 30px;
-  height: 30px;
+.skin-FB-LIVE-08 .extra-item  { padding: 1px 2px; }
+.skin-FB-LIVE-08 .extra-label { display: none; }
+.skin-FB-LIVE-08 .extra-value { font-size: 0.48rem; }
+
+@keyframes fb08-compact-breathe {
+  0%, 100% { box-shadow: 0 6px 18px rgba(15,23,42,0.42), 0 0 10px color-mix(in srgb, var(--accent-color) 14%, transparent); }
+  50%       { box-shadow: 0 8px 24px rgba(15,23,42,0.58), 0 0 22px color-mix(in srgb, var(--accent-color) 30%, transparent); }
 }
 
+/* ---------------------------------------------------------------------------
+   FB-LIVE-09 · Matrix LED
+   LED stripe texture, continuous scan-line sweep
+   --------------------------------------------------------------------------- */
 .skin-FB-LIVE-09 .scoreboard-shell {
-  border-radius: 6px;
+  position: relative;
+  width: min(98vw, 1180px);
+  min-height: 0;
+  border-radius: 2px;
   border-width: 3px;
+  overflow: hidden;
   background:
     repeating-linear-gradient(
       90deg,
-      color-mix(in srgb, #111 72%, transparent) 0,
-      color-mix(in srgb, #111 72%, transparent) 8px,
-      color-mix(in srgb, #1f2937 70%, transparent) 8px,
-      color-mix(in srgb, #1f2937 70%, transparent) 16px
+      color-mix(in srgb, #0a0f1c 76%, transparent) 0,
+      color-mix(in srgb, #0a0f1c 76%, transparent) 8px,
+      color-mix(in srgb, #131f36 72%, transparent) 8px,
+      color-mix(in srgb, #131f36 72%, transparent) 16px
     );
+}
+
+.skin-FB-LIVE-09 .scoreboard-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(var(--accent-color-rgb, 255, 154, 60), 0.18) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: fb09-led-scan 3s linear infinite;
 }
 
 .skin-FB-LIVE-09 .score-values {
@@ -169,14 +414,30 @@
   letter-spacing: 0.08em;
 }
 
+.skin-FB-LIVE-09 .event-row {
+  background: rgba(0, 0, 0, 0.36);
+  padding: 3px 8px;
+}
+
 .skin-FB-LIVE-09 .status-badge {
   text-transform: uppercase;
 }
 
+@keyframes fb09-led-scan {
+  from { background-position: -100% 0; }
+  to   { background-position: 200% 0; }
+}
+
+/* ---------------------------------------------------------------------------
+   FB-LIVE-10 · Clean League
+   Light/neutral theme, gentle glow breathe
+   --------------------------------------------------------------------------- */
 .skin-FB-LIVE-10 .scoreboard-shell {
-  border-radius: 12px;
+  width: min(90vw, 920px);
+  border-radius: 14px;
   border-color: color-mix(in srgb, #d1d5db 28%, transparent);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.32);
+  background: rgba(15, 23, 42, 0.76);
+  animation: fb10-clean-breathe 5s ease-in-out infinite alternate;
 }
 
 .skin-FB-LIVE-10 .team-block {
@@ -188,299 +449,12 @@
   background: rgba(15, 23, 42, 0.52);
 }
 
-/* Phase 3.8 visual signatures */
-.skin-FB-LIVE-01 .scoreboard-shell {
-  width: min(96vw, 1080px);
-  min-height: 0;
-  border-radius: 6px;
-  background:
-    linear-gradient(90deg, rgba(2, 6, 23, 0.92), rgba(15, 23, 42, 0.78)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent);
-}
-
-.skin-FB-LIVE-01 .event-row {
-  min-height: 22px;
-}
-
-.skin-FB-LIVE-02 .scoreboard-shell {
-  width: min(92vw, 820px);
-  margin-top: 4px;
-}
-
-.skin-FB-LIVE-02 .event-row {
-  order: 2;
-  justify-content: center;
-  font-size: 0.82rem;
-}
-
-.skin-FB-LIVE-03 .scoreboard-shell {
-  width: min(92vw, 760px);
-  min-height: 0;
-  gap: 4px;
-}
-
-.skin-FB-LIVE-03 .extra-row {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  transform: scale(0.88);
-  transform-origin: top center;
-}
-
-#overlay-root.skin-FB-LIVE-04 {
-  justify-content: flex-end;
-  padding: 24px;
-}
-
-.skin-FB-LIVE-04 .scoreboard-shell {
-  width: min(48vw, 560px);
-  min-height: 0;
-}
-
-.skin-FB-LIVE-04 .teams-row {
-  grid-template-columns: 1fr;
-}
-
-.skin-FB-LIVE-04 .score-block {
-  width: 100%;
-  order: -1;
-}
-
-.skin-FB-LIVE-05 .scoreboard-shell {
-  width: min(90vw, 940px);
-  clip-path: polygon(18px 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
-}
-
-.skin-FB-LIVE-05 .status-badge {
-  border-radius: 2px;
-  color: #d9f99d;
-}
-
-.skin-FB-LIVE-06 .teams-row {
-  gap: 0;
-}
-
-.skin-FB-LIVE-06 .team-block {
-  min-height: 58px;
-}
-
-.skin-FB-LIVE-07 .scoreboard-shell {
-  min-height: 0;
-}
-
-.skin-FB-LIVE-07 .team-block {
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.skin-FB-LIVE-07 .team-short {
-  display: none;
-}
-
-#overlay-root.skin-FB-LIVE-08 {
-  justify-content: flex-end;
-  align-items: flex-start;
-}
-
-.skin-FB-LIVE-08 .scoreboard-shell {
-  width: min(34vw, 310px);
-  min-height: 0;
-}
-
-.skin-FB-LIVE-08 .teams-row {
-  grid-template-columns: 1fr 1fr;
-}
-
-.skin-FB-LIVE-08 .extra-row {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.skin-FB-LIVE-08 .score-block {
-  order: -1;
-  padding: 8px;
-}
-
-.skin-FB-LIVE-09 .scoreboard-shell {
-  width: min(98vw, 1180px);
-  min-height: 0;
-  border-radius: 2px;
-}
-
-.skin-FB-LIVE-09 .event-row {
-  background: rgba(0, 0, 0, 0.36);
-  padding: 3px 8px;
-}
-
-.skin-FB-LIVE-10 .scoreboard-shell {
-  width: min(90vw, 900px);
-  background: rgba(15, 23, 42, 0.74);
-}
-
 .skin-FB-LIVE-10 .status-badge {
   border-radius: 5px;
   background: rgba(248, 250, 252, 0.12);
 }
 
-.skin-FB-LIVE-08 .scoreboard-shell {
-  gap: 3px;
-  max-height: 164px;
-  overflow: hidden;
-  padding: 4px 6px 22px;
-  position: relative;
-}
-
-.skin-FB-LIVE-08 .score-block {
-  padding: 2px 6px;
-}
-
-.skin-FB-LIVE-08 .extra-row {
-  gap: 2px;
-  position: absolute;
-  right: 6px;
-  bottom: 4px;
-  left: 6px;
-}
-
-.skin-FB-LIVE-08 .team-block {
-  gap: 4px;
-  padding: 2px 4px;
-}
-
-.skin-FB-LIVE-08 .score-values {
-  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
-}
-
-.skin-FB-LIVE-08 .event-name,
-.skin-FB-LIVE-08 .status-badge,
-.skin-FB-LIVE-08 .game-meta {
-  font-size: 0.58rem;
-}
-
-.skin-FB-LIVE-08 .team-name {
-  font-size: 0.68rem;
-}
-
-.skin-FB-LIVE-08 .team-short {
-  font-size: 0.52rem;
-}
-
-.skin-FB-LIVE-08 .logo-slot {
-  width: 22px;
-  height: 22px;
-}
-
-.skin-FB-LIVE-08 .extra-item {
-  padding: 1px 2px;
-}
-
-.skin-FB-LIVE-08 .extra-label {
-  display: none;
-}
-
-.skin-FB-LIVE-08 .extra-value {
-  font-size: 0.48rem;
-}
-
-/* Phase 3.9 pattern polish: image-inspired scorebug families */
-.skin-FB-LIVE-01 .scoreboard-shell {
-  position: relative;
-  width: min(96vw, 1180px);
-  border-radius: 0;
-  border: 0;
-  background:
-    linear-gradient(90deg, rgba(15, 31, 82, 0.96) 0 22%, rgba(248, 250, 252, 0.9) 22% 78%, rgba(15, 31, 82, 0.96) 78%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent);
-  color: #07111f;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.36);
-}
-
-.skin-FB-LIVE-01 .scoreboard-shell::before,
-.skin-FB-LIVE-01 .scoreboard-shell::after {
-  content: "";
-  position: absolute;
-  right: 18px;
-  left: 18px;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #f9d36a 12%, #f59e0b 50%, #f9d36a 88%, transparent);
-  pointer-events: none;
-}
-
-.skin-FB-LIVE-01 .scoreboard-shell::before {
-  top: 0;
-}
-
-.skin-FB-LIVE-01 .scoreboard-shell::after {
-  bottom: 0;
-}
-
-.skin-FB-LIVE-01 .event-row,
-.skin-FB-LIVE-01 .team-block,
-.skin-FB-LIVE-01 .score-block {
-  background: rgba(255, 255, 255, 0.7);
-  color: #07111f;
-  border-color: rgba(15, 23, 42, 0.16);
-}
-
-.skin-FB-LIVE-01 .extra-item {
-  color: #f8fafc;
-}
-
-.skin-FB-LIVE-03 .scoreboard-shell {
-  position: relative;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.skin-FB-LIVE-03 .teams-row {
-  grid-template-columns: 1fr minmax(170px, auto) 1fr;
-}
-
-.skin-FB-LIVE-03 .team-block {
-  min-height: 62px;
-  border: 0;
-  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
-}
-
-.skin-FB-LIVE-03 .team-block.away {
-  clip-path: polygon(22px 0, 100% 0, 100% 100%, 22px 100%, 0 50%);
-}
-
-.skin-FB-LIVE-03 .score-block {
-  align-self: stretch;
-  justify-content: center;
-  padding-inline: 20px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-color) 88%, #f8fafc), color-mix(in srgb, var(--primary-color) 78%, #111827));
-  color: #07111f;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
-}
-
-.skin-FB-LIVE-05 .scoreboard-shell {
-  background:
-    linear-gradient(90deg, rgba(0, 87, 255, 0.5), rgba(15, 23, 42, 0.82) 48%, rgba(255, 94, 0, 0.52)),
-    radial-gradient(circle at 12% 28%, rgba(56, 189, 248, 0.32), transparent 32%),
-    radial-gradient(circle at 88% 28%, rgba(251, 146, 60, 0.32), transparent 32%);
-}
-
-.skin-FB-LIVE-05 .team-block.home {
-  border-color: rgba(56, 189, 248, 0.55);
-}
-
-.skin-FB-LIVE-05 .team-block.away {
-  border-color: rgba(251, 146, 60, 0.55);
-}
-
-.skin-FB-LIVE-07 .scoreboard-shell {
-  border-radius: 2px;
-  background: linear-gradient(90deg, rgba(2, 6, 23, 0.94), rgba(39, 39, 42, 0.86));
-}
-
-.skin-FB-LIVE-07 .event-row {
-  justify-content: center;
-  order: -1;
-}
-
-.skin-FB-LIVE-07 .team-block {
-  border-radius: 4px;
-  background: rgba(3, 7, 18, 0.64);
+@keyframes fb10-clean-breathe {
+  from { box-shadow: 0 6px 16px rgba(15,23,42,0.32), 0 0  6px rgba(255,255,255,0.04); }
+  to   { box-shadow: 0 10px 28px rgba(15,23,42,0.48), 0 0 18px rgba(255,255,255,0.1); }
 }

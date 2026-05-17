@@ -543,11 +543,398 @@ body {
   grid-area: clock;
 }
 
-.skin-thumb-FB-LIVE-01 .thumb-scorebug,
-.skin-thumb-BB-LIVE-02 .thumb-scorebug {
+/* --- Phase 4.5 Thumbnail Styles — unique visual identity per skin --- */
+
+/* FB-LIVE-01 · Premier Broadcast — white centre, gold top/bottom lines */
+.skin-thumb-FB-LIVE-01 .thumb-scorebug {
   width: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(10,22,60,0.9) 0 20%, rgba(248,250,252,0.92) 20% 80%, rgba(10,22,60,0.9) 80%);
+  color: #07111f;
+  box-shadow: 0 -2px 0 #f59e0b inset, 0 2px 0 #f59e0b inset;
+  animation: thumb01-shimmer 3s ease-in-out infinite alternate;
+}
+@keyframes thumb01-shimmer {
+  from { box-shadow: 0 -2px 0 rgba(245,158,11,0.7) inset, 0 2px 0 rgba(245,158,11,0.7) inset; }
+  to   { box-shadow: 0 -2px 0 rgba(249,211,106,1)   inset, 0 2px 0 rgba(249,211,106,1) inset; }
+}
+.skin-thumb-FB-LIVE-01 .thumb-team,
+.skin-thumb-FB-LIVE-01 .thumb-score { color: #07111f; }
+
+/* FB-LIVE-02 · Capsule Pro — pill shape, animated border glow */
+.skin-thumb-FB-LIVE-02 .thumb-scorebug {
+  justify-self: center;
+  border-radius: 999px;
+  padding-inline: 14px;
+  animation: thumb02-glow 2.6s ease-in-out infinite alternate;
+}
+@keyframes thumb02-glow {
+  from { box-shadow: 0 0  8px rgba(255,122,24,0.22), 0 6px 14px rgba(0,0,0,0.3); }
+  to   { box-shadow: 0 0 20px rgba(255,122,24,0.56), 0 8px 20px rgba(0,0,0,0.42); }
+}
+
+/* FB-LIVE-03 · Arrow Cut Live — arrow clip-path */
+.skin-thumb-FB-LIVE-03 .thumb-scorebug {
+  justify-self: center;
+  width: 164px;
+  border-radius: 0;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  border-color: transparent;
+  background: linear-gradient(90deg,
+    rgba(255,122,24,0.7),
+    rgba(10,18,34,0.88) 42%,
+    rgba(59,130,246,0.7));
+  animation: thumb03-shimmer 2.8s ease-in-out infinite alternate;
+}
+@keyframes thumb03-shimmer {
+  from { filter: brightness(0.9); }
+  to   { filter: brightness(1.12); }
+}
+
+/* FB-LIVE-04 · Corner Glass HUD — glass corner card */
+.skin-thumb-FB-LIVE-04 .thumb-scorebug {
+  justify-self: end;
+  width: 136px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.46);
+  backdrop-filter: blur(6px);
+  border-color: rgba(255,255,255,0.18);
+  animation: thumb04-breathe 4s ease-in-out infinite;
+}
+@keyframes thumb04-breathe {
+  0%, 100% { backdrop-filter: blur(4px);  border-color: rgba(255,255,255,0.14); }
+  50%       { backdrop-filter: blur(10px); border-color: rgba(255,255,255,0.32); }
+}
+
+/* FB-LIVE-05 · Rivalry Neon — blue-orange gradient + neon pulse */
+.skin-thumb-FB-LIVE-05 .thumb-scorebug {
+  background: linear-gradient(90deg, rgba(0,87,255,0.5) 0 44%, rgba(10,18,34,0.85) 44% 56%, rgba(255,94,0,0.52) 56%);
+  animation: thumb05-neon 2.4s ease-in-out infinite alternate;
+}
+@keyframes thumb05-neon {
+  from { box-shadow: 0 0 10px rgba(56,189,248,0.3), 0 0 10px rgba(251,146,60,0.3); }
+  to   { box-shadow: 0 0 22px rgba(56,189,248,0.7), 0 0 22px rgba(251,146,60,0.7); }
+}
+
+/* FB-LIVE-06 · Club Divide — home/away color split wave */
+.skin-thumb-FB-LIVE-06 .thumb-scorebug {
+  background: linear-gradient(90deg, rgba(249,115,22,0.62) 0 44%, rgba(15,23,42,0.88) 44% 56%, rgba(59,130,246,0.62) 56%);
+  animation: thumb06-wave 3s ease-in-out infinite alternate;
+}
+@keyframes thumb06-wave {
+  from { background: linear-gradient(90deg, rgba(249,115,22,0.44) 0 44%, rgba(15,23,42,0.88) 44% 56%, rgba(59,130,246,0.44) 56%); }
+  to   { background: linear-gradient(90deg, rgba(249,115,22,0.78) 0 44%, rgba(15,23,42,0.88) 44% 56%, rgba(59,130,246,0.78) 56%); }
+}
+
+/* FB-LIVE-07 · Stadium Focus — dark bar with logo circle glows */
+.skin-thumb-FB-LIVE-07 .thumb-scorebug {
+  grid-template-columns: 24px 1fr auto auto 1fr 24px;
+  width: min(100%, 210px);
+  background: linear-gradient(90deg, rgba(2,6,23,0.96), rgba(24,32,54,0.92));
   border-radius: 3px;
 }
+.skin-thumb-FB-LIVE-07 .thumb-scorebug::before,
+.skin-thumb-FB-LIVE-07 .thumb-scorebug::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1);
+  animation: thumb07-logo-glow 2.6s ease-in-out infinite alternate;
+}
+@keyframes thumb07-logo-glow {
+  from { box-shadow: 0 0  4px rgba(255,154,60,0.28); }
+  to   { box-shadow: 0 0 12px rgba(255,154,60,0.72); }
+}
+
+/* FB-LIVE-08 · Corner Compact — tiny vertical card corner */
+.skin-thumb-FB-LIVE-08 .thumb-scorebug {
+  justify-self: end;
+  width: 80px;
+  min-height: 70px;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  border-radius: 8px;
+  animation: thumb08-breathe 4s ease-in-out infinite;
+}
+@keyframes thumb08-breathe {
+  0%, 100% { box-shadow: 0 4px 12px rgba(15,23,42,0.4); }
+  50%       { box-shadow: 0 6px 18px rgba(15,23,42,0.6), 0 0 10px rgba(255,122,24,0.2); }
+}
+
+/* FB-LIVE-09 · Matrix LED — LED stripe + scan animation */
+.skin-thumb-FB-LIVE-09 .thumb-scorebug {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, rgba(2,6,23,0.9) 0 7px, rgba(20,30,50,0.8) 7px 14px);
+  border-color: rgba(255,154,60,0.5);
+}
+.skin-thumb-FB-LIVE-09 .thumb-scorebug::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,154,60,0.22) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: thumb09-scan 2.4s linear infinite;
+  pointer-events: none;
+}
+@keyframes thumb09-scan {
+  from { background-position: -100% 0; }
+  to   { background-position: 200% 0; }
+}
+
+/* FB-LIVE-10 · Clean League — clean dashed border breathe */
+.skin-thumb-FB-LIVE-10 .thumb-scorebug {
+  border-style: dashed;
+  border-color: rgba(203,213,225,0.5);
+  background: rgba(15, 23, 42, 0.56);
+  animation: thumb10-breathe 5s ease-in-out infinite alternate;
+}
+@keyframes thumb10-breathe {
+  from { border-color: rgba(203,213,225,0.3); }
+  to   { border-color: rgba(203,213,225,0.72); }
+}
+
+/* --- Basketball thumbnails --- */
+
+/* BB-LIVE-01 · Arena Bar — NBA compact with badge flash */
+.skin-thumb-BB-LIVE-01 .thumb-scorebug {
+  width: 100%;
+  border-radius: 4px;
+  border-width: 2px;
+  animation: thumb-bb01-flash 2.4s ease-in-out infinite alternate;
+}
+@keyframes thumb-bb01-flash {
+  from { border-color: rgba(255,122,24,0.4); }
+  to   { border-color: rgba(255,122,24,0.9); box-shadow: 0 0 14px rgba(255,122,24,0.36); }
+}
+
+/* BB-LIVE-02 · Court Strip — wide strip with sweep */
+.skin-thumb-BB-LIVE-02 .thumb-scorebug {
+  width: 100%;
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+}
+.skin-thumb-BB-LIVE-02 .thumb-scorebug::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+  background-size: 300% 100%;
+  animation: thumb-bb02-sweep 3s linear infinite;
+  pointer-events: none;
+}
+@keyframes thumb-bb02-sweep {
+  from { background-position: -100% 0; }
+  to   { background-position: 200% 0; }
+}
+
+/* BB-LIVE-03 · Quarter Burst — clock pop */
+.skin-thumb-BB-LIVE-03 .thumb-scorebug {
+  border-radius: 10px;
+}
+.skin-thumb-BB-LIVE-03 .thumb-clock {
+  animation: thumb-bb03-pop 2.2s cubic-bezier(0.17,0.89,0.32,1.28) infinite;
+}
+@keyframes thumb-bb03-pop {
+  0%  { transform: scale(1); }
+  12% { transform: scale(1.2); }
+  24% { transform: scale(1); }
+  100%{ transform: scale(1); }
+}
+
+/* BB-LIVE-04 · Shot Clock Pro — blink accent */
+.skin-thumb-BB-LIVE-04 .thumb-scorebug {
+  border-color: rgba(251,191,36,0.5);
+  animation: thumb-bb04-blink 1.4s ease-in-out infinite;
+}
+@keyframes thumb-bb04-blink {
+  0%, 100% { border-color: rgba(251,191,36,0.36); }
+  50%      { border-color: rgba(251,191,36,0.88); box-shadow: 0 0 10px rgba(251,191,36,0.34); }
+}
+
+/* BB-LIVE-05 · Foul Tracker — subtle scan sweep */
+.skin-thumb-BB-LIVE-05 .thumb-scorebug {
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+.skin-thumb-BB-LIVE-05 .thumb-scorebug::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: thumb-bb05-scan 4s linear infinite;
+  pointer-events: none;
+}
+@keyframes thumb-bb05-scan {
+  from { background-position: -100% 0; }
+  to   { background-position: 300% 0; }
+}
+
+/* BB-LIVE-06 · Timeout Dots — pill shape dot wave */
+.skin-thumb-BB-LIVE-06 .thumb-scorebug {
+  justify-self: center;
+  border-radius: 999px;
+  padding-inline: 12px;
+}
+.skin-thumb-BB-LIVE-06 .thumb-clock {
+  animation: thumb-bb06-dot 2s ease-in-out infinite;
+}
+@keyframes thumb-bb06-dot {
+  0%, 80%, 100% { transform: scale(1); }
+  40%           { transform: scale(1.18); background: rgba(255,154,60,0.72); }
+}
+
+/* BB-LIVE-07 · Street Ball Neon — urban neon flicker */
+.skin-thumb-BB-LIVE-07 .thumb-scorebug {
+  border-color: rgba(74,222,128,0.8);
+  background: linear-gradient(135deg, rgba(2,6,23,0.88), rgba(20,40,20,0.76));
+  animation: thumb-bb07-flicker 3s ease-in-out infinite;
+}
+@keyframes thumb-bb07-flicker {
+  0%, 100% { box-shadow: 0 0 12px rgba(74,222,128,0.36); }
+  10%       { opacity: 0.9; }
+  11%       { opacity: 1; }
+  50%       { box-shadow: 0 0 24px rgba(74,222,128,0.72); }
+}
+
+/* BB-LIVE-08 · Crystal Court — glass shimmer */
+.skin-thumb-BB-LIVE-08 .thumb-scorebug {
+  justify-self: end;
+  width: 138px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(6px);
+  border-color: rgba(255,255,255,0.22);
+  animation: thumb-bb08-crystal 4s ease-in-out infinite;
+}
+@keyframes thumb-bb08-crystal {
+  0%, 100% { border-color: rgba(255,255,255,0.18); }
+  50%       { border-color: rgba(255,255,255,0.42); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28); }
+}
+
+/* BB-LIVE-09 · Team Identity — logo glow scale */
+.skin-thumb-BB-LIVE-09 .thumb-scorebug {
+  grid-template-columns: 24px 1fr auto auto 1fr 24px;
+  width: min(100%, 210px);
+  background: linear-gradient(90deg, rgba(2,6,23,0.96), rgba(24,32,54,0.92));
+  border-radius: 3px;
+}
+.skin-thumb-BB-LIVE-09 .thumb-scorebug::before,
+.skin-thumb-BB-LIVE-09 .thumb-scorebug::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1);
+  animation: thumb-bb09-logo 3s ease-in-out infinite alternate;
+}
+@keyframes thumb-bb09-logo {
+  from { transform: scale(1);    box-shadow: 0 0  6px rgba(255,154,60,0.3); }
+  to   { transform: scale(1.08); box-shadow: 0 0 16px rgba(255,154,60,0.7); }
+}
+
+/* BB-LIVE-10 · 3x3 Clean — minimal dashed breathe */
+.skin-thumb-BB-LIVE-10 .thumb-scorebug {
+  border-style: dashed;
+  background: rgba(15, 23, 42, 0.52);
+  animation: thumb-bb10-breathe 5s ease-in-out infinite alternate;
+}
+@keyframes thumb-bb10-breathe {
+  from { opacity: 0.8; }
+  to   { opacity: 1; }
+}
+
+/* --- Summary card thumbnails (unchanged from Phase 3) --- */
+.skin-thumb-FB-SUM-01 .thumb-scorebug,
+.skin-thumb-BB-SUM-01 .thumb-scorebug {
+  justify-self: center;
+  width: 176px;
+  min-height: 68px;
+  border-radius: 14px;
+}
+
+.skin-thumb-FB-SUM-03 .thumb-scorebug,
+.skin-thumb-BB-SUM-04 .thumb-scorebug {
+  justify-self: center;
+  width: 148px;
+  min-height: 82px;
+  border-radius: 4px;
+  background: linear-gradient(150deg, rgba(2, 6, 23, 0.9), rgba(255, 122, 24, 0.34));
+}
+
+.skin-thumb-FB-SUM-04 .thumb-scorebug,
+.skin-thumb-BB-SUM-02 .thumb-scorebug {
+  width: 100%;
+  border-left: 5px solid rgba(251, 146, 60, 0.9);
+}
+
+.skin-thumb-FB-SUM-02 .thumb-scorebug,
+.skin-thumb-BB-SUM-05 .thumb-scorebug {
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0.68) 0 44%, rgba(15, 23, 42, 0.82) 44% 56%, rgba(59, 130, 246, 0.68) 56%);
+}
+
+.skin-thumb-FB-SUM-05 .thumb-scorebug,
+.skin-thumb-BB-SUM-06 .thumb-scorebug {
+  border-color: rgba(250, 204, 21, 0.72);
+  background: linear-gradient(135deg, rgba(2, 6, 23, 0.94), rgba(30, 41, 59, 0.72));
+}
+
+.skin-thumb-FB-SUM-06 .thumb-scorebug,
+.skin-thumb-FB-SUM-07 .thumb-scorebug,
+.skin-thumb-BB-SUM-08 .thumb-scorebug {
+  position: relative;
+  padding-top: 14px;
+}
+
+.skin-thumb-FB-SUM-06 .thumb-scorebug::before,
+.skin-thumb-FB-SUM-07 .thumb-scorebug::before,
+.skin-thumb-BB-SUM-08 .thumb-scorebug::before {
+  content: "SPONSOR";
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.48rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.skin-thumb-FB-SUM-08 .thumb-scorebug,
+.skin-thumb-BB-SUM-09 .thumb-scorebug {
+  width: 186px;
+}
+
+.skin-thumb-FB-SUM-08 .thumb-score,
+.skin-thumb-BB-SUM-09 .thumb-score {
+  font-size: 1.55rem;
+}
+
+.skin-thumb-FB-SUM-09 .thumb-scorebug,
+.skin-thumb-BB-SUM-10 .thumb-scorebug {
+  justify-self: center;
+  width: 132px;
+  min-height: 92px;
+  border-radius: 16px;
+}
+
+.skin-thumb-FB-SUM-10 .thumb-scorebug,
+.skin-thumb-BB-SUM-03 .thumb-scorebug {
+  width: 100%;
+  border-bottom: 5px solid rgba(251, 146, 60, 0.9);
+}
+
+.skin-thumb-BB-SUM-07 .thumb-scorebug {
+  border-style: dashed;
+  background: rgba(15, 23, 42, 0.54);
+}
+
 
 .skin-thumb-FB-LIVE-02 .thumb-scorebug,
 .skin-thumb-BB-LIVE-06 .thumb-scorebug {
