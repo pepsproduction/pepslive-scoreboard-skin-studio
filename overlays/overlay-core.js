@@ -307,10 +307,18 @@ function applyDisplayOptions(root) {
   root.classList.toggle("logo-position-outer", displayOptions.teamLogoPosition === "outer");
   root.classList.toggle("logo-position-inner", displayOptions.teamLogoPosition === "inner");
 
+  // Phase 5.0: team name alignment
+  const align = displayOptions.teamNameAlign || "outer";
+  ["outer", "inner", "center"].forEach((mode) => {
+    root.classList.toggle(`team-name-align-${mode}`, align === mode);
+  });
+
+
   const eventRowEmpty = !displayOptions.eventLogo && !displayOptions.eventName && !displayOptions.statusLabel;
   const gameMetaEmpty = !displayOptions.gameClock && !displayOptions.periodLabel;
   root.classList.toggle("event-row-empty", eventRowEmpty);
   root.classList.toggle("game-meta-empty", gameMetaEmpty);
+
 }
 
 function collectRenderedSlotNames(root) {

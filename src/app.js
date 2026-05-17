@@ -49,6 +49,7 @@ import {
   nowIso,
   setButtonGroupActive
 } from "./utils.js";
+import { broadcastSkinUrls, closeStudioDockBridge } from "./studio-dock-bridge.js";
 
 const adapters = createDefaultAdapters();
 const dockAdapter = adapters.find((item) => item.source === "pepslive-dock");
@@ -198,6 +199,10 @@ function syncDisplayOptionControls() {
   ui.displayOptionsForm.querySelectorAll("select[data-display-option]").forEach((select) => {
     select.value = options[select.dataset.displayOption] || DEFAULT_DISPLAY_OPTIONS[select.dataset.displayOption] || "full";
   });
+  // Phase 5.0: team name align button group
+  if (ui.teamNameAlignGroup) {
+    setButtonGroupActive(ui.teamNameAlignGroup, options.teamNameAlign || "outer");
+  }
 }
 
 function updateEventLogoUi() {
@@ -324,6 +329,32 @@ function refreshObsUrlsPanel() {
     portableSummary: portableSummaryResult.url,
     portableSummaryWarning: portableSummaryResult.warning
   };
+
+  // Phase 5.0: broadcast skin URLs to any open Dock V1 instance
+  try { broadcastSkinUrlsToDock(); } catch (_e) {}
+
+  return urls;
+}
+
+/**
+ * Phase 5.0 — Broadcast current skin overlay URLs to PepsLive Dock V1
+ * via BroadcastChannel("PEPSLIVE_STUDIO_SYNC").
+ * Called whenever skin, theme, or display options change.
+ */
+function broadcastSkinUrlsToDock() {
+  const template = resolveTemplateForObsType("live");
+  const portableLive = buildPortableUrlByType("live");
+  const portableSummary = buildPortableUrlByType("summary");
+  const livePreset = getSourcePreset("live");
+  broadcastSkinUrls({
+    liveUrl: portableLive.url,
+    summaryUrl: portableSummary.url,
+    skinId: template.id,
+    sport: template.sport,
+    skinName: template.name || template.id,
+    obsWidth: livePreset.width,
+    obsHeight: livePreset.height
+  });
 }
 
 async function copyText(value, fallbackTarget = null) {
@@ -1067,6 +1098,23 @@ function bindPreviewTools() {
       ...state.displayOptions,
       [key]: value
     };
+    previewEngine.setDisplayOptions(state.displayOptions);
+    refreshObsUrlsPanel();
+    saveSkinState();
+    scheduleCurrentStatePublish();
+  });
+
+  // Phase 5.0: Team Name Alignment button group
+  ui.teamNameAlignGroup?.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-value]");
+    if (!btn) return;
+    const alignValue = btn.dataset.value;
+    state.displayOptions = {
+      ...DEFAULT_DISPLAY_OPTIONS,
+      ...state.displayOptions,
+      teamNameAlign: alignValue
+    };
+    setButtonGroupActive(ui.teamNameAlignGroup, alignValue);
     previewEngine.setDisplayOptions(state.displayOptions);
     refreshObsUrlsPanel();
     saveSkinState();
@@ -2014,6 +2062,7 @@ function cacheElements() {
   ui.slotInspectorSelect = document.getElementById("slotInspectorSelect");
   ui.visualQaModeSelect = document.getElementById("visualQaModeSelect");
   ui.displayOptionsForm = document.getElementById("displayOptionsForm");
+  ui.teamNameAlignGroup = document.getElementById("teamNameAlignGroup"); // Phase 5.0
   ui.eventLogoInput = document.getElementById("eventLogoInput");
   ui.clearEventLogoBtn = document.getElementById("clearEventLogoBtn");
   ui.applyEventPaletteBtn = document.getElementById("applyEventPaletteBtn");
@@ -2299,6 +2348,7 @@ async function initApp() {
 window.addEventListener("beforeunload", () => {
   state.bridge?.stop();
   previewEngine?.dispose?.();
+  try { closeStudioDockBridge(); } catch (_e) {}
 });
 
 document.addEventListener("DOMContentLoaded", () => {

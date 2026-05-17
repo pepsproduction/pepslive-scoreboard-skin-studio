@@ -26,7 +26,8 @@ export const DEFAULT_DISPLAY_OPTIONS = {
   periodLabel: true,
   statusLabel: true,
   extraRow: true,
-  textMode: "full"
+  textMode: "full",
+  teamNameAlign: "outer"   // Phase 5.0: outer | inner | center
 };
 
 export function clamp(value, min, max) {

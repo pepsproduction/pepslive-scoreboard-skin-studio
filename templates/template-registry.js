@@ -108,6 +108,16 @@ export const TEMPLATE_REGISTRY = [
     recommendedSource: LIVE_SOURCE,
     compatibleModes: FOOTBALL_MODES
   },
+  {
+    id: "FB-LIVE-11",
+    sport: "football",
+    type: "live",
+    name: "Cyber Edge",
+    description: "สไตล์ Cyberpunk ล้ำยุค ขอบเฉียงพร้อมแสงนีออนวิ่งรอบทิศทาง",
+    tags: ["Cyberpunk", "Neon", "Animated", "Esports", "Premium"],
+    recommendedSource: LIVE_SOURCE,
+    compatibleModes: FOOTBALL_MODES
+  },
 
   // ---------------------------------------------------------------------------
   // FOOTBALL — SUMMARY
@@ -313,6 +323,16 @@ export const TEMPLATE_REGISTRY = [
     name: "3x3 Clean",
     description: "สกอร์บาส 3x3 เรียบง่าย quiet breathe animation",
     tags: ["Animated", "Minimal", "Local", "Compact"],
+    recommendedSource: LIVE_SOURCE,
+    compatibleModes: BASKETBALL_MODES
+  },
+  {
+    id: "BB-LIVE-11",
+    sport: "basketball",
+    type: "live",
+    name: "Hoops Hologram",
+    description: "โฮโลแกรมสแกนไลน์ พร้อมแสงเรืองรอบจอสุดล้ำ",
+    tags: ["Hologram", "Animated", "Premium", "Esports", "Neon"],
     recommendedSource: LIVE_SOURCE,
     compatibleModes: BASKETBALL_MODES
   },

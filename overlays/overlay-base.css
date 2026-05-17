@@ -56,7 +56,14 @@ body {
   padding: 8px 12px;
 }
 
+/*
+ * .scoreboard-shell uses an isolation pattern for background opacity:
+ * The shell itself is always fully opaque (content never fades).
+ * A ::before pseudo-element carries the background colour + opacity.
+ * Skin-specific CSS overrides the ::before background as needed.
+ */
 .scoreboard-shell {
+  position: relative;          /* stacking context for ::before */
   width: min(96vw, 1180px);
   min-height: 126px;
   display: flex;
@@ -64,7 +71,8 @@ body {
   gap: 10px;
   border-radius: var(--border-radius);
   border: var(--border-width) solid color-mix(in srgb, var(--primary-color) 55%, transparent);
-  background: color-mix(in srgb, var(--secondary-color) calc(var(--background-opacity) * 100%), transparent);
+  /* No background on shell itself — carried by ::before */
+  background: transparent;
   backdrop-filter: blur(var(--glass-blur));
   box-shadow:
     0 14px 32px rgba(15, 23, 42, calc(var(--shadow-intensity) * 0.8)),
@@ -72,6 +80,26 @@ body {
   padding: 10px 14px;
   transform-origin: top center;
   transform: scale(var(--scoreboard-scale));
+}
+
+/* Background isolation layer — opacity only affects this pseudo-element */
+.scoreboard-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  /* Default: secondary colour at user-controlled opacity */
+  background: color-mix(in srgb, var(--secondary-color) 100%, transparent);
+  opacity: var(--background-opacity);
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* All direct children sit above the bg layer */
+.scoreboard-shell > * {
+  position: relative;
+  z-index: 1;
 }
 
 #overlay-root.mode-live .scoreboard-shell {
@@ -637,4 +665,40 @@ body {
   #overlay-root.mode-summary .extra-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* ==========================================================================
+   Phase 5.0 — Team Name Alignment
+   Applied via class on #overlay-root:
+     .team-name-align-outer   home name left-flush, away name right-flush
+     .team-name-align-inner   home name right-flush (faces score), away left-flush
+     .team-name-align-center  both names centred
+   ========================================================================== */
+
+/* OUTER (default) — names flush toward the edges */
+#overlay-root.team-name-align-outer .team-block.home .team-name-box,
+#overlay-root:not([class*="team-name-align"]) .team-block.home .team-name-box {
+  align-items: flex-start;
+  text-align: left;
+}
+#overlay-root.team-name-align-outer .team-block.away .team-name-box,
+#overlay-root:not([class*="team-name-align"]) .team-block.away .team-name-box {
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* INNER — names face inward toward the score block */
+#overlay-root.team-name-align-inner .team-block.home .team-name-box {
+  align-items: flex-end;
+  text-align: right;
+}
+#overlay-root.team-name-align-inner .team-block.away .team-name-box {
+  align-items: flex-start;
+  text-align: left;
+}
+
+/* CENTER — names centred within their block */
+#overlay-root.team-name-align-center .team-block .team-name-box {
+  align-items: center;
+  text-align: center;
 }

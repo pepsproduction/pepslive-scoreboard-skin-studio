@@ -545,18 +545,19 @@ body {
 
 /* --- Phase 4.5 Thumbnail Styles — unique visual identity per skin --- */
 
-/* FB-LIVE-01 · Premier Broadcast — dark navy, gold shimmer top line */
+/* FB-LIVE-01 · Premier Broadcast — glassmorphism, dynamic glow */
 .skin-thumb-FB-LIVE-01 .thumb-scorebug {
   width: 100%;
-  border-radius: 0;
-  background: linear-gradient(180deg, #0e1c3a 0%, #091221 100%);
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(180deg, rgba(8, 12, 20, 0.95) 0%, rgba(12, 18, 30, 0.85) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 0;
   color: #f8fafc;
-  box-shadow: 0 -2px 0 rgba(200, 148, 42, 0.7) inset;
   animation: thumb01-shimmer 2.8s ease-in-out infinite alternate;
 }
 @keyframes thumb01-shimmer {
-  from { box-shadow: 0 -2px 0 rgba(200, 148, 42, 0.5) inset; }
-  to   { box-shadow: 0 -2px 0 rgba(249, 211, 106, 1)   inset, 0 0 12px rgba(200,148,42,0.3); }
+  from { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.05); }
+  to   { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.1); }
 }
 .skin-thumb-FB-LIVE-01 .thumb-team,
 .skin-thumb-FB-LIVE-01 .thumb-score { color: #f8fafc; }
@@ -1996,3 +1997,64 @@ textarea:focus {
   color: rgba(203, 213, 225, 0.45);
 }
 
+/* ==========================================================================
+   Phase 5.0 — Team Name Alignment button group
+   ========================================================================== */
+
+.btn-group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.btn-group.compact {
+  gap: 3px;
+}
+
+.btn-group-item {
+  flex: 1 1 auto;
+  min-height: 32px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 118, 160, 0.35);
+  background: rgba(15, 23, 42, 0.55);
+  color: rgba(203, 213, 225, 0.75);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-group-item:hover {
+  background: rgba(99, 118, 160, 0.2);
+  border-color: rgba(99, 118, 160, 0.55);
+  color: #e2e8f0;
+}
+
+.btn-group-item.is-active {
+  background: rgba(79, 124, 255, 0.28);
+  border-color: rgba(79, 124, 255, 0.65);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* FB-LIVE-11 · Cyber Edge */
+.skin-thumb-FB-LIVE-11 .thumb-scorebug {
+  width: 160px;
+  justify-self: center;
+  border-radius: 0;
+  background: linear-gradient(135deg, rgba(10, 10, 15, 0.95), rgba(20, 15, 30, 0.9));
+  border-bottom: 2px solid #0ff;
+  border-top: 2px solid #ff0055;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+
+/* BB-LIVE-11 · Hoops Hologram */
+.skin-thumb-BB-LIVE-11 .thumb-scorebug {
+  width: 100%;
+  border-radius: 8px;
+  background: rgba(4, 8, 16, 0.85);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+}

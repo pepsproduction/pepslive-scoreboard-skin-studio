@@ -35,6 +35,10 @@
 }
 
 .skin-BB-SUM-04 .scoreboard-shell {
+
+}
+
+.skin-BB-SUM-04 .scoreboard-shell::before {
   background:
     linear-gradient(120deg, rgba(2, 6, 23, 0.9), rgba(30, 58, 138, 0.74)),
     radial-gradient(circle at 20% 20%, rgba(250, 204, 21, 0.23), transparent 50%);
@@ -69,6 +73,10 @@
 
 .skin-BB-SUM-07 .scoreboard-shell {
   border-radius: 14px;
+
+}
+
+.skin-BB-SUM-07 .scoreboard-shell::before {
   background: rgba(15, 23, 42, 0.86);
 }
 
@@ -240,6 +248,10 @@
 /* Phase 3.9 pattern polish: finals and recap cards */
 .skin-BB-SUM-01 .scoreboard-shell {
   border: 0;
+
+}
+
+.skin-BB-SUM-01 .scoreboard-shell::before {
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--home-color) 55%, #020617) 0 44%, #020617 44% 56%, color-mix(in srgb, var(--away-color) 55%, #020617) 56%),
     radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.18), transparent 36%);
@@ -253,6 +265,10 @@
 }
 
 .skin-BB-SUM-04 .scoreboard-shell {
+
+}
+
+.skin-BB-SUM-04 .scoreboard-shell::before {
   background:
     radial-gradient(circle at 50% 20%, rgba(250, 204, 21, 0.24), transparent 38%),
     linear-gradient(145deg, rgba(2, 6, 23, 0.94), rgba(30, 58, 138, 0.72));

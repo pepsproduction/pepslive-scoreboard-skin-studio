@@ -9,6 +9,11 @@
 }
 
 .skin-FB-SUM-02 .scoreboard-shell {
+
+  border-radius: 18px;
+}
+
+.skin-FB-SUM-02 .scoreboard-shell::before {
   background:
     linear-gradient(
       90deg,
@@ -17,7 +22,6 @@
       color-mix(in srgb, var(--away-color) 30%, transparent) 50%,
       color-mix(in srgb, var(--away-color) 30%, transparent) 100%
     );
-  border-radius: 18px;
 }
 
 .skin-FB-SUM-02 .team-block {
@@ -61,8 +65,12 @@
 }
 
 .skin-FB-SUM-05 .scoreboard-shell {
-  background: linear-gradient(135deg, rgba(2, 6, 23, 0.95), rgba(30, 41, 59, 0.72));
+
   border-color: color-mix(in srgb, #cbd5e1 45%, transparent);
+}
+
+.skin-FB-SUM-05 .scoreboard-shell::before {
+  background: linear-gradient(135deg, rgba(2, 6, 23, 0.95), rgba(30, 41, 59, 0.72));
 }
 
 .skin-FB-SUM-05 .status-badge {
@@ -248,6 +256,10 @@
 /* Phase 3.9 pattern polish: final cards, posters, and split boards */
 .skin-FB-SUM-01 .scoreboard-shell {
   border: 0;
+
+}
+
+.skin-FB-SUM-01 .scoreboard-shell::before {
   background:
     linear-gradient(90deg, rgba(2, 6, 23, 0.92) 0 34%, rgba(14, 165, 233, 0.78) 34% 66%, rgba(2, 6, 23, 0.92) 66%),
     radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.16), transparent 34%);
@@ -273,6 +285,10 @@
 }
 
 .skin-FB-SUM-03 .scoreboard-shell {
+
+}
+
+.skin-FB-SUM-03 .scoreboard-shell::before {
   background:
     linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.96)),
     radial-gradient(circle at 50% 0, rgba(251, 146, 60, 0.28), transparent 34%);
