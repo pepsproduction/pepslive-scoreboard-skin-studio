@@ -280,6 +280,7 @@ export function decodePortableState(raw) {
  *   textMode?: string,
  *   teamLogoPosition?: string,
  *   eventLogo?: string,
+ *   matchData?: object,
  *   debug?: boolean,
  *   absolute?: boolean,
  *   cacheBust?: boolean,
@@ -297,6 +298,7 @@ export function generatePortableOverlayUrl(opts) {
     theme,
     displayOptions,
     eventLogo,
+    matchData,
     debug = false,
     absolute = true,
     cacheBust = true,
@@ -312,6 +314,7 @@ export function generatePortableOverlayUrl(opts) {
   if (theme && Object.keys(theme).length > 0) stateObj.theme = theme;
   if (displayOptions && Object.keys(displayOptions).length > 0) stateObj.displayOptions = displayOptions;
   if (eventLogo) stateObj.eventLogo = eventLogo;
+  if (matchData && Object.keys(matchData).length > 0) stateObj.matchData = matchData;
 
   const { encoded, size, oversized, dropped } = encodePortableState(stateObj, { includeEventLogo: !!eventLogo });
 
@@ -355,6 +358,8 @@ export function generatePortableOverlayUrl(opts) {
  *   animationStyle?: string,
  *   theme?: object,
  *   displayOptions?: object,
+ *   matchData?: object,
+ *   pollIntervalSec?: number,
  *   debug?: boolean,
  *   absolute?: boolean,
  *   embedPortableState?: boolean
@@ -370,6 +375,8 @@ export function generateRelayOverlayUrl(opts) {
     animationStyle,
     theme,
     displayOptions,
+    matchData,
+    pollIntervalSec,
     debug = false,
     absolute = true,
     embedPortableState = true
@@ -407,6 +414,7 @@ export function generateRelayOverlayUrl(opts) {
     if (animationStyle) stateObj.animation = animationStyle;
     if (theme && Object.keys(theme).length > 0) stateObj.theme = theme;
     if (displayOptions && Object.keys(displayOptions).length > 0) stateObj.displayOptions = displayOptions;
+    if (matchData && Object.keys(matchData).length > 0) stateObj.matchData = matchData;
 
     const { encoded, oversized, dropped } = encodePortableState(stateObj);
     url.searchParams.set("state", encoded);
@@ -419,6 +427,7 @@ export function generateRelayOverlayUrl(opts) {
   }
 
   if (debug) url.searchParams.set("debug", "1");
+  if (pollIntervalSec) url.searchParams.set("poll", String(Math.max(1, Math.min(60, Math.round(Number(pollIntervalSec) || 1)))));
 
   return {
     url: absolute ? url.toString() : `${url.pathname}${url.search}`,

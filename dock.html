@@ -103,6 +103,7 @@
               <div class="inline-row preview-actions">
                 <button type="button" class="capsule-btn primary" id="previewCopyProductionBtn" data-copy-feedback="true">Copy Browser Source URL</button>
                 <button type="button" class="capsule-btn" id="previewCopyDebugBtn" data-copy-feedback="true">Copy Debug URL</button>
+                <button type="button" class="capsule-btn" id="previewExportPngBtn">Export PNG</button>
                 <button type="button" class="capsule-btn web-hidden" id="previewAddSourceBtn">Add Source</button>
               </div>
               <div id="previewStage" class="preview-stage bg-transparent-grid">
@@ -315,7 +316,7 @@
               <p class="tiny-note">Set a public JSON URL that returns a PepsLive state payload. Overlays with <code>?relay=</code> will poll it for live score updates — works across any origin or OBS storage profile.</p>
               <div class="inline-grid obs-preset-grid">
                 <label><span>Relay JSON URL</span><input id="relayUrlInput" type="url" class="text-input" placeholder="https://gist.githubusercontent.com/…/raw/state.json" /></label>
-                <label><span>Poll Interval (sec)</span><input id="relayIntervalInput" type="number" class="text-input" value="5" min="2" max="60" /></label>
+                <label><span>Poll Interval (sec)</span><input id="relayIntervalInput" type="number" class="text-input" value="1" min="1" max="60" /></label>
               </div>
               <div class="inline-row">
                 <button type="button" class="capsule-btn primary" id="copyRelayLiveUrlBtn" data-copy-feedback="true">Copy Relay Live URL</button>

@@ -1,10 +1,10 @@
 import { TEMPLATE_REGISTRY, getTemplateById } from "../templates/template-registry.js";
 import { validateIncomingPayload } from "../src/payload-validator.js";
-import { PEPSLIVE_MESSAGE_TYPES, PEPSLIVE_SCOREBOARD_PROTOCOL, createProtocolPayload } from "../src/pepslive-payload-protocol.js";
+import { PEPSLIVE_MESSAGE_TYPES, PEPSLIVE_SCOREBOARD_PROTOCOL, createProtocolPayload, isProtocolPayload } from "../src/pepslive-payload-protocol.js";
 import { SharedStateBridge, getSharedOverlayState } from "../src/shared-state-bridge.js";
 import { evaluateRenderedSlots, getRenderContractByTemplateId } from "../src/template-render-contract.js";
 import { DEFAULT_DISPLAY_OPTIONS, parseDisplayOptionsString, decodePortableState } from "../src/utils.js";
-import { RelayPoller, sanitizeRelayUrl, RELAY_SOURCE_LABEL } from "../src/relay-poller.js";
+import { RelayPoller, sanitizeRelayUrl, clampRelayInterval, RELAY_SOURCE_LABEL } from "../src/relay-poller.js";
 
 const DEFAULT_THEME = {
   primaryColor: "#ff7a18",
@@ -138,6 +138,7 @@ function parseQueryParams() {
     slotsRaw: params.get("slots"),
     stateRaw: params.get("state"),  // Phase 4.3 portable state
     relayRaw: params.get("relay"),   // Phase 4.4 relay poller URL (percent-encoded)
+    relayPollSec: Number(params.get("poll") || "1"),
     isolated: params.get("isolated") === "1",
     debug: params.get("debug") === "1"
   };
@@ -530,6 +531,15 @@ function resolveSourceLabel(sourceValue = "") {
   return sourceValue || "Unknown";
 }
 
+function mergeMatchDataWithTemplateFallback(template, incoming = {}) {
+  const merged = {
+    ...(currentData || {}),
+    ...(incoming && typeof incoming === "object" ? incoming : {})
+  };
+  merged.sport = merged.sport || template.sport;
+  return merged;
+}
+
 async function fallbackRender(reason) {
   const template = getTemplateById(currentSkinId || "FB-LIVE-01");
   const mock = await getMockBySport(template.sport);
@@ -550,6 +560,18 @@ async function applyProtocolPayload(rawPayload, sourceLabel = "unknown") {
   const validation = await validateIncomingPayload(rawPayload);
   if (!validation.isValid || !validation.normalizedPayload) {
     currentSourceLabel = resolveSourceLabel(rawPayload?.source || sourceLabel);
+    if (sourceLabel === RELAY_SOURCE_LABEL && currentData) {
+      const template = getTemplateById(currentSkinId || "FB-LIVE-01");
+      updateDebugBox({
+        protocolStatus: rawPayload?.protocol || PEPSLIVE_SCOREBOARD_PROTOCOL,
+        validationStatus: `relay ignored (${validation.errors?.[0] || "invalid payload"})`,
+        updateTime: new Date().toISOString(),
+        template,
+        sport: template.sport,
+        type: template.type
+      });
+      return;
+    }
     await fallbackRender(`invalid payload via ${sourceLabel}`);
     return;
   }
@@ -570,6 +592,23 @@ async function applyProtocolPayload(rawPayload, sourceLabel = "unknown") {
     template,
     sport: payload.sport,
     type: payload.type
+  });
+}
+
+function normalizeRelayPayload(data) {
+  if (isProtocolPayload(data)) {
+    return data;
+  }
+  const activeTemplate = getTemplateById(currentSkinId || "FB-LIVE-01");
+  const matchData = data?.matchData && typeof data.matchData === "object" ? data.matchData : data;
+  return createProtocolPayload({
+    source: RELAY_SOURCE_LABEL,
+    sport: matchData?.sport || activeTemplate.sport,
+    skinId: data?.skinId || activeTemplate.id,
+    type: data?.type || activeTemplate.type,
+    theme: data?.theme || {},
+    animation: data?.animation || { style: currentAnimation },
+    matchData: mergeMatchDataWithTemplateFallback(activeTemplate, matchData)
   });
 }
 
@@ -726,7 +765,13 @@ async function initOverlay() {
 
   if (hasPortableState) {
     // Use mock data; live scores will arrive via BroadcastChannel/postMessage if same-origin
-    currentData = await getMockBySport(fallbackTemplate.sport);
+    const portableMatchData = portableState.matchData && typeof portableState.matchData === "object" ? portableState.matchData : null;
+    currentData = portableMatchData
+      ? { ...(await getMockBySport(fallbackTemplate.sport)), ...portableMatchData, sport: portableMatchData.sport || fallbackTemplate.sport }
+      : await getMockBySport(fallbackTemplate.sport);
+    if (portableState.eventLogo) {
+      currentData = { ...currentData, eventLogo: portableState.eventLogo };
+    }
   } else {
     const sharedState = getSharedOverlayState();
     const sharedPayload = sharedState.currentPayload;
@@ -757,12 +802,12 @@ async function initOverlay() {
   if (relayUrl && !isolatedPreviewMode) {
     relayPoller = new RelayPoller({
       url: relayUrl,
-      intervalMs: 5_000,
+      intervalMs: clampRelayInterval((Number.isFinite(query.relayPollSec) ? query.relayPollSec : 1) * 1000),
       onPayload: async (data) => {
         // Relay delivers the full protocol payload OR raw matchData.
         // If it's a full protocol payload use it directly; otherwise wrap it.
         try {
-          await applyProtocolPayload(data, RELAY_SOURCE_LABEL);
+          await applyProtocolPayload(normalizeRelayPayload(data), RELAY_SOURCE_LABEL);
         } catch (_error) {
           // Ignore relay parse errors silently
         }

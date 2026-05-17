@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## Phase 5.2 - Live Relay Stability + PNG Export
+
+- Relay/portable URLs can now embed the current `matchData` so overlays open with the latest Dock V1 score/team/clock instead of flashing mock preview data first.
+- Relay polling default/minimum is now 1 second for faster OBS Browser Source updates.
+- Overlay relay payload handling now accepts both full protocol payloads and flat matchData-style relay responses.
+- Invalid relay reads no longer force the overlay back to mock data when a valid scoreboard is already visible.
+- Added **Export PNG** from the current Source Preview, using the selected Browser Source preset size and transparent background.
+
 ## Phase 4.6 - Stable Skin URLs + Dock V1 Handoff
 
 - Changed production copy URLs to portable state URLs with cache busters for OBS-ready setup.
@@ -19,7 +27,7 @@ Closes the final sync gap for OBS Browser Sources running in isolated storage pr
 - ETag-based conditional GET (`If-None-Match`) avoids re-parsing identical responses
 - Exponential backoff (up to 30 s) on HTTP errors; resets on success
 - `sanitizeRelayUrl` โ€” validates http/https only, trims whitespace, returns null on failure
-- `clampRelayInterval` โ€” enforces 2 000 ms โ€“ 60 000 ms range
+- `clampRelayInterval` โ€” enforces 1 000 ms โ€“ 60 000 ms range
 - `onStatus` callback exposes running/error state to the debug overlay box
 - Never throws; all errors go to `onError` callback
 
@@ -39,7 +47,7 @@ Closes the final sync gap for OBS Browser Sources running in isolated storage pr
   - Rendered preset list with Load / Delete per entry
   - Styled `.preset-list`, `.preset-item`, `.preset-actions`, `.text-input`
 - **Relay Config** section inside Browser Source Export (below Portable State URLs)
-  - Relay JSON URL input + Poll Interval input (2โ€“60 sec)
+  - Relay JSON URL input + Poll Interval input (1-60 sec)
   - Copy Relay Live URL / Copy Relay Summary URL buttons
   - Export State as Relay JSON (downloads the current payload as a ready-to-host file)
   - Test Relay URL (fetches URL, validates format, shows result inline)
@@ -65,7 +73,7 @@ Closes the final sync gap for OBS Browser Sources running in isolated storage pr
   - Skin Presets: save / list / sort / delete round-trip; name cap; non-existent delete
   - `generateRelayOverlayUrl`: missing/bad relay, valid relay + state combo, live/summary, debug flag, decode round-trip
   - Source file completeness and export names
-- `scripts/check-portable-url.mjs` โ€” 32/32 PASS (no regressions)
+- `scripts/check-portable-url.mjs` โ€” 36/36 PASS (no regressions)
 - `scripts/check-phase3-integration.mjs` โ€” PASS (no regressions)
 - `node --check` โ€” clean for all 6 modified files
 
@@ -115,7 +123,7 @@ Adds a first-class **Portable State URL** strategy so that OBS Browser Sources c
 - Live score updates still arrive via BroadcastChannel/postMessage if the dock is same-origin
 
 ### QA
-- `scripts/check-portable-url.mjs` โ€” 32/32 assertions pass:
+- `scripts/check-portable-url.mjs` โ€” 36/36 assertions pass:
   - Round-trip encode/decode for skin/theme/displayOptions
   - Base64url safety (no `+`, `/`, trailing `=`)
   - Invalid state fallback (null, garbage, corrupt, array) โ€” never throws

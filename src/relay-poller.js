@@ -15,13 +15,13 @@ import { isProtocolPayload } from "./pepslive-payload-protocol.js";
 import { nowIso } from "./utils.js";
 
 /** Minimum allowed poll interval in milliseconds. */
-export const RELAY_POLL_INTERVAL_MIN_MS = 2_000;
+export const RELAY_POLL_INTERVAL_MIN_MS = 1_000;
 
 /** Maximum allowed poll interval in milliseconds. */
 export const RELAY_POLL_INTERVAL_MAX_MS = 60_000;
 
 /** Default poll interval in milliseconds. */
-export const RELAY_POLL_INTERVAL_DEFAULT_MS = 5_000;
+export const RELAY_POLL_INTERVAL_DEFAULT_MS = 1_000;
 
 /** Maximum consecutive errors before backoff reaches ceiling. */
 const MAX_BACKOFF_STEPS = 6;
@@ -78,7 +78,7 @@ export function isRelayPayloadUsable(value) {
  * Usage:
  *   const poller = new RelayPoller({
  *     url: "https://example.com/state.json",
- *     intervalMs: 5000,
+ *     intervalMs: 1000,
  *     onPayload: (data) => { ... },
  *     onError:   (err) => { ... },
  *     onStatus:  (status) => { ... }

@@ -100,7 +100,8 @@ const sample = {
   type: "live",
   animation: "smooth-broadcast",
   theme: { primaryColor: "#ff7a18", secondaryColor: "#101827" },
-  displayOptions: { eventLogo: true, eventName: true, gameClock: true }
+  displayOptions: { eventLogo: true, eventName: true, gameClock: true },
+  matchData: { homeName: "Dragon FC", awayName: "Tiger FC", homeScore: 2, awayScore: 1, gameClock: "45:00" }
 };
 
 const { encoded, size, oversized, dropped } = encodePortableState(sample);
@@ -119,6 +120,8 @@ assert("type preserved", decoded.type === sample.type);
 assert("animation preserved", decoded.animation === sample.animation);
 assert("theme.primaryColor preserved", decoded.theme?.primaryColor === sample.theme.primaryColor);
 assert("displayOptions.eventLogo preserved", decoded.displayOptions?.eventLogo === true);
+assert("matchData.homeScore preserved", decoded.matchData?.homeScore === 2);
+assert("matchData.gameClock preserved", decoded.matchData?.gameClock === "45:00");
 
 // ---------------------------------------------------------------------------
 // Test 2: Decode invalid/corrupt state – must return null, not throw
@@ -194,7 +197,8 @@ const fullState = {
     extraRow: false,
     textMode: "full",
     teamLogoPosition: "outer"
-  }
+  },
+  matchData: { homeName: "Orange Wolves", awayName: "Blue Hawks", homeScore: 78, awayScore: 74 }
 };
 
 const { encoded: fullEncoded } = encodePortableState(fullState);
@@ -205,6 +209,8 @@ assert("theme in state", typeof fullDecoded.theme === "object");
 assert("displayOptions in state", typeof fullDecoded.displayOptions === "object");
 assert("displayOptions.teamLogoPosition preserved", fullDecoded.displayOptions?.teamLogoPosition === "outer");
 assert("displayOptions.extraRow preserved (false)", fullDecoded.displayOptions?.extraRow === false);
+assert("matchData in state", typeof fullDecoded.matchData === "object");
+assert("matchData.awayScore preserved", fullDecoded.matchData?.awayScore === 74);
 
 // ---------------------------------------------------------------------------
 // Summary

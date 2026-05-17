@@ -247,7 +247,7 @@ const RELAY_CONFIG_KEY = "pepslive:relayConfig";
  * @returns {{ url: string, intervalSec: number }}
  */
 export function getRelayConfig() {
-  return safeJsonParse(localStorage.getItem(RELAY_CONFIG_KEY), { url: "", intervalSec: 5 });
+  return safeJsonParse(localStorage.getItem(RELAY_CONFIG_KEY), { url: "", intervalSec: 1 });
 }
 
 /**
@@ -257,9 +257,8 @@ export function getRelayConfig() {
 export function setRelayConfig(config) {
   const saved = {
     url: String(config.url || "").trim(),
-    intervalSec: Math.max(2, Math.min(60, Math.round(Number(config.intervalSec) || 5)))
+    intervalSec: Math.max(1, Math.min(60, Math.round(Number(config.intervalSec) || 1)))
   };
   localStorage.setItem(RELAY_CONFIG_KEY, JSON.stringify(saved));
   return saved;
 }
-

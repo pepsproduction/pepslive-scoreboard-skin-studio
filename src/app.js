@@ -284,6 +284,7 @@ function buildOverlayUrlByType(type, { debug = false, cacheBust = false, forceVe
  */
 function buildPortableUrlByType(type, { debug = false, cacheBust = true, forceVersion = null } = {}) {
   const template = resolveTemplateForObsType(type);
+  const payload = buildProtocolPayloadFromState({ skinId: template.id, sport: template.sport, type });
   return generatePortableOverlayUrl({
     skinId: template.id,
     type,
@@ -292,6 +293,7 @@ function buildPortableUrlByType(type, { debug = false, cacheBust = true, forceVe
     theme: state.currentTheme,
     displayOptions: state.displayOptions,
     eventLogo: state.eventLogoDataUrl || "",
+    matchData: payload.matchData,
     debug,
     absolute: true,
     cacheBust,
@@ -1113,6 +1115,112 @@ function bindTopActions() {
   });
 }
 
+function collectFrameCss(frameDocument) {
+  const chunks = [];
+  Array.from(frameDocument.styleSheets || []).forEach((sheet) => {
+    try {
+      Array.from(sheet.cssRules || []).forEach((rule) => chunks.push(rule.cssText));
+    } catch (_error) {
+      // Ignore inaccessible stylesheets; overlay assets are same-origin in normal use.
+    }
+  });
+  chunks.push(`
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden !important;
+      background: transparent !important;
+    }
+    #overlay-debug-box,
+    #overlay-relay-status {
+      display: none !important;
+    }
+  `);
+  return chunks.join("\n");
+}
+
+function waitForImageLoad(image) {
+  return new Promise((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("PNG renderer could not decode the preview SVG"));
+  });
+}
+
+function escapeXmlAttribute(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+async function exportCurrentPreviewPng() {
+  if (!state.selectedTemplate || !ui.previewFrame?.contentDocument) {
+    notify("Preview is not ready for PNG export", "warn");
+    return;
+  }
+
+  previewEngine?.postLiveUpdate?.();
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  const frameDocument = ui.previewFrame.contentDocument;
+  const preset = getSourcePreset(state.selectedTemplate.type);
+  const width = preset.width;
+  const height = preset.height;
+  const bodyClone = frameDocument.body.cloneNode(true);
+  bodyClone.querySelector("#overlay-debug-box")?.remove();
+  bodyClone.querySelector("#overlay-relay-status")?.remove();
+  bodyClone.querySelectorAll("script").forEach((node) => node.remove());
+
+  const htmlStyle = escapeXmlAttribute(frameDocument.documentElement.getAttribute("style") || "");
+  const serializer = new XMLSerializer();
+  const css = collectFrameCss(frameDocument);
+  const safeCss = css.replace(/\]\]>/g, "]]]]><![CDATA[>");
+  const serializedBody = serializer.serializeToString(bodyClone);
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <foreignObject width="100%" height="100%">
+        <html xmlns="http://www.w3.org/1999/xhtml" style="${htmlStyle}">
+          <head><style><![CDATA[${safeCss}]]></style></head>
+          ${serializedBody}
+        </html>
+      </foreignObject>
+    </svg>
+  `;
+
+  const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const svgUrl = URL.createObjectURL(svgBlob);
+  const image = new Image();
+  image.decoding = "async";
+  const imageLoad = waitForImageLoad(image);
+  image.src = svgUrl;
+
+  try {
+    await imageLoad;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Canvas is not available");
+    }
+    context.clearRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    const pngUrl = canvas.toDataURL("image/png");
+    const anchor = document.createElement("a");
+    anchor.href = pngUrl;
+    anchor.download = `pepslive-${state.selectedTemplate.id}-${width}x${height}.png`;
+    anchor.click();
+    notify("PNG exported from current preview");
+  } catch (error) {
+    notify(`PNG export failed: ${error.message}`, "error");
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+}
+
 function bindPreviewTools() {
   ui.backgroundMode.addEventListener("change", () => {
     previewEngine.setBackgroundMode(ui.backgroundMode.value);
@@ -1144,6 +1252,10 @@ function bindPreviewTools() {
   ui.visualQaModeSelect.addEventListener("change", () => {
     state.visualQaMode = ui.visualQaModeSelect.value;
     previewEngine.setVisualQaMode(state.visualQaMode);
+  });
+
+  ui.previewExportPngBtn?.addEventListener("click", () => {
+    exportCurrentPreviewPng();
   });
 
   ui.displayOptionsForm?.addEventListener("change", (event) => {
@@ -1810,6 +1922,7 @@ function buildRelayUrlByType(type, { debug = false } = {}) {
   const template = resolveTemplateForObsType(type);
   const relayUrl = (ui.relayUrlInput?.value || state.relayConfig.url || "").trim();
   if (!relayUrl) return { url: "", warning: "Enter a relay URL first." };
+  const payload = buildProtocolPayloadFromState({ skinId: template.id, sport: template.sport, type });
   return generateRelayOverlayUrl({
     skinId: template.id,
     type,
@@ -1818,6 +1931,8 @@ function buildRelayUrlByType(type, { debug = false } = {}) {
     animationStyle: state.animationStyle,
     theme: state.currentTheme,
     displayOptions: state.displayOptions,
+    matchData: payload.matchData,
+    pollIntervalSec: state.relayConfig.intervalSec || 1,
     debug,
     absolute: true,
     embedPortableState: true
@@ -1876,7 +1991,7 @@ function bindRelayPanel() {
 
   const saveRelay = () => {
     const url = (ui.relayUrlInput?.value || "").trim();
-    const intervalSec = Number(ui.relayIntervalInput?.value) || 5;
+    const intervalSec = Number(ui.relayIntervalInput?.value) || 1;
     state.relayConfig = setRelayConfig({ url, intervalSec });
   };
 
@@ -2110,6 +2225,7 @@ function cacheElements() {
   ui.previewCopyProductionBtn = document.getElementById("previewCopyProductionBtn");
   ui.previewCopyDebugBtn = document.getElementById("previewCopyDebugBtn");
   ui.previewAddSourceBtn = document.getElementById("previewAddSourceBtn");
+  ui.previewExportPngBtn = document.getElementById("previewExportPngBtn");
   ui.previewFrame = document.getElementById("overlayPreviewFrame");
   ui.previewStage = document.getElementById("previewStage");
   ui.safeArea = document.getElementById("safeAreaOverlay");

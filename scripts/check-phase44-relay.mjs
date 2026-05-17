@@ -17,9 +17,9 @@ const root = path.resolve(__dirname, "..");
 // Inline relay-poller helpers (no DOM/browser required)
 // ---------------------------------------------------------------------------
 
-const RELAY_POLL_INTERVAL_MIN_MS = 2_000;
+const RELAY_POLL_INTERVAL_MIN_MS = 1_000;
 const RELAY_POLL_INTERVAL_MAX_MS = 60_000;
-const RELAY_POLL_INTERVAL_DEFAULT_MS = 5_000;
+const RELAY_POLL_INTERVAL_DEFAULT_MS = 1_000;
 
 function clampRelayInterval(ms) {
   const value = Math.round(Number(ms));
