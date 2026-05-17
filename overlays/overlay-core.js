@@ -119,6 +119,8 @@ let slotInspectorMode = "Off";
 let visualQaMode = "Off";
 let lastContractReport = null;
 let currentSourceLabel = "Mock Data";
+let lastRenderedTemplateId = "";
+let lastRenderedMode = "";
 
 function parseQueryParams() {
   const params = new URLSearchParams(window.location.search);
@@ -213,6 +215,63 @@ function extraItemsMarkup(sport, data) {
     .join("");
 }
 
+function updateRootDisplayClasses(root, mode, templateId, animationStyle) {
+  [
+    [mode === "summary" ? "mode-summary" : "mode-live", "mode-"],
+    [`skin-${templateId}`, "skin-"],
+    [`anim-${animationStyle}`, "anim-"]
+  ].forEach(([nextClass, prefix]) => {
+    if (root.classList.contains(nextClass)) {
+      return;
+    }
+    const staleClasses = Array.from(root.classList).filter((className) => className.startsWith(prefix));
+    root.classList.remove(...staleClasses);
+    root.classList.add(nextClass);
+  });
+}
+
+function setSlotText(root, slotName, value, fallback = "-") {
+  const node = root.querySelector(`[data-slot="${slotName}"]`);
+  if (node) {
+    node.textContent = textOrFallback(value, fallback);
+  }
+}
+
+function updateLogoSlot(root, data, slotName) {
+  const existing = root.querySelector(`[data-slot="${slotName}"]`);
+  if (!existing) {
+    return;
+  }
+  const nextMarkup = createLogoMarkup(data[slotName], getLogoFallback(data, slotName), slotName);
+  if (existing.outerHTML !== nextMarkup) {
+    existing.outerHTML = nextMarkup;
+  }
+}
+
+function patchScoreboardSlots(root, data) {
+  setSlotText(root, "eventName", data.eventName);
+  setSlotText(root, "statusLabel", data.statusLabel);
+  setSlotText(root, "homeName", data.homeName);
+  setSlotText(root, "homeShortName", data.homeShortName);
+  setSlotText(root, "homeScore", data.homeScore, "0");
+  setSlotText(root, "awayScore", data.awayScore, "0");
+  setSlotText(root, "gameClock", data.gameClock, "00:00");
+  setSlotText(root, "periodLabel", data.periodLabel, "-");
+  setSlotText(root, "awayName", data.awayName);
+  setSlotText(root, "awayShortName", data.awayShortName);
+
+  updateLogoSlot(root, data, "eventLogo");
+  updateLogoSlot(root, data, "homeLogo");
+  updateLogoSlot(root, data, "awayLogo");
+
+  (SPORT_EXTRAS[data.sport] || []).forEach((field) => {
+    const node = root.querySelector(`[data-slot="${field}"] .extra-value`);
+    if (node) {
+      node.textContent = textOrFallback(data[field], "-");
+    }
+  });
+}
+
 function applyInspectorAndQaClass(root) {
   const inspectorClasses = Object.values(SLOT_INSPECTOR_CLASS_MAP);
   const qaClasses = Object.values(VISUAL_QA_CLASS_MAP);
@@ -248,46 +307,54 @@ function renderScoreboard(template, data) {
     return;
   }
   const mode = modeFromBody();
-  root.className = `${mode === "summary" ? "mode-summary" : "mode-live"} skin-${template.id} anim-${currentAnimation}`;
-  root.innerHTML = `
-    <section class="scoreboard-shell">
-      <div class="event-row" data-slot="eventRow">
-        <div class="event-meta">
-          ${createLogoMarkup(data.eventLogo, getLogoFallback(data, "eventLogo"), "eventLogo")}
-          <span class="event-name" data-slot="eventName">${textOrFallback(data.eventName)}</span>
+  const needsStructureRender = lastRenderedTemplateId !== template.id || lastRenderedMode !== mode || !root.querySelector(".scoreboard-shell");
+  updateRootDisplayClasses(root, mode, template.id, currentAnimation);
+
+  if (needsStructureRender) {
+    root.innerHTML = `
+      <section class="scoreboard-shell">
+        <div class="event-row" data-slot="eventRow">
+          <div class="event-meta">
+            ${createLogoMarkup(data.eventLogo, getLogoFallback(data, "eventLogo"), "eventLogo")}
+            <span class="event-name" data-slot="eventName">${textOrFallback(data.eventName)}</span>
+          </div>
+          <span class="status-badge" data-slot="statusLabel">${textOrFallback(data.statusLabel)}</span>
         </div>
-        <span class="status-badge" data-slot="statusLabel">${textOrFallback(data.statusLabel)}</span>
-      </div>
-      <div class="teams-row" data-slot="teamsRow">
-        <div class="team-block home" data-slot="homeTeam">
-          ${createLogoMarkup(data.homeLogo, getLogoFallback(data, "homeLogo"), "homeLogo")}
-          <div class="team-name-box">
-            <span class="team-name" data-slot="homeName">${textOrFallback(data.homeName)}</span>
-            <span class="team-short" data-slot="homeShortName">${textOrFallback(data.homeShortName)}</span>
+        <div class="teams-row" data-slot="teamsRow">
+          <div class="team-block home" data-slot="homeTeam">
+            ${createLogoMarkup(data.homeLogo, getLogoFallback(data, "homeLogo"), "homeLogo")}
+            <div class="team-name-box">
+              <span class="team-name" data-slot="homeName">${textOrFallback(data.homeName)}</span>
+              <span class="team-short" data-slot="homeShortName">${textOrFallback(data.homeShortName)}</span>
+            </div>
+          </div>
+          <div class="score-block" data-slot="score">
+            <div class="score-values">
+              <span data-slot="homeScore">${textOrFallback(data.homeScore, "0")}</span>
+              <span class="score-divider">:</span>
+              <span data-slot="awayScore">${textOrFallback(data.awayScore, "0")}</span>
+            </div>
+            <div class="game-meta">
+              <span data-slot="gameClock">${textOrFallback(data.gameClock, "00:00")}</span>
+              <span data-slot="periodLabel">${textOrFallback(data.periodLabel, "-")}</span>
+            </div>
+          </div>
+          <div class="team-block away" data-slot="awayTeam">
+            ${createLogoMarkup(data.awayLogo, getLogoFallback(data, "awayLogo"), "awayLogo")}
+            <div class="team-name-box">
+              <span class="team-name" data-slot="awayName">${textOrFallback(data.awayName)}</span>
+              <span class="team-short" data-slot="awayShortName">${textOrFallback(data.awayShortName)}</span>
+            </div>
           </div>
         </div>
-        <div class="score-block" data-slot="score">
-          <div class="score-values">
-            <span data-slot="homeScore">${textOrFallback(data.homeScore, "0")}</span>
-            <span class="score-divider">:</span>
-            <span data-slot="awayScore">${textOrFallback(data.awayScore, "0")}</span>
-          </div>
-          <div class="game-meta">
-            <span data-slot="gameClock">${textOrFallback(data.gameClock, "00:00")}</span>
-            <span data-slot="periodLabel">${textOrFallback(data.periodLabel, "-")}</span>
-          </div>
-        </div>
-        <div class="team-block away" data-slot="awayTeam">
-          ${createLogoMarkup(data.awayLogo, getLogoFallback(data, "awayLogo"), "awayLogo")}
-          <div class="team-name-box">
-            <span class="team-name" data-slot="awayName">${textOrFallback(data.awayName)}</span>
-            <span class="team-short" data-slot="awayShortName">${textOrFallback(data.awayShortName)}</span>
-          </div>
-        </div>
-      </div>
-      <div class="extra-row" data-slot="extraRow">${extraItemsMarkup(data.sport, data)}</div>
-    </section>
-  `;
+        <div class="extra-row" data-slot="extraRow">${extraItemsMarkup(data.sport, data)}</div>
+      </section>
+    `;
+    lastRenderedTemplateId = template.id;
+    lastRenderedMode = mode;
+  } else {
+    patchScoreboardSlots(root, data);
+  }
 
   applyInspectorAndQaClass(root);
 

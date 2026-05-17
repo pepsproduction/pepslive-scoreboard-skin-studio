@@ -446,6 +446,8 @@ async function resolveMatchDataForTemplate(template, { forceMock = false } = {})
 
 async function applyTemplate(template, options = {}) {
   const { markRecent = false, broadcast = true, forceMock = false, matchDataOverride = null } = options;
+  const previousTemplateId = state.selectedTemplate?.id || "";
+  const templateChanged = previousTemplateId !== template.id;
 
   state.selectedTemplate = template;
   state.currentTheme = getThemeBySkinId(template.id) || state.currentTheme || DEFAULT_THEME;
@@ -462,7 +464,9 @@ async function applyTemplate(template, options = {}) {
   ui.visualQaModeSelect.value = state.visualQaMode;
   updateCurrentSkinLabel();
   updatePreviewSummary(template);
-  gallery?.setSelectedTemplateId?.(template.id);
+  if (templateChanged) {
+    gallery?.setSelectedTemplateId?.(template.id);
+  }
   refreshObsUrlsPanel();
   saveSkinState();
 

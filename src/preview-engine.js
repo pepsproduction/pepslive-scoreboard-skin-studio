@@ -69,8 +69,17 @@ export class PreviewEngine {
   }
 
   setTemplate(template) {
+    const previousTemplateId = this.state.template?.id || "";
+    const previousTemplateType = this.state.template?.type || "";
     this.state.template = template;
-    this.reloadFrame();
+    if (!this.frameLoaded || previousTemplateId !== template.id || previousTemplateType !== template.type) {
+      this.reloadFrame();
+    } else {
+      this.postMessage({
+        type: "pepslive:update-skin",
+        skinId: template.id
+      });
+    }
     this.updateStatus(`Preview: ${template.id} (${template.type})`);
   }
 
