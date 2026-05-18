@@ -63,6 +63,7 @@ export function setCurrentSkin(skin) {
     animation: skin.animation || {},
     displayOptions: skin.displayOptions || {},
     typeSettings: skin.typeSettings || current?.typeSettings || {},
+    selectedTemplateByType: skin.selectedTemplateByType || current?.selectedTemplateByType || {},
     eventLogo: skin.eventLogo || "",
     createdAt: current?.createdAt || now,
     updatedAt: now
@@ -135,6 +136,7 @@ export function exportSkinJson(payload) {
     animation: payload.animation || {},
     displayOptions: payload.displayOptions || {},
     typeSettings: payload.typeSettings || {},
+    selectedTemplateByType: payload.selectedTemplateByType || {},
     eventLogo: payload.eventLogo || "",
     createdAt: payload.createdAt || nowIso(),
     updatedAt: nowIso()

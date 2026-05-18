@@ -248,7 +248,7 @@ Checklist ที่ใช้ตรวจรอบ Visual QA + Overlay Smoke Test
 ## วิธีใช้ OBS Source Manager แบบเร็ว
 1. ถ้า OBS พร้อม ให้กรอก host/port/password แล้วกด `Connect OBS`
 2. ถ้าเชื่อมไม่ได้ ให้ใช้ Manual Mode และกด `Copy Live Production URL` หรือ `Copy Summary Production URL`
-3. ถ้าต้องการติดตั้งหลาย source ให้ใช้ `Add Both Sources`
+3. ถ้าต้องการติดตั้งหลาย source ให้กด `Add Live Scoreboard Source` และ `Add Summary Board Source` แยกกัน เพื่อลดอาการหน่วงใน OBS
 4. ถ้าต้อง refresh ให้ใช้ `Regenerate URL` แล้ว `Copy Fresh URL` หรือ `Force Refresh Source`
 
 ## วิธีใช้แบบ Manual
@@ -265,7 +265,7 @@ Checklist ที่ใช้ตรวจรอบ Visual QA + Overlay Smoke Test
 1. กรอก Host/Port/Password ใน OBS Source Manager
 2. กด `Connect OBS` แล้ว `Test Connection`
 3. เลือก preset สำหรับ Live/Summary
-4. กด `Add Live Source`, `Add Summary Source` หรือ `Add Both Sources`
+4. กด `Add Live Scoreboard Source` หรือ `Add Summary Board Source` ตาม source ที่ต้องการใช้งาน
 5. ใช้ `Refresh Selected Source` หรือ `Force Refresh Source` เมื่อต้องการรีโหลด
 
 ## Production URL vs Debug URL

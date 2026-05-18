@@ -29,7 +29,7 @@ import {
   deleteSkinPreset,
   getRelayConfig,
   setRelayConfig
-} from "./skin-storage.js";
+} from "./skin-storage.js?v=20260518-summary-lock";
 import { SharedStateBridge, getSharedOverlayState } from "./shared-state-bridge.js";
 import { auditTemplateContracts, getRenderContractByTemplateId } from "./template-render-contract.js";
 import { TemplateGallery } from "./template-gallery.js";
@@ -99,6 +99,7 @@ const state = {
   eventLogoDataUrl: "",
   eventLogoPalette: [],
   settingsByType: mergeStoredTypeSettings(getCurrentSkin()?.typeSettings || {}),
+  selectedTemplateByType: mergeStoredTemplateSelection(getCurrentSkin()?.selectedTemplateByType || {}, getCurrentSkin()),
   publishTimer: 0,
   galleryPreviewTimer: 0,
   // Phase 4.4
@@ -143,6 +144,21 @@ function mergeStoredTypeSettings(stored = {}) {
     live: createSettingsProfile(stored.live || {}),
     summary: createSettingsProfile(stored.summary || {})
   };
+}
+
+function mergeStoredTemplateSelection(stored = {}, currentSkin = null) {
+  const next = { live: "", summary: "" };
+  if (currentSkin?.type && currentSkin?.skinId && next[currentSkin.type] !== undefined) {
+    next[currentSkin.type] = currentSkin.skinId;
+  }
+  if (stored && typeof stored === "object") {
+    ["live", "summary"].forEach((type) => {
+      if (typeof stored[type] === "string" && stored[type]) {
+        next[type] = stored[type];
+      }
+    });
+  }
+  return next;
 }
 
 function notify(message, level = "info") {
@@ -325,7 +341,15 @@ function resolveTemplateForObsType(type) {
   if (state.selectedTemplate?.type === type) {
     return state.selectedTemplate;
   }
-  const preferredSport = state.selectedTemplate?.sport || state.currentSkin?.sport || "football";
+  const rememberedTemplate = getTemplateById(state.selectedTemplateByType?.[type] || "");
+  if (rememberedTemplate?.type === type) {
+    return rememberedTemplate;
+  }
+  const currentSkinTemplate = getTemplateById(state.currentSkin?.skinId || "");
+  if (currentSkinTemplate?.type === type) {
+    return currentSkinTemplate;
+  }
+  const preferredSport = state.selectedTemplate?.sport || currentSkinTemplate?.sport || state.currentSkin?.sport || "football";
   return (
     TEMPLATE_REGISTRY.find((item) => item.type === type && item.sport === preferredSport) ||
     TEMPLATE_REGISTRY.find((item) => item.type === type) ||
@@ -490,7 +514,8 @@ function broadcastSkinUrlsToDock(urls = null) {
     obsHeight: livePreset.height,
     embedMode: IS_EMBED_MODE,
     theme: state.currentTheme,
-    displayOptions: state.displayOptions
+    displayOptions: state.displayOptions,
+    selectedTemplateByType: state.selectedTemplateByType
   });
 }
 
@@ -704,6 +729,7 @@ function saveSkinState() {
     },
     displayOptions: state.displayOptions,
     typeSettings: state.settingsByType,
+    selectedTemplateByType: state.selectedTemplateByType,
     eventLogo: state.eventLogoDataUrl
   });
   state.currentSkin = payload;
@@ -737,6 +763,10 @@ async function applyTemplate(template, options = {}) {
     ? createSettingsProfile(settingsProfileOverride)
     : getSettingsSnapshotForType(template.type, template);
   state.selectedTemplate = template;
+  state.selectedTemplateByType = {
+    ...state.selectedTemplateByType,
+    [template.type]: template.id
+  };
   applySettingsProfile(nextProfile);
   state.activeMatchData = applyEventLogoToMatchData(matchDataOverride || (await resolveMatchDataForTemplate(template, { forceMock })));
 
@@ -1566,6 +1596,10 @@ function bindPreviewTools() {
 async function importSkinSettingsPayload(parsed) {
   const template = getTemplateById(parsed.skinId);
   state.settingsByType = mergeStoredTypeSettings(parsed.typeSettings || state.settingsByType);
+  state.selectedTemplateByType = mergeStoredTemplateSelection(parsed.selectedTemplateByType || state.selectedTemplateByType, {
+    type: template.type,
+    skinId: template.id
+  });
   state.settingsByType[template.type] = createSettingsProfile({
     theme: parsed.theme || state.settingsByType[template.type]?.theme,
     animation: parsed.animation || state.settingsByType[template.type]?.animationStyle,
@@ -1597,6 +1631,7 @@ function bindSkinJsonActions() {
       },
       displayOptions: state.displayOptions,
       typeSettings: state.settingsByType,
+      selectedTemplateByType: state.selectedTemplateByType,
       eventLogo: state.eventLogoDataUrl,
       createdAt: state.currentSkin?.createdAt
     });
@@ -1657,6 +1692,7 @@ function bindSkinJsonActions() {
         ...state.settingsByType,
         [state.selectedTemplate.type]: createSettingsProfile()
       },
+      selectedTemplateByType: state.selectedTemplateByType,
       eventLogo: ""
     });
     state.currentSkin = resetPayload;
@@ -1925,15 +1961,6 @@ function bindObsPanel() {
       await addObsSourceForType("summary");
     } catch (error) {
       notify(`Add summary source failed: ${error.message}`, "error");
-    }
-  });
-
-  ui.addBothSourcesBtn.addEventListener("click", async () => {
-    try {
-      await addObsSourceForType("live");
-      await addObsSourceForType("summary");
-    } catch (error) {
-      notify(`Add both sources failed: ${error.message}`, "error");
     }
   });
 
@@ -2569,7 +2596,6 @@ function cacheElements() {
   ui.obsTestBtn = document.getElementById("obsTestBtn");
   ui.addLiveSourceBtn = document.getElementById("addLiveSourceBtn");
   ui.addSummarySourceBtn = document.getElementById("addSummarySourceBtn");
-  ui.addBothSourcesBtn = document.getElementById("addBothSourcesBtn");
   ui.obsRefreshTargetSelect = document.getElementById("obsRefreshTargetSelect");
   ui.refreshSelectedSourceBtn = document.getElementById("refreshSelectedSourceBtn");
   ui.forceRefreshSourceBtn = document.getElementById("forceRefreshSourceBtn");

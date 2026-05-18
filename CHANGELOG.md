@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## Phase 5.8 - Separate Source Apply + Summary Template Lock
+
+- Live and Summary templates are now remembered independently so Summary Board settings keep the selected Summary template instead of falling back to the first template.
+- Skin JSON export/import and Dock URL handoff now preserve the `selectedTemplateByType` map for live/summary source URLs.
+- OBS Source Manager no longer exposes a combined `Add Both Sources` action; Live Scoreboard and Summary Board sources are applied separately to reduce OBS update lag.
+
 ## Phase 5.7 - No-Flash Live Payload Guard
 
 - Preserved `seq`/`revision` fields through the shared payload protocol so overlays can reason about payload order.
