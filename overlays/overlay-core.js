@@ -130,6 +130,8 @@ let displayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
 let postMessageRenderTimer = 0;
 let isolatedPreviewMode = false;
 let skinLockedToUrl = false;
+let lastLivePayloadOrder = 0;
+let realPayloadSeen = false;
 
 function parseQueryParams() {
   const params = new URLSearchParams(window.location.search);
@@ -211,6 +213,40 @@ function writeLastStablePayload(payload, sourceLabel = "") {
   } catch (_error) {
     // OBS Browser Source storage may be unavailable; live rendering still works.
   }
+}
+
+function payloadOrderValue(payload = {}) {
+  const timestamp = Date.parse(payload.timestamp || "");
+  if (!Number.isNaN(timestamp)) {
+    return timestamp;
+  }
+  const seq = Number(payload.seq ?? payload.revision);
+  if (Number.isFinite(seq) && seq > 0) {
+    return seq;
+  }
+  return 0;
+}
+
+function shouldIgnoreStaleLivePayload(payload, sourceLabel = "") {
+  if (!isLiveDataOnlySource(payload, sourceLabel)) {
+    return false;
+  }
+  const nextOrder = payloadOrderValue(payload);
+  if (!nextOrder || !lastLivePayloadOrder) {
+    return false;
+  }
+  return nextOrder < lastLivePayloadOrder;
+}
+
+function rememberLivePayload(payload, sourceLabel = "") {
+  if (!isLiveDataOnlySource(payload, sourceLabel)) {
+    return;
+  }
+  const order = payloadOrderValue(payload);
+  if (order) {
+    lastLivePayloadOrder = Math.max(lastLivePayloadOrder, order);
+  }
+  realPayloadSeen = true;
 }
 
 function applyTheme(theme) {
@@ -679,13 +715,21 @@ function mergeMatchDataWithTemplateFallback(template, incoming = {}) {
 
 async function fallbackRender(reason) {
   const template = getTemplateById(currentSkinId || "FB-LIVE-01");
-  const mock = await getMockBySport(template.sport);
-  currentData = mock;
-  currentSourceLabel = "Mock Data";
+  const stablePayload = readLastStablePayload();
+  const stableMatchData = stablePayload?.matchData?.sport === template.sport ? stablePayload.matchData : null;
+  if (stablePayload) {
+    rememberLivePayload(stablePayload, stablePayload.source || "stable-storage");
+  }
+  currentData = stableMatchData || currentData || await getMockBySport(template.sport);
+  currentSourceLabel = stableMatchData
+    ? resolveSourceLabel(stablePayload.source || "stable-storage")
+    : currentData && realPayloadSeen
+      ? currentSourceLabel
+      : "Mock Data";
   renderScoreboard(template, currentData);
   updateDebugBox({
     protocolStatus: PEPSLIVE_SCOREBOARD_PROTOCOL,
-    validationStatus: `fallback (${reason})`,
+    validationStatus: stableMatchData || realPayloadSeen ? `kept stable data (${reason})` : `fallback (${reason})`,
     updateTime: new Date().toISOString(),
     template,
     sport: template.sport,
@@ -715,7 +759,20 @@ async function applyProtocolPayload(rawPayload, sourceLabel = "unknown") {
 
   const payload = validation.normalizedPayload;
   currentSourceLabel = resolveSourceLabel(payload.source || sourceLabel);
+  if (shouldIgnoreStaleLivePayload(payload, sourceLabel)) {
+    const template = getTemplateById(currentSkinId || payload.skinId || "FB-LIVE-01");
+    updateDebugBox({
+      protocolStatus: payload.protocol,
+      validationStatus: "stale payload ignored",
+      updateTime: payload.timestamp,
+      template,
+      sport: template.sport,
+      type: template.type
+    });
+    return;
+  }
   writeLastStablePayload(payload, sourceLabel);
+  rememberLivePayload(payload, sourceLabel);
   const template = resolveTemplateForIncomingPayload(payload, sourceLabel);
   const isLockedToDifferentType = skinLockedToUrl && payload.type && payload.type !== template.type;
   const isDockPayload = isPepsLiveDockSource(payload, sourceLabel);
@@ -729,7 +786,9 @@ async function applyProtocolPayload(rawPayload, sourceLabel = "unknown") {
       displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...payload.displayOptions };
     }
   }
-  currentData = payload.matchData;
+  currentData = isLiveDataOnlySource(payload, sourceLabel)
+    ? mergeMatchDataWithTemplateFallback(template, payload.matchData)
+    : payload.matchData;
 
   renderScoreboard(template, currentData);
   updateDebugBox({
@@ -924,6 +983,9 @@ async function initOverlay() {
     const sharedState = getSharedOverlayState();
     const sharedPayload = sharedState.currentPayload;
     const stablePayload = readLastStablePayload();
+    if (stablePayload) {
+      rememberLivePayload(stablePayload, stablePayload.source || "stable-storage");
+    }
     const stableMatchData = sharedPayload?.matchData?.sport === fallbackTemplate.sport
       ? sharedPayload.matchData
       : stablePayload?.matchData?.sport === fallbackTemplate.sport
@@ -942,6 +1004,9 @@ async function initOverlay() {
     const sharedState = getSharedOverlayState();
     const sharedPayload = sharedState.currentPayload;
     const stablePayload = readLastStablePayload();
+    if (stablePayload) {
+      rememberLivePayload(stablePayload, stablePayload.source || "stable-storage");
+    }
     currentData = sharedPayload?.matchData?.sport === fallbackTemplate.sport
       ? sharedPayload.matchData
       : stablePayload?.matchData?.sport === fallbackTemplate.sport

@@ -251,6 +251,8 @@ export async function normalizeIncomingPayload(payload) {
     protocol: PEPSLIVE_SCOREBOARD_PROTOCOL,
     version: PEPSLIVE_SCOREBOARD_PROTOCOL_VERSION,
     source: payload.source || "external",
+    seq: payload.seq,
+    revision: payload.revision,
     timestamp: normalizeTimestamp(payload.timestamp),
     sport,
     skinId,

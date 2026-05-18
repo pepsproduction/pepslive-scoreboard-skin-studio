@@ -21,7 +21,7 @@ export const SUPPORTED_SPORTS = ["football", "basketball"];
 export const SUPPORTED_TYPES = ["live", "summary"];
 
 export function createProtocolPayload(partial = {}) {
-  return {
+  const payload = {
     protocol: PEPSLIVE_SCOREBOARD_PROTOCOL,
     version: PEPSLIVE_SCOREBOARD_PROTOCOL_VERSION,
     source: partial.source || "PepsLiveScoreboardSkinStudio",
@@ -34,6 +34,13 @@ export function createProtocolPayload(partial = {}) {
     matchData: partial.matchData || {},
     displayOptions: partial.displayOptions || {}
   };
+  if (partial.seq !== undefined) {
+    payload.seq = partial.seq;
+  }
+  if (partial.revision !== undefined) {
+    payload.revision = partial.revision;
+  }
+  return payload;
 }
 
 export function createProtocolMessage(type, payload, meta = {}) {

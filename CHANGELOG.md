@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Phase 5.7 - No-Flash Live Payload Guard
+
+- Preserved `seq`/`revision` fields through the shared payload protocol so overlays can reason about payload order.
+- Overlay live-data updates now ignore stale Dock/relay/shared payloads instead of repainting old score data.
+- Invalid incoming payloads now keep the current or last stable Dock data on screen before falling back to mock data.
+- Dock/relay payloads now merge into the current match snapshot, reducing flashes back to default team/score values during settings changes.
+
 ## Phase 5.6 - Flicker Guard + Summary Preview URL Fix
 
 - Reworked Studio preview iframes to use short `stateKey` URLs plus same-origin storage/postMessage hydration instead of long portable URLs.
