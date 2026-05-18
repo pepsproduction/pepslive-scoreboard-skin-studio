@@ -389,6 +389,77 @@ body {
   grid-template-columns: repeat(5, minmax(120px, 1fr));
 }
 
+body.thumb-render #overlay-root {
+  padding: 4px;
+}
+
+body.thumb-render .scoreboard-shell {
+  width: calc(100% - 8px) !important;
+  max-width: calc(100% - 8px) !important;
+  min-height: 0 !important;
+  height: calc(100% - 8px) !important;
+  padding: 8px !important;
+  gap: 5px !important;
+  border-radius: 10px !important;
+  justify-content: center !important;
+}
+
+body.thumb-render .event-row {
+  min-height: 20px;
+  padding: 3px 5px;
+}
+
+body.thumb-render .event-logo,
+body.thumb-render .team-logo {
+  width: 22px;
+  height: 22px;
+  font-size: 0.48rem;
+}
+
+body.thumb-render .event-name,
+body.thumb-render .status-badge,
+body.thumb-render .team-short,
+body.thumb-render .extra-row {
+  display: none !important;
+}
+
+body.thumb-render .teams-row,
+body.thumb-render #overlay-root.mode-summary .teams-row {
+  grid-template-columns: minmax(0, 1fr) minmax(56px, auto) minmax(0, 1fr) !important;
+  gap: 4px !important;
+}
+
+body.thumb-render .team-block {
+  min-height: 34px !important;
+  padding: 4px 5px !important;
+  border-radius: 8px !important;
+}
+
+body.thumb-render .team-name {
+  font-size: clamp(0.46rem, 4vw, 0.8rem) !important;
+  line-height: 1;
+}
+
+body.thumb-render .score-block,
+body.thumb-render #overlay-root.mode-summary .score-block {
+  min-width: 56px !important;
+  padding: 4px 6px !important;
+  gap: 2px !important;
+  border-radius: 8px !important;
+}
+
+body.thumb-render .score-values,
+body.thumb-render #overlay-root.mode-summary .score-values {
+  font-size: clamp(0.9rem, 7vw, 1.6rem) !important;
+  gap: 3px !important;
+}
+
+body.thumb-render .game-meta {
+  font-size: 0.45rem !important;
+  gap: 3px !important;
+  letter-spacing: 0.02em;
+}
+
 .slot-hidden {
   display: none !important;
 }

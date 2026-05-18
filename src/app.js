@@ -215,7 +215,10 @@ function updatePreviewSummary(template = state.selectedTemplate) {
     if (sourcePreset && ui.previewStage) {
       ui.previewStage.style.setProperty("--preview-aspect-ratio", `${sourcePreset.width} / ${sourcePreset.height}`);
       ui.previewStage.style.setProperty("--preview-aspect-ratio-value", String(sourcePreset.width / sourcePreset.height));
+      ui.previewStage.style.setProperty("--preview-source-width", `${sourcePreset.width}px`);
+      ui.previewStage.style.setProperty("--preview-source-height", `${sourcePreset.height}px`);
       ui.previewStage.dataset.sourceType = template.type;
+      previewEngine?.setSourceSize?.(sourcePreset.width, sourcePreset.height);
     }
   }
 }

@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## Phase 5.6 - Flicker Guard + Summary Preview URL Fix
+
+- Reworked Studio preview iframes to use short `stateKey` URLs plus same-origin storage/postMessage hydration instead of long portable URLs.
+- Summary and Live previews now scale the real Browser Source canvas into the preview frame so the whole board is visible without stretching.
+- Template Gallery thumbnails now use short overlay URLs and source-size scaling, preventing `URI Too Long` errors in Summary Board cards.
+- Portable URLs now strip oversized logo data from nested `matchData` before encoding, avoiding browser URL length failures after Event Logo upload.
+- Overlay pages now remember the last stable Dock/relay/shared payload and use it before mock fallback, reducing flashes back to default preview data during reloads.
+
 ## Phase 5.5 - Relay Visual Lock + Export Polish
 
 - Locked URL-selected skin/theme/display options while Dock V1 and relay payloads update only match data, reducing flashes back to default preview styling.

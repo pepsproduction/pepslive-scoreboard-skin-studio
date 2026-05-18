@@ -1,4 +1,4 @@
-import { DEFAULT_DISPLAY_OPTIONS, generatePortableOverlayUrl } from "./utils.js";
+import { DEFAULT_DISPLAY_OPTIONS, generateOverlayUrl } from "./utils.js";
 
 function escapeHtml(value) {
   return String(value || "")
@@ -33,6 +33,8 @@ export class TemplateGallery {
       list: "All",
       search: ""
     };
+    this.handleResize = () => this.updateThumbnailScales();
+    window.addEventListener("resize", this.handleResize);
   }
 
   setCollections({ favorites, recentlyUsed }) {
@@ -63,18 +65,28 @@ export class TemplateGallery {
   }
 
   buildThumbnailUrl(template) {
-    return generatePortableOverlayUrl({
+    return generateOverlayUrl({
       skinId: template.id,
       type: template.type,
-      sport: template.sport,
       animationStyle: "none",
-      theme: this.previewContext.theme || {},
-      displayOptions: this.previewContext.displayOptions || DEFAULT_DISPLAY_OPTIONS,
-      eventLogo: this.previewContext.eventLogo || "",
       cacheBust: false,
       isolated: true,
       absolute: false
-    }).url;
+    });
+  }
+
+  updateThumbnailScales() {
+    this.root?.querySelectorAll(".thumb-source-window").forEach((windowEl) => {
+      const frame = windowEl.querySelector(".thumb-frame");
+      const sourceWidth = Number(windowEl.dataset.sourceWidth || 0);
+      const sourceHeight = Number(windowEl.dataset.sourceHeight || 0);
+      if (!frame || !sourceWidth || !sourceHeight) {
+        return;
+      }
+      const bounds = windowEl.getBoundingClientRect();
+      const scale = Math.min(bounds.width / sourceWidth, bounds.height / sourceHeight);
+      frame.style.setProperty("--thumb-scale", String(Math.max(0.01, scale || 1)));
+    });
   }
 
   refreshThumbnailFrames() {
@@ -89,6 +101,7 @@ export class TemplateGallery {
         frame.setAttribute("src", nextUrl);
       }
     });
+    window.requestAnimationFrame(() => this.updateThumbnailScales());
   }
 
   filterTemplates() {
@@ -199,8 +212,13 @@ export class TemplateGallery {
                             <span class="badge sport">${escapeHtml(template.sport)}</span>
                             <span class="badge type">${escapeHtml(template.type)}</span>
                           </div>
-                          <div class="thumb-source-window" style="--source-aspect-ratio: ${thumbRatio}">
-                            <iframe class="thumb-frame" src="${escapeAttribute(thumbUrl)}" title="${escapeAttribute(template.id)} preview" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+                          <div
+                            class="thumb-source-window"
+                            data-source-width="${source.width}"
+                            data-source-height="${source.height}"
+                            style="--source-aspect-ratio: ${thumbRatio}; --thumb-source-width: ${source.width}px; --thumb-source-height: ${source.height}px"
+                          >
+                            <iframe class="thumb-frame" src="${escapeAttribute(thumbUrl)}" title="${escapeAttribute(template.id)} preview" loading="eager" tabindex="-1" aria-hidden="true"></iframe>
                           </div>
                           <div class="thumb-caption">
                             <span class="thumb-code">${escapeHtml(template.id)}</span>
@@ -241,6 +259,7 @@ export class TemplateGallery {
     `;
 
     this.bindEvents();
+    window.requestAnimationFrame(() => this.updateThumbnailScales());
   }
 
   bindEvents() {

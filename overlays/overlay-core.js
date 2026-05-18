@@ -25,6 +25,8 @@ const DEFAULT_THEME = {
   animationStyle: "smooth-broadcast"
 };
 
+const LAST_STABLE_PAYLOAD_KEY = "pepslive.overlay.lastStablePayload.v1";
+
 const EXTRA_LABELS = {
   addedTime: "Added Time",
   aggregateScore: "Aggregate",
@@ -137,6 +139,8 @@ function parseQueryParams() {
     themeRaw: params.get("theme"),
     slotsRaw: params.get("slots"),
     stateRaw: params.get("state"),  // Phase 4.3 portable state
+    stateKey: params.get("stateKey"),
+    thumbnail: params.get("thumb") === "1",
     relayRaw: params.get("relay"),   // Phase 4.4 relay poller URL (percent-encoded)
     relayPollSec: Number(params.get("poll") || "1"),
     isolated: params.get("isolated") === "1",
@@ -161,6 +165,51 @@ function getStoredTheme(skinId) {
     return parsed[skinId] || null;
   } catch (_error) {
     return null;
+  }
+}
+
+function readPreviewStateByKey(stateKey) {
+  if (!stateKey) {
+    return null;
+  }
+  const storageKey = `pepslive.overlayPreviewState.${stateKey}`;
+  const stores = [];
+  try { stores.push(sessionStorage); } catch (_error) {}
+  try { stores.push(localStorage); } catch (_error) {}
+  for (const store of stores) {
+    try {
+      const raw = store.getItem(storageKey);
+      if (!raw) {
+        continue;
+      }
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch (_error) {
+      // Ignore invalid preview state and wait for postMessage hydration.
+    }
+  }
+  return null;
+}
+
+function readLastStablePayload() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LAST_STABLE_PAYLOAD_KEY) || "null");
+    return isProtocolPayload(parsed) ? parsed : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function writeLastStablePayload(payload, sourceLabel = "") {
+  if (!isProtocolPayload(payload) || !isLiveDataOnlySource(payload, sourceLabel)) {
+    return;
+  }
+  try {
+    localStorage.setItem(LAST_STABLE_PAYLOAD_KEY, JSON.stringify(payload));
+  } catch (_error) {
+    // OBS Browser Source storage may be unavailable; live rendering still works.
   }
 }
 
@@ -666,6 +715,7 @@ async function applyProtocolPayload(rawPayload, sourceLabel = "unknown") {
 
   const payload = validation.normalizedPayload;
   currentSourceLabel = resolveSourceLabel(payload.source || sourceLabel);
+  writeLastStablePayload(payload, sourceLabel);
   const template = resolveTemplateForIncomingPayload(payload, sourceLabel);
   const isLockedToDifferentType = skinLockedToUrl && payload.type && payload.type !== template.type;
   const isDockPayload = isPepsLiveDockSource(payload, sourceLabel);
@@ -824,12 +874,17 @@ async function initOverlay() {
   const query = parseQueryParams();
   debugEnabled = query.debug;
   isolatedPreviewMode = query.isolated;
+  if (query.thumbnail) {
+    document.documentElement.classList.add("thumb-render");
+    document.body.classList.add("thumb-render");
+  }
   ensureDebugBox();
 
   // --- Phase 4.3: Parse portable state first (highest priority) ---
-  const portableState = decodePortableState(query.stateRaw);
+  const keyedPreviewState = readPreviewStateByKey(query.stateKey);
+  const portableState = decodePortableState(query.stateRaw) || keyedPreviewState;
   const hasPortableState = !!portableState;
-  skinLockedToUrl = hasPortableState || !!query.skinId;
+  skinLockedToUrl = hasPortableState || !!query.skinId || !!query.stateKey;
 
   if (hasPortableState) {
     // Portable state takes priority over everything else for skin/theme/displayOptions
@@ -841,7 +896,7 @@ async function initOverlay() {
     const queryTheme = parseThemeFromQuery(query.themeRaw);
     applyTheme({ ...portableTheme, ...queryTheme });
 
-    currentSourceLabel = "Portable URL State";
+    currentSourceLabel = keyedPreviewState ? "Preview State Key" : "Portable URL State";
   } else {
     // Legacy fallback: individual query params + shared state
     displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(parseDisplayOptionsString(query.slotsRaw) || {}) };
@@ -866,16 +921,32 @@ async function initOverlay() {
   if (hasPortableState) {
     // Use mock data; live scores will arrive via BroadcastChannel/postMessage if same-origin
     const portableMatchData = portableState.matchData && typeof portableState.matchData === "object" ? portableState.matchData : null;
-    currentData = portableMatchData
-      ? { ...(await getMockBySport(fallbackTemplate.sport)), ...portableMatchData, sport: portableMatchData.sport || fallbackTemplate.sport }
-      : await getMockBySport(fallbackTemplate.sport);
+    const sharedState = getSharedOverlayState();
+    const sharedPayload = sharedState.currentPayload;
+    const stablePayload = readLastStablePayload();
+    const stableMatchData = sharedPayload?.matchData?.sport === fallbackTemplate.sport
+      ? sharedPayload.matchData
+      : stablePayload?.matchData?.sport === fallbackTemplate.sport
+        ? stablePayload.matchData
+        : null;
+    currentData = {
+      ...(await getMockBySport(fallbackTemplate.sport)),
+      ...(portableMatchData || {}),
+      ...(stableMatchData || {}),
+      sport: stableMatchData?.sport || portableMatchData?.sport || fallbackTemplate.sport
+    };
     if (portableState.eventLogo) {
       currentData = { ...currentData, eventLogo: portableState.eventLogo };
     }
   } else {
     const sharedState = getSharedOverlayState();
     const sharedPayload = sharedState.currentPayload;
-    currentData = sharedPayload?.matchData?.sport === fallbackTemplate.sport ? sharedPayload.matchData : null;
+    const stablePayload = readLastStablePayload();
+    currentData = sharedPayload?.matchData?.sport === fallbackTemplate.sport
+      ? sharedPayload.matchData
+      : stablePayload?.matchData?.sport === fallbackTemplate.sport
+        ? stablePayload.matchData
+        : null;
     if (!currentData) {
       currentData = await getMockBySport(fallbackTemplate.sport);
     }

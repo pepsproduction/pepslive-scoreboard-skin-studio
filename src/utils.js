@@ -138,7 +138,8 @@ export function generateOverlayUrl({
   absolute = true,
   debug = false,
   stateKey = "",
-  isolated = false
+  isolated = false,
+  thumbnail = false
 }) {
   const overlayFile = type === "summary" ? "overlays/summary.html" : "overlays/live.html";
   const basePath = getProjectRootPath();
@@ -172,6 +173,10 @@ export function generateOverlayUrl({
     url.searchParams.set("isolated", "1");
   }
 
+  if (thumbnail) {
+    url.searchParams.set("thumb", "1");
+  }
+
   if (cacheBust) {
     url.searchParams.set("v", `${Date.now()}`);
   }
@@ -203,6 +208,28 @@ export function nowIso() {
 
 /** Max byte length for the base64url state param before a warning is issued. */
 export const PORTABLE_STATE_SIZE_LIMIT = 4096;
+const PORTABLE_MATCH_DATA_FIELD_LIMIT = 700;
+const PORTABLE_MATCH_DATA_URL_FIELDS = ["eventLogo", "homeLogo", "awayLogo"];
+
+function clonePortableMatchData(matchData, dropped = []) {
+  if (!matchData || typeof matchData !== "object" || Array.isArray(matchData)) {
+    return null;
+  }
+
+  const portable = { ...matchData };
+  PORTABLE_MATCH_DATA_URL_FIELDS.forEach((field) => {
+    const value = portable[field];
+    if (typeof value !== "string") {
+      return;
+    }
+    if (value.startsWith("data:") || value.length > PORTABLE_MATCH_DATA_FIELD_LIMIT) {
+      delete portable[field];
+      dropped.push(`matchData.${field}`);
+    }
+  });
+
+  return portable;
+}
 
 /**
  * Encode a plain-object state into a compact base64url string.
@@ -220,7 +247,7 @@ export function encodePortableState(stateObj, { includeEventLogo = false } = {})
     if (value === undefined || value === null) {
       continue;
     }
-    clean[key] = value;
+    clean[key] = key === "matchData" ? clonePortableMatchData(value, dropped) : value;
   }
 
   // Always attempt without eventLogo first to check size
@@ -230,7 +257,7 @@ export function encodePortableState(stateObj, { includeEventLogo = false } = {})
   const jsonWithoutLogo = JSON.stringify(withoutLogo);
   let jsonToEncode = jsonWithoutLogo;
 
-  if (includeEventLogo && clean.eventLogo && String(clean.eventLogo).length > PORTABLE_STATE_SIZE_LIMIT) {
+  if (includeEventLogo && clean.eventLogo && String(clean.eventLogo).length > PORTABLE_MATCH_DATA_FIELD_LIMIT) {
     dropped.push("eventLogo");
   } else if (includeEventLogo && clean.eventLogo) {
     const jsonWithLogo = JSON.stringify(clean);

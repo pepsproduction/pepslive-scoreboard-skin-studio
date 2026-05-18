@@ -1,4 +1,4 @@
-import { BACKGROUND_MODES, DEFAULT_DISPLAY_OPTIONS, SAFE_AREA_MODES, generatePortableOverlayUrl } from "./utils.js";
+import { BACKGROUND_MODES, DEFAULT_DISPLAY_OPTIONS, SAFE_AREA_MODES, generateOverlayUrl } from "./utils.js";
 
 const BACKGROUND_CLASS_MAP = {
   "Transparent Grid": "bg-transparent-grid",
@@ -39,9 +39,17 @@ export class PreviewEngine {
     };
 
     this.frameLoaded = false;
+    this.awaitingFrameReveal = false;
+    this.previewStateKey = `preview-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    this.sourceSize = { width: 900, height: 180 };
+    this.resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => this.updateViewportScale())
+      : null;
+    this.resizeObserver?.observe(this.stage);
     this.frame.addEventListener("load", () => {
       this.frameLoaded = true;
       this.postLiveUpdate();
+      window.setTimeout(() => this.revealFrame(), 120);
     });
 
     this.handleWindowMessage = this.handleWindowMessage.bind(this);
@@ -50,6 +58,7 @@ export class PreviewEngine {
 
   dispose() {
     window.removeEventListener("message", this.handleWindowMessage);
+    this.resizeObserver?.disconnect();
   }
 
   handleWindowMessage(event) {
@@ -66,7 +75,17 @@ export class PreviewEngine {
     if (this.state.template?.id && payload.report?.templateId && payload.report.templateId !== this.state.template.id) {
       return;
     }
+    this.revealFrame();
     this.onRenderReport?.(payload.report || null);
+  }
+
+  revealFrame() {
+    if (!this.awaitingFrameReveal) {
+      return;
+    }
+    this.awaitingFrameReveal = false;
+    this.stage?.classList.remove("is-loading-preview");
+    this.frame.style.opacity = "1";
   }
 
   setTemplate(template) {
@@ -134,6 +153,24 @@ export class PreviewEngine {
     this.applyBackgroundClass();
   }
 
+  setSourceSize(width, height) {
+    const nextWidth = Math.max(1, Number(width) || 900);
+    const nextHeight = Math.max(1, Number(height) || 180);
+    this.sourceSize = { width: nextWidth, height: nextHeight };
+    this.stage.style.setProperty("--preview-source-width", `${nextWidth}px`);
+    this.stage.style.setProperty("--preview-source-height", `${nextHeight}px`);
+    this.updateViewportScale();
+  }
+
+  updateViewportScale() {
+    if (!this.stage || !this.sourceSize.width || !this.sourceSize.height) {
+      return;
+    }
+    const rect = this.stage.getBoundingClientRect();
+    const scale = Math.min(rect.width / this.sourceSize.width, rect.height / this.sourceSize.height);
+    this.stage.style.setProperty("--preview-scale", String(Math.max(0.01, scale || 1)));
+  }
+
   setSafeAreaMode(mode) {
     this.state.safeAreaMode = mode;
     this.applySafeAreaClass();
@@ -157,18 +194,42 @@ export class PreviewEngine {
     if (!this.state.template) {
       return "";
     }
-    return generatePortableOverlayUrl({
+    this.writePreviewState();
+    return generateOverlayUrl({
       skinId: this.state.template.id,
       type: this.state.template.type,
-      sport: this.state.template.sport,
-      animationStyle: this.state.animationStyle,
-      theme: this.state.theme,
-      displayOptions: this.state.displayOptions,
       matchData: this.state.matchData,
       cacheBust,
       absolute,
+      stateKey: this.previewStateKey,
       isolated: true
-    }).url;
+    });
+  }
+
+  writePreviewState() {
+    if (!this.state.template) {
+      return;
+    }
+    const payload = {
+      skinId: this.state.template.id,
+      type: this.state.template.type,
+      sport: this.state.template.sport,
+      animation: this.state.animationStyle,
+      theme: this.state.theme,
+      displayOptions: this.state.displayOptions,
+      matchData: this.state.matchData
+    };
+    const key = `pepslive.overlayPreviewState.${this.previewStateKey}`;
+    try {
+      sessionStorage.setItem(key, JSON.stringify(payload));
+    } catch (_error) {
+      // Same-origin iframe preview can still be hydrated by postMessage.
+    }
+    try {
+      localStorage.setItem(key, JSON.stringify(payload));
+    } catch (_error) {
+      // localStorage is optional for preview hydration.
+    }
   }
 
   reloadFrame() {
@@ -176,6 +237,9 @@ export class PreviewEngine {
       return;
     }
     this.frameLoaded = false;
+    this.awaitingFrameReveal = true;
+    this.stage?.classList.add("is-loading-preview");
+    this.frame.style.opacity = "0";
     this.frame.src = this.getOverlayUrl({ cacheBust: true, absolute: true });
   }
 
@@ -191,6 +255,7 @@ export class PreviewEngine {
     if (!this.frameLoaded || !this.state.template) {
       return;
     }
+    this.writePreviewState();
     this.postMessage({
       type: "pepslive:update-theme",
       theme: this.state.theme

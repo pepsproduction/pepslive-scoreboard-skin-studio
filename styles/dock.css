@@ -415,11 +415,13 @@ body {
 }
 
 .thumb-frame {
-  width: 100%;
-  height: 100%;
+  width: var(--thumb-source-width, 100%);
+  height: var(--thumb-source-height, 100%);
   border: 0;
   background: transparent;
   pointer-events: none;
+  transform: scale(var(--thumb-scale, 1));
+  transform-origin: 0 0;
 }
 
 .skin-thumb-football {
