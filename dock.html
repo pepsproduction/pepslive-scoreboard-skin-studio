@@ -180,6 +180,18 @@
                       <button type="button" class="btn-group-item" data-value="inner" title="Home name right, away name left">Inner R / L</button>
                     </div>
                   </label>
+                  <label class="slot-toggle layout-control"><span>Event Text</span><input type="range" data-display-option="eventNameFontSize" min="8" max="64" step="1" /></label>
+                  <label class="slot-toggle layout-control"><span>Team Name</span><input type="range" data-display-option="teamNameFontSize" min="10" max="96" step="1" /></label>
+                  <label class="slot-toggle layout-control"><span>Short Name</span><input type="range" data-display-option="teamShortNameFontSize" min="8" max="48" step="1" /></label>
+                  <label class="slot-toggle layout-control"><span>Score Size</span><input type="range" data-display-option="scoreFontSize" min="16" max="160" step="1" /></label>
+                  <label class="slot-toggle layout-control"><span>Clock Size</span><input type="range" data-display-option="clockFontSize" min="8" max="48" step="1" /></label>
+                  <label class="slot-toggle layout-control"><span>Period Size</span><input type="range" data-display-option="periodFontSize" min="8" max="48" step="1" /></label>
+                  <label class="slot-toggle layout-control"><span>Status Size</span><input type="range" data-display-option="statusFontSize" min="8" max="48" step="1" /></label>
+                  <label class="slot-toggle layout-control"><span>Extra Text</span><input type="range" data-display-option="extraFontSize" min="8" max="42" step="1" /></label>
+                  <label class="slot-toggle layout-control"><span>Board Width %</span><input type="range" data-display-option="boardWidthPercent" min="30" max="100" step="1" /></label>
+                  <label class="slot-toggle layout-control"><span>Board Height</span><input type="range" data-display-option="boardMinHeight" min="0" max="1080" step="4" /></label>
+                  <label class="slot-toggle layout-control"><span>Score Box Width</span><input type="range" data-display-option="scoreBoxWidth" min="80" max="720" step="4" /></label>
+                  <label class="slot-toggle layout-control"><span>Team Box Height</span><input type="range" data-display-option="teamBoxMinHeight" min="0" max="360" step="4" /></label>
                 </div>
               </div>
               <label class="contract-report-label">
@@ -334,7 +346,7 @@
               <div class="tiny-note" id="obsManualGuideText">If OBS WebSocket is unavailable, copy the Production URL above into OBS Browser Source and use the selected preset size.</div>
             </section>
 
-            <section class="panel-block">
+            <section class="panel-block integration-card">
               <h2>PepsLive Dock Integration</h2>
               <p class="tiny-note">Monitor/debug only. Match control stays in the original PepsLive Dock UI.</p>
               <label>
@@ -352,7 +364,7 @@
               <label><span>Current Match Preview</span><textarea id="integrationCurrentMatchPreviewArea" class="json-area small" readonly></textarea></label>
             </section>
 
-            <section class="panel-block">
+            <section class="panel-block data-bridge-card">
               <h2>Data Bridge</h2>
               <p class="tiny-note">Data ingest/debug only. No score or timer controls are included here.</p>
               <div class="status-chip" id="bridgeStatusText" data-state="ok">initializing...</div>
@@ -378,11 +390,14 @@
               <ul id="moduleRoadmapList" class="mini-list"></ul>
             </section>
 
-            <section class="panel-block">
-              <h2>Import / Export Skin JSON</h2>
+            <section class="panel-block skin-json-card">
+              <h2>Skin Settings File</h2>
+              <p class="tiny-note">Export this file on the full web page, then import it here in Dock V1 to keep the same skin setup on another machine.</p>
+              <input id="skinJsonFileInput" type="file" accept=".json,application/json" hidden />
               <div class="inline-row">
-                <button type="button" class="capsule-btn" id="exportJsonBtn">Export Current Skin JSON</button>
-                <button type="button" class="capsule-btn" id="importJsonBtn">Import Skin JSON</button>
+                <button type="button" class="capsule-btn" id="exportJsonBtn">Export Settings File</button>
+                <button type="button" class="capsule-btn" id="loadSkinJsonFileBtn">Open Settings File</button>
+                <button type="button" class="capsule-btn" id="importJsonBtn">Import From Text</button>
               </div>
               <div class="inline-row">
                 <button type="button" class="capsule-btn" id="resetSkinBtn">Reset Skin</button>

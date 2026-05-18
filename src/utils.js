@@ -27,7 +27,19 @@ export const DEFAULT_DISPLAY_OPTIONS = {
   statusLabel: true,
   extraRow: true,
   textMode: "full",
-  teamNameAlign: "outer" // same-left | same-right | outer | inner
+  teamNameAlign: "outer", // same-left | same-right | outer | inner
+  eventNameFontSize: 14,
+  teamNameFontSize: 20,
+  teamShortNameFontSize: 11,
+  scoreFontSize: 30,
+  clockFontSize: 12,
+  periodFontSize: 12,
+  statusFontSize: 12,
+  extraFontSize: 11,
+  boardWidthPercent: 96,
+  boardMinHeight: 0,
+  scoreBoxWidth: 176,
+  teamBoxMinHeight: 0
 };
 
 export function clamp(value, min, max) {

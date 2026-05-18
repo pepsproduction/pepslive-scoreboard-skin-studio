@@ -672,3 +672,11 @@ In embedded mode:
 - Relay polling defaults to 1 second for lower score-update delay.
 - Bad/stale relay reads no longer reset the visible scoreboard back to mock preview data.
 - Use **Export PNG** in the Source Preview toolbar to download the current scoreboard design as a transparent PNG at the selected Browser Source preset size.
+
+## Phase 5.3 Embedded Settings Stability
+
+- PepsLive Dock V1 match payloads now update only score/team/clock data. They do not reset the selected skin, Summary Board choice, theme, event logo, or display options.
+- Skin Settings Studio in embedded mode uses a small locked Source Preview and a larger scrollable settings column, so it is easier to tune inside an OBS Dock popup.
+- Added independent controls for text sizes and frame sizing: event text, team name, short name, score, clock, period, status, extra text, board width/height, score box width, and team box height.
+- In embedded mode, advanced panels that are no longer needed during Dock V1 use are hidden: Browser Source Export, PepsLive Dock Integration, and Data Bridge.
+- Use **Skin Settings File** to export a skin setup on the full web page and import it inside Dock V1 on another machine.

@@ -24,6 +24,18 @@ body {
   --scoreboard-scale: 1;
   --border-width: 1.6px;
   --glass-blur: 10px;
+  --event-name-font-size: 14px;
+  --team-name-font-size: 20px;
+  --team-short-font-size: 11px;
+  --score-font-size: 30px;
+  --clock-font-size: 12px;
+  --period-font-size: 12px;
+  --status-font-size: 12px;
+  --extra-font-size: 11px;
+  --board-width-percent: 96;
+  --board-min-height: 0px;
+  --score-box-width: 176px;
+  --team-box-min-height: 0px;
 }
 
 * {
@@ -64,8 +76,8 @@ body {
  */
 .scoreboard-shell {
   position: relative;          /* stacking context for ::before */
-  width: min(96vw, 1180px);
-  min-height: 126px;
+  width: min(calc(var(--board-width-percent) * 1vw), 1180px);
+  min-height: max(var(--board-min-height), 126px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -103,14 +115,14 @@ body {
 }
 
 #overlay-root.mode-live .scoreboard-shell {
-  min-height: 0;
+  min-height: var(--board-min-height);
   gap: 6px;
   padding: 7px 10px;
 }
 
 #overlay-root.mode-summary .scoreboard-shell {
-  width: min(92vw, 1400px);
-  min-height: 300px;
+  width: min(calc(var(--board-width-percent) * 1vw), 1400px);
+  min-height: max(var(--board-min-height), 300px);
   padding: 24px;
   gap: 18px;
 }
@@ -129,7 +141,7 @@ body {
 }
 
 .event-name {
-  font-size: 1rem;
+  font-size: var(--event-name-font-size);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -139,9 +151,9 @@ body {
   padding: 4px 10px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent-color) 24%, transparent);
+  font-size: var(--status-font-size);
   border: 1px solid color-mix(in srgb, var(--accent-color) 45%, transparent);
   font-weight: 700;
-  font-size: 0.8rem;
   letter-spacing: 0.06em;
 }
 
@@ -206,6 +218,7 @@ body {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  min-height: var(--team-box-min-height);
   padding: 8px 10px;
   border-radius: calc(var(--border-radius) * 0.74);
   border: 1px solid color-mix(in srgb, var(--text-color) 12%, transparent);
@@ -231,7 +244,7 @@ body {
 }
 
 .team-name {
-  font-size: 1.02rem;
+  font-size: var(--team-name-font-size);
   font-weight: 700;
   line-height: 1.05;
   white-space: nowrap;
@@ -240,21 +253,21 @@ body {
 }
 
 .team-short {
-  font-size: 0.78rem;
+  font-size: var(--team-short-font-size);
   font-weight: 700;
   opacity: 0.85;
   letter-spacing: 0.08em;
 }
 
 .score-block {
-  min-width: 220px;
+  min-width: var(--score-box-width);
   display: grid;
   justify-items: center;
   gap: 6px;
 }
 
 #overlay-root.mode-live .score-block {
-  min-width: 176px;
+  min-width: min(var(--score-box-width), 42vw);
   gap: 3px;
 }
 
@@ -262,13 +275,13 @@ body {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  font-size: var(--score-font-size);
   font-weight: 900;
   line-height: 1;
 }
 
 #overlay-root.mode-live .score-values {
-  font-size: clamp(1.45rem, 2.6vw, 2rem);
+  font-size: var(--score-font-size);
 }
 
 .score-divider {
@@ -279,10 +292,18 @@ body {
 .game-meta {
   display: flex;
   gap: 10px;
-  font-size: 0.84rem;
+  font-size: var(--clock-font-size);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+[data-slot="periodLabel"] {
+  font-size: var(--period-font-size);
+}
+
+[data-slot="gameClock"] {
+  font-size: var(--clock-font-size);
 }
 
 .extra-row {
@@ -302,6 +323,7 @@ body {
   padding: 6px 8px;
   display: grid;
   gap: 1px;
+  font-size: var(--extra-font-size);
 }
 
 #overlay-root.mode-live .extra-item {
@@ -341,15 +363,15 @@ body {
 }
 
 #overlay-root.mode-summary .team-name {
-  font-size: 1.35rem;
+  font-size: calc(var(--team-name-font-size) * 1.16);
 }
 
 #overlay-root.mode-summary .score-values {
-  font-size: clamp(3rem, 9vw, 8rem);
+  font-size: calc(var(--score-font-size) * 2.5);
 }
 
 #overlay-root.mode-summary .score-block {
-  min-width: 380px;
+  min-width: max(var(--score-box-width), 280px);
 }
 
 #overlay-root.mode-summary .extra-row {
@@ -439,7 +461,7 @@ body {
 
 #overlay-root.mode-live.hide-extra-row .scoreboard-shell,
 #overlay-root.mode-live.event-row-empty .scoreboard-shell {
-  min-height: 0;
+  min-height: var(--board-min-height);
 }
 
 #overlay-root.text-mode-blank [data-slot="eventName"],

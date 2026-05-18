@@ -203,7 +203,12 @@ function syncDisplayOptionControls() {
   }
   const options = { ...DEFAULT_DISPLAY_OPTIONS, ...(state.displayOptions || {}) };
   ui.displayOptionsForm.querySelectorAll("input[data-display-option]").forEach((input) => {
-    input.checked = options[input.dataset.displayOption] !== false;
+    const key = input.dataset.displayOption;
+    if (input.type === "checkbox") {
+      input.checked = options[key] !== false;
+      return;
+    }
+    input.value = options[key] ?? DEFAULT_DISPLAY_OPTIONS[key] ?? input.value;
   });
   ui.displayOptionsForm.querySelectorAll("select[data-display-option]").forEach((select) => {
     select.value = options[select.dataset.displayOption] || DEFAULT_DISPLAY_OPTIONS[select.dataset.displayOption] || "full";
@@ -712,6 +717,46 @@ async function applyNormalizedProtocolPayload(protocolPayload, sourceLabel, opti
   notify(`Payload applied (${sourceLabel})`);
 }
 
+function isPepsLiveDockPayload(payload = null, sourceLabel = "") {
+  return `${payload?.source || ""} ${sourceLabel || ""}`.toLowerCase().includes("pepslive-dock");
+}
+
+async function applyMatchDataOnlyPayload(protocolPayload, sourceLabel, options = {}) {
+  const template = state.selectedTemplate || getTemplateById(protocolPayload.skinId) || TEMPLATE_REGISTRY[0];
+  const sport = protocolPayload.matchData?.sport || protocolPayload.sport || template.sport || "football";
+  const fallback = await getMockDataBySport(sport);
+  const matchData = applyEventLogoToMatchData({
+    ...fallback,
+    ...(protocolPayload.matchData || {}),
+    sport
+  });
+  const timestamp = protocolPayload.timestamp || nowIso();
+
+  state.activeMatchData = matchData;
+  previewEngine.setMatchData(matchData);
+
+  const panelPayload = buildProtocolPayloadFromState({
+    source: protocolPayload.source || sourceLabel || "pepslive-dock",
+    timestamp,
+    sport: matchData.sport || template.sport,
+    skinId: template.id,
+    type: template.type,
+    theme: state.currentTheme,
+    animation: { style: state.animationStyle },
+    matchData,
+    displayOptions: state.displayOptions
+  });
+
+  updateProtocolMeta(panelPayload, timestamp);
+  updateIntegrationPanel(panelPayload, {
+    dataSource: options.dataSource || resolveIntegrationDataSource(protocolPayload.source || sourceLabel, options.transport || ""),
+    payloadSource: protocolPayload.source || sourceLabel,
+    lastUpdate: timestamp
+  });
+  setIntegrationPayloadStatus("Payload Status: match data synced", "ok");
+  refreshObsUrlsPanel();
+}
+
 async function validateRawPayload(rawPayload) {
   if (!dockAdapter) {
     return {
@@ -763,6 +808,13 @@ async function handlePayloadIngest(rawPayload, sourceLabel, options = {}) {
   if (!validation.isValid || !validation.normalizedPayload) {
     setIntegrationPayloadStatus("Payload Status: rejected", "warn");
     notify(`Payload rejected (${sourceLabel})`, "warn");
+    return;
+  }
+  if (options.matchDataOnly || isPepsLiveDockPayload(validation.normalizedPayload, sourceLabel)) {
+    await applyMatchDataOnlyPayload(validation.normalizedPayload, sourceLabel, {
+      dataSource: options.dataSource || resolveIntegrationDataSource(sourceLabel, options.transport || ""),
+      transport: options.transport || ""
+    });
     return;
   }
   await applyNormalizedProtocolPayload(validation.normalizedPayload, sourceLabel, {
@@ -1173,6 +1225,10 @@ async function exportCurrentPreviewPng() {
   bodyClone.querySelector("#overlay-debug-box")?.remove();
   bodyClone.querySelector("#overlay-relay-status")?.remove();
   bodyClone.querySelectorAll("script").forEach((node) => node.remove());
+  bodyClone.setAttribute(
+    "style",
+    `margin:0;padding:0;width:${width}px;height:${height}px;overflow:hidden;background:transparent !important;`
+  );
 
   const htmlStyle = escapeXmlAttribute(frameDocument.documentElement.getAttribute("style") || "");
   const serializer = new XMLSerializer();
@@ -1208,11 +1264,24 @@ async function exportCurrentPreviewPng() {
     }
     context.clearRect(0, 0, width, height);
     context.drawImage(image, 0, 0, width, height);
-    const pngUrl = canvas.toDataURL("image/png");
+    const pngBlob = await new Promise((resolve) => {
+      if (canvas.toBlob) {
+        canvas.toBlob((blob) => resolve(blob), "image/png");
+        return;
+      }
+      resolve(null);
+    });
+    const pngUrl = pngBlob ? URL.createObjectURL(pngBlob) : canvas.toDataURL("image/png");
     const anchor = document.createElement("a");
     anchor.href = pngUrl;
     anchor.download = `pepslive-${state.selectedTemplate.id}-${width}x${height}.png`;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
     anchor.click();
+    anchor.remove();
+    if (pngBlob) {
+      window.setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+    }
     notify("PNG exported from current preview");
   } catch (error) {
     notify(`PNG export failed: ${error.message}`, "error");
@@ -1258,14 +1327,18 @@ function bindPreviewTools() {
     exportCurrentPreviewPng();
   });
 
-  ui.displayOptionsForm?.addEventListener("change", (event) => {
+  const handleDisplayOptionInput = (event) => {
     const input = event.target.closest("input[data-display-option]");
     const select = event.target.closest("select[data-display-option]");
     if (!input && !select) {
       return;
     }
     const key = input?.dataset.displayOption || select?.dataset.displayOption;
-    const value = input ? input.checked : select.value;
+    let value = select ? select.value : input.checked;
+    if (input && input.type !== "checkbox") {
+      const parsed = Number(input.value);
+      value = Number.isFinite(parsed) ? parsed : input.value;
+    }
     state.displayOptions = {
       ...DEFAULT_DISPLAY_OPTIONS,
       ...state.displayOptions,
@@ -1276,7 +1349,10 @@ function bindPreviewTools() {
     scheduleGalleryPreviewRefresh();
     saveSkinState();
     scheduleCurrentStatePublish();
-  });
+  };
+
+  ui.displayOptionsForm?.addEventListener("input", handleDisplayOptionInput);
+  ui.displayOptionsForm?.addEventListener("change", handleDisplayOptionInput);
 
   // Phase 5.0: Team Name Alignment button group
   ui.teamNameAlignGroup?.addEventListener("click", (event) => {
@@ -1325,6 +1401,20 @@ function bindPreviewTools() {
   });
 }
 
+async function importSkinSettingsPayload(parsed) {
+  const template = getTemplateById(parsed.skinId);
+  state.currentTheme = { ...DEFAULT_THEME, ...(parsed.theme || {}) };
+  state.animationStyle = parsed.animation?.style || state.currentTheme.animationStyle || "smooth-broadcast";
+  state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(parsed.displayOptions || {}) };
+  state.eventLogoDataUrl = parsed.eventLogo || "";
+  state.eventLogoPalette = state.eventLogoDataUrl ? await extractPaletteFromDataUrl(state.eventLogoDataUrl) : [];
+  syncDisplayOptionControls();
+  updateEventLogoUi();
+  setThemeBySkinId(template.id, state.currentTheme);
+  await applyTemplate(template, { markRecent: true, broadcast: true, forceMock: false });
+  return template;
+}
+
 function bindSkinJsonActions() {
   ui.exportJsonBtn.addEventListener("click", () => {
     if (!state.selectedTemplate) {
@@ -1347,6 +1437,28 @@ function bindSkinJsonActions() {
     notify("Export Skin JSON complete");
   });
 
+  ui.loadSkinJsonFileBtn?.addEventListener("click", () => {
+    ui.skinJsonFileInput?.click();
+  });
+
+  ui.skinJsonFileInput?.addEventListener("change", async () => {
+    const file = ui.skinJsonFileInput.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw);
+      ui.skinJsonArea.value = JSON.stringify(parsed, null, 2);
+      const template = await importSkinSettingsPayload(parsed);
+      notify(`Settings file imported: ${template.id}`);
+    } catch (error) {
+      notify(`Open settings file failed: ${error.message}`, "error");
+    } finally {
+      ui.skinJsonFileInput.value = "";
+    }
+  });
+
   ui.importJsonBtn.addEventListener("click", async () => {
     const raw = ui.skinJsonArea.value.trim();
     if (!raw) {
@@ -1355,16 +1467,7 @@ function bindSkinJsonActions() {
     }
     try {
       const parsed = JSON.parse(raw);
-      const template = getTemplateById(parsed.skinId);
-      state.currentTheme = { ...DEFAULT_THEME, ...(parsed.theme || {}) };
-      state.animationStyle = parsed.animation?.style || state.currentTheme.animationStyle || "smooth-broadcast";
-      state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(parsed.displayOptions || {}) };
-      state.eventLogoDataUrl = parsed.eventLogo || "";
-      state.eventLogoPalette = state.eventLogoDataUrl ? await extractPaletteFromDataUrl(state.eventLogoDataUrl) : [];
-      syncDisplayOptionControls();
-      updateEventLogoUi();
-      setThemeBySkinId(template.id, state.currentTheme);
-      await applyTemplate(template, { markRecent: true, broadcast: true, forceMock: false });
+      const template = await importSkinSettingsPayload(parsed);
       notify(`Import Skin success: ${template.id}`);
     } catch (error) {
       notify(`Import JSON failed: ${error.message}`, "error");
@@ -2176,6 +2279,19 @@ function initSharedBridge() {
           payloadSource: sharedState.currentPayload?.source || "-",
           lastUpdate: sharedState.lastSyncTime
         });
+        if (
+          mode === "storage" &&
+          shouldListenRemoteUpdates() &&
+          isPepsLiveDockPayload(sharedState.currentPayload, "storage")
+        ) {
+          state.applyingRemote = true;
+          applyMatchDataOnlyPayload(sharedState.currentPayload, "storage", {
+            dataSource: resolveIntegrationDataSource(sharedState.currentPayload?.source, mode),
+            transport: mode
+          }).finally(() => {
+            state.applyingRemote = false;
+          });
+        }
       }
       updateBridgeStatus(`State sync ${mode}`, "ok");
     }
@@ -2254,6 +2370,8 @@ function cacheElements() {
 
   ui.exportJsonBtn = document.getElementById("exportJsonBtn");
   ui.importJsonBtn = document.getElementById("importJsonBtn");
+  ui.loadSkinJsonFileBtn = document.getElementById("loadSkinJsonFileBtn");
+  ui.skinJsonFileInput = document.getElementById("skinJsonFileInput");
   ui.resetSkinBtn = document.getElementById("resetSkinBtn");
   ui.duplicateSkinBtn = document.getElementById("duplicateSkinBtn");
   ui.skinJsonArea = document.getElementById("skinJsonArea");
@@ -2491,15 +2609,16 @@ async function initApp() {
 
   const sharedState = getSharedOverlayState();
   const sharedPayload = sharedState.currentPayload;
+  const sharedPayloadIsDock = isPepsLiveDockPayload(sharedPayload, "storage");
   const initialTemplate = state.currentSkin?.skinId
     ? getTemplateById(state.currentSkin.skinId)
-    : sharedPayload?.skinId
+    : sharedPayload?.skinId && !sharedPayloadIsDock
       ? getTemplateById(sharedPayload.skinId)
       : TEMPLATE_REGISTRY[0];
 
-  const initialTheme = getThemeBySkinId(initialTemplate.id) || sharedPayload?.theme || state.currentSkin?.theme || DEFAULT_THEME;
+  const initialTheme = getThemeBySkinId(initialTemplate.id) || (!sharedPayloadIsDock ? sharedPayload?.theme : null) || state.currentSkin?.theme || DEFAULT_THEME;
   state.currentTheme = { ...DEFAULT_THEME, ...initialTheme };
-  state.animationStyle = sharedPayload?.animation?.style || state.currentTheme.animationStyle || DEFAULT_THEME.animationStyle;
+  state.animationStyle = (!sharedPayloadIsDock ? sharedPayload?.animation?.style : null) || state.currentTheme.animationStyle || DEFAULT_THEME.animationStyle;
   state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(state.currentSkin?.displayOptions || {}) };
   state.eventLogoDataUrl = state.currentSkin?.eventLogo || "";
   state.eventLogoPalette = state.eventLogoDataUrl ? await extractPaletteFromDataUrl(state.eventLogoDataUrl) : [];
@@ -2512,6 +2631,12 @@ async function initApp() {
     forceMock: false,
     matchDataOverride: sharedPayload?.matchData || null
   });
+  if (sharedPayloadIsDock && sharedPayload?.matchData) {
+    await applyMatchDataOnlyPayload(sharedPayload, "storage", {
+      dataSource: resolveIntegrationDataSource(sharedPayload.source, "storage"),
+      transport: "storage"
+    });
+  }
   syncGalleryPreviewContext({ refreshFrames: true });
 
   updateProtocolMeta(sharedPayload || buildProtocolPayloadFromState(), sharedState.lastSyncTime || nowIso());

@@ -92,13 +92,14 @@ body {
 .settings-modal-body {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(480px, 1.25fr) minmax(360px, 0.75fr);
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 3fr);
   gap: 12px;
+  overflow: hidden;
 }
 
 .settings-preview-column {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .settings-controls-column {
@@ -1418,6 +1419,16 @@ body {
   accent-color: var(--accent);
 }
 
+.slot-toggle.layout-control {
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: minmax(90px, 0.9fr) minmax(110px, 1.1fr);
+}
+
+.slot-toggle.layout-control input[type="range"] {
+  width: 100%;
+}
+
 .slot-toggle:has(input:checked) {
   color: var(--text-primary);
   border-color: rgba(255, 122, 24, 0.45);
@@ -2121,6 +2132,7 @@ body.skin-studio-embed {
 }
 
 .skin-studio-embed .source-manager,
+.skin-studio-embed .source-export-panel,
 .skin-studio-embed .data-bridge-card,
 .skin-studio-embed .integration-card {
   display: none;
@@ -2138,22 +2150,25 @@ body.skin-studio-embed {
 }
 
 .skin-studio-embed .settings-modal-body {
-  overflow: auto;
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 3fr);
+  overflow: hidden;
   padding-right: 6px;
   align-items: start;
 }
 
-.skin-studio-embed .settings-preview-column,
-.skin-studio-embed .settings-controls-column {
+.skin-studio-embed .settings-preview-column {
   overflow: visible;
 }
 
 .skin-studio-embed .settings-controls-column {
+  overflow: auto;
+  max-height: calc(100vh - 116px);
   padding-bottom: 28px;
 }
 
 .skin-studio-embed .preview-panel {
-  position: relative;
+  position: sticky;
+  top: 0;
 }
 
 @media (max-width: 900px) {

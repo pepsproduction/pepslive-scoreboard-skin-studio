@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## Phase 5.3 - Embedded Settings Stability + Layout Controls
+
+- Dock V1 payloads now update match data only; they no longer overwrite the selected skin, theme, display options, or Summary Board choice.
+- Source Preview export uses a safer PNG download path with explicit canvas/blob download handling.
+- Added independent display controls for event text, team names, short names, scores, clock, period, status, extra text, board width/height, score box width, and team box height.
+- Embedded Skin Settings Studio now uses a compact sticky preview column plus a scrollable settings column for OBS Dock use.
+- Embedded mode hides advanced Browser Source Export, PepsLive Dock Integration, and Data Bridge panels; the simplified Skin Settings File panel remains for moving presets between machines.
+
 ## Phase 5.2 - Live Relay Stability + PNG Export
 
 - Relay/portable URLs can now embed the current `matchData` so overlays open with the latest Dock V1 score/team/clock instead of flashing mock preview data first.

@@ -1,4 +1,4 @@
-import { BACKGROUND_MODES, DEFAULT_DISPLAY_OPTIONS, SAFE_AREA_MODES, generateOverlayUrl } from "./utils.js";
+import { BACKGROUND_MODES, DEFAULT_DISPLAY_OPTIONS, SAFE_AREA_MODES, generatePortableOverlayUrl } from "./utils.js";
 
 const BACKGROUND_CLASS_MAP = {
   "Transparent Grid": "bg-transparent-grid",
@@ -157,16 +157,18 @@ export class PreviewEngine {
     if (!this.state.template) {
       return "";
     }
-    return generateOverlayUrl({
+    return generatePortableOverlayUrl({
       skinId: this.state.template.id,
       type: this.state.template.type,
+      sport: this.state.template.sport,
       animationStyle: this.state.animationStyle,
       theme: this.state.theme,
       displayOptions: this.state.displayOptions,
+      matchData: this.state.matchData,
       cacheBust,
       absolute,
       isolated: true
-    });
+    }).url;
   }
 
   reloadFrame() {

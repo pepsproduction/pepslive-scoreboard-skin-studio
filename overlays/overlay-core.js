@@ -332,6 +332,27 @@ function applyInspectorAndQaClass(root) {
 function applyDisplayOptions(root) {
   displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(displayOptions || {}) };
 
+  const numberOption = (key, fallback, min, max) => {
+    const value = Number(displayOptions[key]);
+    if (!Number.isFinite(value)) {
+      return fallback;
+    }
+    return Math.min(Math.max(value, min), max);
+  };
+
+  root.style.setProperty("--event-name-font-size", `${numberOption("eventNameFontSize", 14, 8, 64)}px`);
+  root.style.setProperty("--team-name-font-size", `${numberOption("teamNameFontSize", 20, 10, 96)}px`);
+  root.style.setProperty("--team-short-font-size", `${numberOption("teamShortNameFontSize", 11, 8, 48)}px`);
+  root.style.setProperty("--score-font-size", `${numberOption("scoreFontSize", 30, 16, 160)}px`);
+  root.style.setProperty("--clock-font-size", `${numberOption("clockFontSize", 12, 8, 48)}px`);
+  root.style.setProperty("--period-font-size", `${numberOption("periodFontSize", 12, 8, 48)}px`);
+  root.style.setProperty("--status-font-size", `${numberOption("statusFontSize", 12, 8, 48)}px`);
+  root.style.setProperty("--extra-font-size", `${numberOption("extraFontSize", 11, 8, 42)}px`);
+  root.style.setProperty("--board-width-percent", String(numberOption("boardWidthPercent", 96, 30, 100)));
+  root.style.setProperty("--board-min-height", `${numberOption("boardMinHeight", 0, 0, 1080)}px`);
+  root.style.setProperty("--score-box-width", `${numberOption("scoreBoxWidth", 176, 80, 720)}px`);
+  root.style.setProperty("--team-box-min-height", `${numberOption("teamBoxMinHeight", 0, 0, 360)}px`);
+
   root.classList.toggle("hide-event-logo", !displayOptions.eventLogo);
   root.classList.toggle("hide-event-name", !displayOptions.eventName);
   root.classList.toggle("hide-team-logos", !displayOptions.teamLogos);
