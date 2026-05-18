@@ -214,6 +214,7 @@ function updatePreviewSummary(template = state.selectedTemplate) {
     ui.previewSourceSizeText.textContent = sourcePreset ? sourcePreset.label : "-";
     if (sourcePreset && ui.previewStage) {
       ui.previewStage.style.setProperty("--preview-aspect-ratio", `${sourcePreset.width} / ${sourcePreset.height}`);
+      ui.previewStage.style.setProperty("--preview-aspect-ratio-value", String(sourcePreset.width / sourcePreset.height));
       ui.previewStage.dataset.sourceType = template.type;
     }
   }

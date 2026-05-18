@@ -3,6 +3,7 @@
 ## Phase 5.4 - Live/Summary Settings Isolation + Flicker Guard
 
 - Embedded Skin Settings Studio now places Source Preview at the top of the popup, with preview and controls scrolling independently.
+- Embedded Source Preview stage now targets roughly one quarter of the dock viewport while preserving the selected Browser Source aspect ratio.
 - Live Scoreboard and Summary Board styling states are stored separately so adjusting one mode no longer overwrites the other mode.
 - Browser Source payloads now carry `displayOptions` as part of the shared protocol, while PepsLive Dock V1 match updates no longer reset display options back to defaults.
 - Overlay rendering ignores empty Dock visual settings and keeps the selected skin/theme/slot layout stable during score/time updates.

@@ -683,7 +683,7 @@ In embedded mode:
 
 ## Phase 5.4 Live/Summary Settings Isolation
 
-- Embedded Skin Settings Studio keeps Source Preview at the top of the popup and lets the settings panel scroll separately.
+- Embedded Skin Settings Studio keeps Source Preview at the top of the popup, sizes the preview stage to about one quarter of the dock viewport, and lets the settings panel scroll separately.
 - Live Scoreboard settings and Summary Board settings are saved independently.
 - PepsLive Dock V1 updates score/team/clock data only; it does not reset skin, theme, display options, or slot layout.
 - Browser Source overlays keep the selected visual state while live match data changes, reducing fallback flicker to the default preview.
