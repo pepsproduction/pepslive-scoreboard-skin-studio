@@ -680,3 +680,11 @@ In embedded mode:
 - Added independent controls for text sizes and frame sizing: event text, team name, short name, score, clock, period, status, extra text, board width/height, score box width, and team box height.
 - In embedded mode, advanced panels that are no longer needed during Dock V1 use are hidden: Browser Source Export, PepsLive Dock Integration, and Data Bridge.
 - Use **Skin Settings File** to export a skin setup on the full web page and import it inside Dock V1 on another machine.
+
+## Phase 5.4 Live/Summary Settings Isolation
+
+- Embedded Skin Settings Studio keeps Source Preview at the top of the popup and lets the settings panel scroll separately.
+- Live Scoreboard settings and Summary Board settings are saved independently.
+- PepsLive Dock V1 updates score/team/clock data only; it does not reset skin, theme, display options, or slot layout.
+- Browser Source overlays keep the selected visual state while live match data changes, reducing fallback flicker to the default preview.
+- If OBS uses an isolated Browser Source profile, use the copied Portable URL or Relay URL so the selected skin state is included directly in the URL.

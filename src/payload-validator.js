@@ -257,6 +257,7 @@ export async function normalizeIncomingPayload(payload) {
     type,
     theme: isPlainObject(payload.theme) ? payload.theme : {},
     animation: isPlainObject(payload.animation) ? payload.animation : {},
+    displayOptions: isPlainObject(payload.displayOptions) ? payload.displayOptions : {},
     matchData: {
       ...mergedMatchData,
       sport

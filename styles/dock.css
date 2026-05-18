@@ -2150,25 +2150,44 @@ body.skin-studio-embed {
 }
 
 .skin-studio-embed .settings-modal-body {
-  grid-template-columns: minmax(240px, 1fr) minmax(0, 3fr);
+  grid-template-columns: 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
   padding-right: 6px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .skin-studio-embed .settings-preview-column {
-  overflow: visible;
+  min-height: 0;
+  max-height: min(38vh, 280px);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .skin-studio-embed .settings-controls-column {
   overflow: auto;
-  max-height: calc(100vh - 116px);
+  max-height: none;
   padding-bottom: 28px;
 }
 
 .skin-studio-embed .preview-panel {
-  position: sticky;
-  top: 0;
+  position: relative;
+}
+
+.skin-studio-embed .preview-meta-bar {
+  display: none;
+}
+
+.skin-studio-embed .preview-actions {
+  margin-top: 6px;
+}
+
+.skin-studio-embed .preview-stage[data-source-type="live"] {
+  max-height: min(22vh, 150px);
+}
+
+.skin-studio-embed .preview-stage[data-source-type="summary"] {
+  max-height: min(30vh, 220px);
 }
 
 @media (max-width: 900px) {

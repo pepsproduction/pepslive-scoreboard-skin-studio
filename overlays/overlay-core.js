@@ -552,6 +552,10 @@ function resolveSourceLabel(sourceValue = "") {
   return sourceValue || "Unknown";
 }
 
+function isPepsLiveDockSource(payload = null, sourceLabel = "") {
+  return `${payload?.source || ""} ${sourceLabel || ""}`.toLowerCase().includes("pepslive-dock");
+}
+
 function mergeMatchDataWithTemplateFallback(template, incoming = {}) {
   const merged = {
     ...(currentData || {}),
@@ -600,9 +604,16 @@ async function applyProtocolPayload(rawPayload, sourceLabel = "unknown") {
   const payload = validation.normalizedPayload;
   currentSourceLabel = resolveSourceLabel(payload.source || sourceLabel);
   const template = resolveTemplateForIncomingPayload(payload, sourceLabel);
+  const isLockedToDifferentType = skinLockedToUrl && payload.type && payload.type !== template.type;
+  const isDockPayload = isPepsLiveDockSource(payload, sourceLabel);
   currentSkinId = template.id;
-  currentAnimation = payload.animation?.style || currentAnimation;
-  applyTheme(mergeIncomingTheme(payload, sourceLabel));
+  if (!isLockedToDifferentType) {
+    currentAnimation = payload.animation?.style || currentAnimation;
+    applyTheme(mergeIncomingTheme(payload, sourceLabel));
+    if (!isDockPayload && payload.displayOptions && typeof payload.displayOptions === "object") {
+      displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...payload.displayOptions };
+    }
+  }
   currentData = payload.matchData;
 
   renderScoreboard(template, currentData);
@@ -629,7 +640,8 @@ function normalizeRelayPayload(data) {
     type: data?.type || activeTemplate.type,
     theme: data?.theme || {},
     animation: data?.animation || { style: currentAnimation },
-    matchData: mergeMatchDataWithTemplateFallback(activeTemplate, matchData)
+    matchData: mergeMatchDataWithTemplateFallback(activeTemplate, matchData),
+    displayOptions: data?.displayOptions || displayOptions
   });
 }
 
@@ -642,7 +654,8 @@ function buildPayloadFromLocalState() {
     type: template.type,
     theme: currentTheme,
     animation: { style: currentAnimation },
-    matchData: currentData || {}
+    matchData: currentData || {},
+    displayOptions
   });
 }
 
@@ -660,7 +673,8 @@ function schedulePostMessageRender() {
       type: activeTemplate.type,
       theme: currentTheme,
       animation: { style: currentAnimation },
-      matchData: currentData || {}
+      matchData: currentData || {},
+      displayOptions
     });
     await applyProtocolPayload(composedPayload, "post-message");
   }, 16);

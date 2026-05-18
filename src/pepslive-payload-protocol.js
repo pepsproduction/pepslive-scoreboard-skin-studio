@@ -31,7 +31,8 @@ export function createProtocolPayload(partial = {}) {
     type: partial.type || "live",
     theme: partial.theme || {},
     animation: partial.animation || {},
-    matchData: partial.matchData || {}
+    matchData: partial.matchData || {},
+    displayOptions: partial.displayOptions || {}
   };
 }
 

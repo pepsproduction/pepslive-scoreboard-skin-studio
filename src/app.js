@@ -98,6 +98,7 @@ const state = {
   displayOptions: { ...DEFAULT_DISPLAY_OPTIONS },
   eventLogoDataUrl: "",
   eventLogoPalette: [],
+  settingsByType: mergeStoredTypeSettings(getCurrentSkin()?.typeSettings || {}),
   publishTimer: 0,
   galleryPreviewTimer: 0,
   // Phase 4.4
@@ -122,6 +123,27 @@ let gallery = null;
 let previewEngine = null;
 let themeEditor = null;
 let obsManager = null;
+
+function hasObjectValues(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length > 0;
+}
+
+function createSettingsProfile(overrides = {}) {
+  return {
+    theme: { ...DEFAULT_THEME, ...(overrides.theme || {}) },
+    animationStyle: overrides.animationStyle || overrides.animation?.style || overrides.animation || DEFAULT_THEME.animationStyle,
+    displayOptions: { ...DEFAULT_DISPLAY_OPTIONS, ...(overrides.displayOptions || {}) },
+    eventLogoDataUrl: overrides.eventLogoDataUrl || overrides.eventLogo || "",
+    eventLogoPalette: Array.isArray(overrides.eventLogoPalette) ? [...overrides.eventLogoPalette] : []
+  };
+}
+
+function mergeStoredTypeSettings(stored = {}) {
+  return {
+    live: createSettingsProfile(stored.live || {}),
+    summary: createSettingsProfile(stored.summary || {})
+  };
+}
 
 function notify(message, level = "info") {
   if (!ui.message) {
@@ -237,14 +259,55 @@ function updateEventLogoUi() {
   }
 }
 
-function applyEventLogoToMatchData(matchData) {
+function applyEventLogoToMatchData(matchData, eventLogoOverride = state.eventLogoDataUrl) {
   if (!matchData) {
     return matchData;
   }
   return {
     ...matchData,
-    eventLogo: state.eventLogoDataUrl || matchData.eventLogo || ""
+    eventLogo: eventLogoOverride || matchData.eventLogo || ""
   };
+}
+
+function captureCurrentTypeSettings(type = state.selectedTemplate?.type) {
+  if (!type || !["live", "summary"].includes(type)) {
+    return;
+  }
+  state.settingsByType[type] = createSettingsProfile({
+    theme: state.currentTheme,
+    animationStyle: state.animationStyle,
+    displayOptions: state.displayOptions,
+    eventLogoDataUrl: state.eventLogoDataUrl,
+    eventLogoPalette: state.eventLogoPalette
+  });
+}
+
+function getTypeSettings(type = "live") {
+  if (!state.settingsByType[type]) {
+    state.settingsByType[type] = createSettingsProfile();
+  }
+  return state.settingsByType[type];
+}
+
+function getSettingsSnapshotForType(type = "live", template = null) {
+  if (state.selectedTemplate?.type === type) {
+    captureCurrentTypeSettings(type);
+  }
+  const profile = getTypeSettings(type);
+  return createSettingsProfile({
+    ...profile,
+    theme: getThemeBySkinId(template?.id || "") || profile.theme
+  });
+}
+
+function applySettingsProfile(profile) {
+  const nextProfile = createSettingsProfile(profile);
+  state.currentTheme = nextProfile.theme;
+  state.animationStyle = nextProfile.animationStyle || nextProfile.theme.animationStyle || DEFAULT_THEME.animationStyle;
+  state.currentTheme = { ...state.currentTheme, animationStyle: state.animationStyle };
+  state.displayOptions = nextProfile.displayOptions;
+  state.eventLogoDataUrl = nextProfile.eventLogoDataUrl;
+  state.eventLogoPalette = nextProfile.eventLogoPalette;
 }
 
 function getSourcePreset(type) {
@@ -268,13 +331,14 @@ function resolveTemplateForObsType(type) {
 
 function buildOverlayUrlByType(type, { debug = false, cacheBust = false, forceVersion = null } = {}) {
   const template = resolveTemplateForObsType(type);
+  const settings = getSettingsSnapshotForType(type, template);
   const versionValue = forceVersion ?? state.obsUrlVersion;
   return generateOverlayUrl({
     skinId: template.id,
     type,
-    animationStyle: state.animationStyle,
-    theme: state.currentTheme,
-    displayOptions: state.displayOptions,
+    animationStyle: settings.animationStyle,
+    theme: settings.theme,
+    displayOptions: settings.displayOptions,
     cacheBust,
     absolute: true,
     debug,
@@ -289,15 +353,24 @@ function buildOverlayUrlByType(type, { debug = false, cacheBust = false, forceVe
  */
 function buildPortableUrlByType(type, { debug = false, cacheBust = true, forceVersion = null } = {}) {
   const template = resolveTemplateForObsType(type);
-  const payload = buildProtocolPayloadFromState({ skinId: template.id, sport: template.sport, type });
+  const settings = getSettingsSnapshotForType(type, template);
+  const payload = buildProtocolPayloadFromState({
+    skinId: template.id,
+    sport: template.sport,
+    type,
+    theme: settings.theme,
+    animation: { style: settings.animationStyle },
+    displayOptions: settings.displayOptions,
+    eventLogo: settings.eventLogoDataUrl
+  });
   return generatePortableOverlayUrl({
     skinId: template.id,
     type,
     sport: template.sport,
-    animationStyle: state.animationStyle,
-    theme: state.currentTheme,
-    displayOptions: state.displayOptions,
-    eventLogo: state.eventLogoDataUrl || "",
+    animationStyle: settings.animationStyle,
+    theme: settings.theme,
+    displayOptions: settings.displayOptions,
+    eventLogo: settings.eventLogoDataUrl || "",
     matchData: payload.matchData,
     debug,
     absolute: true,
@@ -591,18 +664,24 @@ function applyContractReport(report) {
 }
 
 function buildProtocolPayloadFromState(partial = {}) {
-  const template = state.selectedTemplate || TEMPLATE_REGISTRY[0];
-  const matchData = applyEventLogoToMatchData(partial.matchData || state.activeMatchData || {});
+  const template = partial.skinId
+    ? getTemplateById(partial.skinId)
+    : partial.type
+      ? resolveTemplateForObsType(partial.type)
+      : state.selectedTemplate || TEMPLATE_REGISTRY[0];
+  const settings = getSettingsSnapshotForType(partial.type || template.type, template);
+  const eventLogo = partial.eventLogo ?? settings.eventLogoDataUrl ?? state.eventLogoDataUrl;
+  const matchData = applyEventLogoToMatchData(partial.matchData || state.activeMatchData || {}, eventLogo);
   return createProtocolPayload({
     source: partial.source || "PepsLiveScoreboardSkinStudio",
     timestamp: partial.timestamp || nowIso(),
     sport: partial.sport || template.sport,
     skinId: partial.skinId || template.id,
     type: partial.type || template.type,
-    theme: partial.theme || state.currentTheme,
-    animation: partial.animation || { style: state.animationStyle },
+    theme: partial.theme || settings.theme,
+    animation: partial.animation || { style: settings.animationStyle },
     matchData,
-    displayOptions: partial.displayOptions || state.displayOptions
+    displayOptions: partial.displayOptions || settings.displayOptions
   });
 }
 
@@ -610,6 +689,7 @@ function saveSkinState() {
   if (!state.selectedTemplate) {
     return;
   }
+  captureCurrentTypeSettings(state.selectedTemplate.type);
   const payload = setCurrentSkin({
     skinId: state.selectedTemplate.id,
     sport: state.selectedTemplate.sport,
@@ -619,6 +699,7 @@ function saveSkinState() {
       style: state.animationStyle
     },
     displayOptions: state.displayOptions,
+    typeSettings: state.settingsByType,
     eventLogo: state.eventLogoDataUrl
   });
   state.currentSkin = payload;
@@ -634,24 +715,40 @@ async function resolveMatchDataForTemplate(template, { forceMock = false } = {})
 }
 
 async function applyTemplate(template, options = {}) {
-  const { markRecent = false, broadcast = true, forceMock = false, matchDataOverride = null } = options;
+  const {
+    markRecent = false,
+    broadcast = true,
+    forceMock = false,
+    matchDataOverride = null,
+    settingsProfileOverride = null
+  } = options;
   const previousTemplateId = state.selectedTemplate?.id || "";
+  const previousTemplateType = state.selectedTemplate?.type || "";
   const templateChanged = previousTemplateId !== template.id;
+  if (previousTemplateType) {
+    captureCurrentTypeSettings(previousTemplateType);
+  }
 
+  const nextProfile = settingsProfileOverride
+    ? createSettingsProfile(settingsProfileOverride)
+    : getSettingsSnapshotForType(template.type, template);
   state.selectedTemplate = template;
-  state.currentTheme = getThemeBySkinId(template.id) || state.currentTheme || DEFAULT_THEME;
-  state.animationStyle = state.currentTheme.animationStyle || state.animationStyle;
+  applySettingsProfile(nextProfile);
+  state.activeMatchData = applyEventLogoToMatchData(matchDataOverride || (await resolveMatchDataForTemplate(template, { forceMock })));
 
-  previewEngine.setTemplate(template);
   previewEngine.setTheme(state.currentTheme);
   previewEngine.setAnimation(state.animationStyle);
   previewEngine.setSlotInspectorMode(state.slotInspectorMode);
   previewEngine.setVisualQaMode(state.visualQaMode);
   previewEngine.setDisplayOptions(state.displayOptions);
+  previewEngine.setMatchData(state.activeMatchData);
+  previewEngine.setTemplate(template);
   themeEditor.setTheme(state.currentTheme, { silent: true });
   ui.animationPreset.value = state.animationStyle;
   ui.slotInspectorSelect.value = state.slotInspectorMode;
   ui.visualQaModeSelect.value = state.visualQaMode;
+  syncDisplayOptionControls();
+  updateEventLogoUi();
   updateCurrentSkinLabel();
   updatePreviewSummary(template);
   if (templateChanged) {
@@ -660,8 +757,6 @@ async function applyTemplate(template, options = {}) {
   refreshObsUrlsPanel();
   saveSkinState();
 
-  state.activeMatchData = applyEventLogoToMatchData(matchDataOverride || (await resolveMatchDataForTemplate(template, { forceMock })));
-  previewEngine.setMatchData(state.activeMatchData);
   updateIntegrationPanel(buildProtocolPayloadFromState(), {
     dataSource: matchDataOverride ? state.integrationDataSource : INTEGRATION_DATA_SOURCES.MOCK,
     payloadSource: matchDataOverride ? state.integrationLastPayloadSource || "external" : "mock-data",
@@ -696,15 +791,20 @@ async function applyNormalizedProtocolPayload(protocolPayload, sourceLabel, opti
   const { broadcast = true, dataSource = "", payloadSource = "" } = options;
 
   const template = getTemplateById(protocolPayload.skinId);
-  state.currentTheme = { ...DEFAULT_THEME, ...(protocolPayload.theme || {}) };
-  state.animationStyle = protocolPayload.animation?.style || state.currentTheme.animationStyle || "smooth-broadcast";
-  setThemeBySkinId(template.id, state.currentTheme);
+  const existingProfile = getTypeSettings(template.type);
+  const profileOverride = createSettingsProfile({
+    theme: hasObjectValues(protocolPayload.theme) ? protocolPayload.theme : existingProfile.theme,
+    animation: hasObjectValues(protocolPayload.animation) ? protocolPayload.animation : existingProfile.animationStyle,
+    displayOptions: hasObjectValues(protocolPayload.displayOptions) ? protocolPayload.displayOptions : existingProfile.displayOptions,
+    eventLogo: protocolPayload.matchData?.eventLogo || existingProfile.eventLogoDataUrl
+  });
 
   await applyTemplate(template, {
     markRecent: false,
     broadcast,
     forceMock: false,
-    matchDataOverride: protocolPayload.matchData
+    matchDataOverride: protocolPayload.matchData,
+    settingsProfileOverride: profileOverride
   });
 
   updateProtocolMeta(protocolPayload, protocolPayload.timestamp);
@@ -1403,11 +1503,16 @@ function bindPreviewTools() {
 
 async function importSkinSettingsPayload(parsed) {
   const template = getTemplateById(parsed.skinId);
-  state.currentTheme = { ...DEFAULT_THEME, ...(parsed.theme || {}) };
-  state.animationStyle = parsed.animation?.style || state.currentTheme.animationStyle || "smooth-broadcast";
-  state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(parsed.displayOptions || {}) };
-  state.eventLogoDataUrl = parsed.eventLogo || "";
+  state.settingsByType = mergeStoredTypeSettings(parsed.typeSettings || state.settingsByType);
+  state.settingsByType[template.type] = createSettingsProfile({
+    theme: parsed.theme || state.settingsByType[template.type]?.theme,
+    animation: parsed.animation || state.settingsByType[template.type]?.animationStyle,
+    displayOptions: parsed.displayOptions || state.settingsByType[template.type]?.displayOptions,
+    eventLogo: parsed.eventLogo || state.settingsByType[template.type]?.eventLogoDataUrl
+  });
+  applySettingsProfile(state.settingsByType[template.type]);
   state.eventLogoPalette = state.eventLogoDataUrl ? await extractPaletteFromDataUrl(state.eventLogoDataUrl) : [];
+  state.settingsByType[template.type].eventLogoPalette = state.eventLogoPalette;
   syncDisplayOptionControls();
   updateEventLogoUi();
   setThemeBySkinId(template.id, state.currentTheme);
@@ -1429,6 +1534,7 @@ function bindSkinJsonActions() {
         style: state.animationStyle
       },
       displayOptions: state.displayOptions,
+      typeSettings: state.settingsByType,
       eventLogo: state.eventLogoDataUrl,
       createdAt: state.currentSkin?.createdAt
     });
@@ -1485,6 +1591,10 @@ function bindSkinJsonActions() {
       theme: DEFAULT_THEME,
       animation: { style: DEFAULT_THEME.animationStyle },
       displayOptions: { ...DEFAULT_DISPLAY_OPTIONS },
+      typeSettings: {
+        ...state.settingsByType,
+        [state.selectedTemplate.type]: createSettingsProfile()
+      },
       eventLogo: ""
     });
     state.currentSkin = resetPayload;
@@ -1493,6 +1603,7 @@ function bindSkinJsonActions() {
     state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
     state.eventLogoDataUrl = "";
     state.eventLogoPalette = [];
+    state.settingsByType[state.selectedTemplate.type] = createSettingsProfile();
     syncDisplayOptionControls();
     updateEventLogoUi();
     setThemeBySkinId(state.selectedTemplate.id, state.currentTheme);
@@ -2025,15 +2136,24 @@ function buildRelayUrlByType(type, { debug = false } = {}) {
   const template = resolveTemplateForObsType(type);
   const relayUrl = (ui.relayUrlInput?.value || state.relayConfig.url || "").trim();
   if (!relayUrl) return { url: "", warning: "Enter a relay URL first." };
-  const payload = buildProtocolPayloadFromState({ skinId: template.id, sport: template.sport, type });
+  const settings = getSettingsSnapshotForType(type, template);
+  const payload = buildProtocolPayloadFromState({
+    skinId: template.id,
+    sport: template.sport,
+    type,
+    theme: settings.theme,
+    animation: { style: settings.animationStyle },
+    displayOptions: settings.displayOptions,
+    eventLogo: settings.eventLogoDataUrl
+  });
   return generateRelayOverlayUrl({
     skinId: template.id,
     type,
     sport: template.sport,
     relayUrl,
-    animationStyle: state.animationStyle,
-    theme: state.currentTheme,
-    displayOptions: state.displayOptions,
+    animationStyle: settings.animationStyle,
+    theme: settings.theme,
+    displayOptions: settings.displayOptions,
     matchData: payload.matchData,
     pollIntervalSec: state.relayConfig.intervalSec || 1,
     debug,
@@ -2616,14 +2736,23 @@ async function initApp() {
       ? getTemplateById(sharedPayload.skinId)
       : TEMPLATE_REGISTRY[0];
 
-  const initialTheme = getThemeBySkinId(initialTemplate.id) || (!sharedPayloadIsDock ? sharedPayload?.theme : null) || state.currentSkin?.theme || DEFAULT_THEME;
-  state.currentTheme = { ...DEFAULT_THEME, ...initialTheme };
-  state.animationStyle = (!sharedPayloadIsDock ? sharedPayload?.animation?.style : null) || state.currentTheme.animationStyle || DEFAULT_THEME.animationStyle;
-  state.displayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...(state.currentSkin?.displayOptions || {}) };
-  state.eventLogoDataUrl = state.currentSkin?.eventLogo || "";
-  state.eventLogoPalette = state.eventLogoDataUrl ? await extractPaletteFromDataUrl(state.eventLogoDataUrl) : [];
-  syncDisplayOptionControls();
-  updateEventLogoUi();
+  if (state.currentSkin && (!state.currentSkin.typeSettings || Object.keys(state.currentSkin.typeSettings).length === 0)) {
+    const legacyType = state.currentSkin.type || initialTemplate.type || "live";
+    state.settingsByType[legacyType] = createSettingsProfile({
+      theme: state.currentSkin.theme || getThemeBySkinId(initialTemplate.id) || DEFAULT_THEME,
+      animation: state.currentSkin.animation || DEFAULT_THEME.animationStyle,
+      displayOptions: state.currentSkin.displayOptions || DEFAULT_DISPLAY_OPTIONS,
+      eventLogo: state.currentSkin.eventLogo || ""
+    });
+  }
+
+  if (sharedPayload && !sharedPayloadIsDock && !state.currentSkin?.skinId) {
+    state.settingsByType[initialTemplate.type] = createSettingsProfile({
+      theme: sharedPayload.theme || DEFAULT_THEME,
+      animation: sharedPayload.animation || DEFAULT_THEME.animationStyle,
+      displayOptions: sharedPayload.displayOptions || DEFAULT_DISPLAY_OPTIONS
+    });
+  }
 
   await applyTemplate(initialTemplate, {
     markRecent: false,

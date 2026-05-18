@@ -97,6 +97,10 @@ function mergePayload(basePayload, patch = {}) {
       ...(basePayload?.animation || {}),
       ...(patch?.animation || {})
     },
+    displayOptions: {
+      ...(basePayload?.displayOptions || {}),
+      ...(patch?.displayOptions || {})
+    },
     matchData: {
       ...(basePayload?.matchData || {}),
       ...(patch?.matchData || {})

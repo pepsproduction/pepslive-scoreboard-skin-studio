@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## Phase 5.4 - Live/Summary Settings Isolation + Flicker Guard
+
+- Embedded Skin Settings Studio now places Source Preview at the top of the popup, with preview and controls scrolling independently.
+- Live Scoreboard and Summary Board styling states are stored separately so adjusting one mode no longer overwrites the other mode.
+- Browser Source payloads now carry `displayOptions` as part of the shared protocol, while PepsLive Dock V1 match updates no longer reset display options back to defaults.
+- Overlay rendering ignores empty Dock visual settings and keeps the selected skin/theme/slot layout stable during score/time updates.
+- Template application now loads match data before re-rendering the preview to reduce visible fallback flicker.
+
 ## Phase 5.3 - Embedded Settings Stability + Layout Controls
 
 - Dock V1 payloads now update match data only; they no longer overwrite the selected skin, theme, display options, or Summary Board choice.
