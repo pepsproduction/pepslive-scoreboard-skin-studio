@@ -249,7 +249,7 @@ body {
   line-height: 1.05;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
 }
 
 .team-short {
@@ -351,7 +351,18 @@ body {
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
+}
+
+.event-name,
+.team-name,
+.team-short,
+.status-badge,
+.game-meta span,
+.extra-value,
+.score-values {
+  min-width: 0;
+  max-width: 100%;
 }
 
 #overlay-root.mode-summary .event-row {

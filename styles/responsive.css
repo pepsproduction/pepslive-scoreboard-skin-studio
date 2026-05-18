@@ -29,12 +29,24 @@
     grid-template-columns: 1fr;
   }
 
+  .skin-studio-embed .settings-modal-body {
+    grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr);
+  }
+
   .settings-preview-column {
     overflow: visible;
   }
 
+  .skin-studio-embed .settings-preview-column {
+    overflow: auto;
+  }
+
   .preview-panel {
     position: relative;
+  }
+
+  .skin-studio-embed .preview-panel {
+    position: sticky;
   }
 
   .sidebar {
@@ -51,6 +63,21 @@
 
   .preview-meta-bar {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .skin-studio-embed .settings-modal-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .skin-studio-embed .settings-preview-column {
+    max-height: 34vh;
+  }
+
+  .skin-studio-embed .preview-panel {
+    position: relative;
   }
 }
 

@@ -1309,9 +1309,80 @@ function escapeXmlAttribute(value) {
     .replace(/>/g, "&gt;");
 }
 
+async function choosePngExportTarget(filename) {
+  try {
+    if (window.showDirectoryPicker) {
+      const directoryHandle = await window.showDirectoryPicker({
+        id: "pepslive-scoreboard-png-export",
+        mode: "readwrite"
+      });
+      return { directoryHandle, fileHandle: null, cancelled: false };
+    }
+    if (!window.showSaveFilePicker) {
+      return { directoryHandle: null, fileHandle: null, cancelled: false };
+    }
+    const fileHandle = await window.showSaveFilePicker({
+      suggestedName: filename,
+      types: [
+        {
+          description: "PNG Image",
+          accept: { "image/png": [".png"] }
+        }
+      ]
+    });
+    return { directoryHandle: null, fileHandle, cancelled: false };
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      return { directoryHandle: null, fileHandle: null, cancelled: true };
+    }
+    return { directoryHandle: null, fileHandle: null, cancelled: false };
+  }
+}
+
+async function savePngBlob(blob, filename, target = {}) {
+  if (target.directoryHandle && blob) {
+    const fileHandle = await target.directoryHandle.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return "folder-picker";
+  }
+
+  if (target.fileHandle && blob) {
+    const writable = await target.fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return "file-picker";
+  }
+
+  const pngUrl = blob ? URL.createObjectURL(blob) : "";
+  if (!pngUrl) {
+    throw new Error("PNG blob is not available");
+  }
+  const anchor = document.createElement("a");
+  anchor.href = pngUrl;
+  anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+  return "download";
+}
+
 async function exportCurrentPreviewPng() {
   if (!state.selectedTemplate || !ui.previewFrame?.contentDocument) {
     notify("Preview is not ready for PNG export", "warn");
+    return;
+  }
+
+  const preset = getSourcePreset(state.selectedTemplate.type);
+  const width = preset.width;
+  const height = preset.height;
+  const filename = `pepslive-${state.selectedTemplate.id}-${width}x${height}.png`;
+  const saveTarget = await choosePngExportTarget(filename);
+  if (saveTarget.cancelled) {
+    notify("PNG export canceled", "warn");
     return;
   }
 
@@ -1319,9 +1390,6 @@ async function exportCurrentPreviewPng() {
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
   const frameDocument = ui.previewFrame.contentDocument;
-  const preset = getSourcePreset(state.selectedTemplate.type);
-  const width = preset.width;
-  const height = preset.height;
   const bodyClone = frameDocument.body.cloneNode(true);
   bodyClone.querySelector("#overlay-debug-box")?.remove();
   bodyClone.querySelector("#overlay-relay-status")?.remove();
@@ -1370,20 +1438,10 @@ async function exportCurrentPreviewPng() {
         canvas.toBlob((blob) => resolve(blob), "image/png");
         return;
       }
-      resolve(null);
+      fetch(canvas.toDataURL("image/png")).then((response) => response.blob()).then(resolve).catch(() => resolve(null));
     });
-    const pngUrl = pngBlob ? URL.createObjectURL(pngBlob) : canvas.toDataURL("image/png");
-    const anchor = document.createElement("a");
-    anchor.href = pngUrl;
-    anchor.download = `pepslive-${state.selectedTemplate.id}-${width}x${height}.png`;
-    anchor.style.display = "none";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    if (pngBlob) {
-      window.setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
-    }
-    notify("PNG exported from current preview");
+    const saveMode = await savePngBlob(pngBlob, filename, saveTarget);
+    notify(saveMode === "download" ? "PNG exported from current preview" : "PNG exported to selected location");
   } catch (error) {
     notify(`PNG export failed: ${error.message}`, "error");
   } finally {

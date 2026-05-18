@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Phase 5.5 - Relay Visual Lock + Export Polish
+
+- Locked URL-selected skin/theme/display options while Dock V1 and relay payloads update only match data, reducing flashes back to default preview styling.
+- Added automatic text fitting for long team names, event names, clock/status labels, scores, and extra values instead of clipping with ellipsis.
+- Embedded Skin Settings Studio now uses a 1/4 preview column and 3/4 scrollable tools/settings column in Dock V1.
+- Export PNG now asks for a destination folder when supported by the browser, falling back to save/download behavior when needed.
+
 ## Phase 5.4 - Live/Summary Settings Isolation + Flicker Guard
 
 - Embedded Skin Settings Studio now places Source Preview at the top of the popup, with preview and controls scrolling independently.

@@ -387,6 +387,56 @@ function collectRenderedSlotNames(root) {
     .filter(Boolean);
 }
 
+const FIT_TEXT_SELECTORS = [
+  '[data-slot="eventName"]',
+  '[data-slot="homeName"]',
+  '[data-slot="awayName"]',
+  '[data-slot="homeShortName"]',
+  '[data-slot="awayShortName"]',
+  '[data-slot="statusLabel"]',
+  '[data-slot="gameClock"]',
+  '[data-slot="periodLabel"]',
+  ".score-values",
+  ".extra-value"
+];
+
+function fitTextElement(node, minPx = 8) {
+  if (!node || !(node instanceof HTMLElement) || node.offsetParent === null) {
+    return;
+  }
+
+  const parent = node.parentElement;
+  const maxWidth = node.clientWidth || parent?.clientWidth || 0;
+  if (!maxWidth) {
+    return;
+  }
+
+  node.style.fontSize = "";
+  const computed = getComputedStyle(node);
+  const baseSize = parseFloat(computed.fontSize) || Number(node.dataset.fitBaseSize) || 16;
+  node.dataset.fitBaseSize = String(baseSize);
+  node.style.fontSize = `${baseSize}px`;
+  node.style.whiteSpace = "nowrap";
+
+  let nextSize = baseSize;
+  let guard = 0;
+  while (node.scrollWidth > maxWidth + 1 && nextSize > minPx && guard < 32) {
+    const overrun = node.scrollWidth - maxWidth;
+    nextSize -= Math.max(0.5, Math.min(2, overrun / 34));
+    node.style.fontSize = `${Math.max(minPx, nextSize)}px`;
+    guard += 1;
+  }
+}
+
+function fitDynamicText(root) {
+  FIT_TEXT_SELECTORS.forEach((selector) => {
+    root.querySelectorAll(selector).forEach((node) => {
+      const minPx = node.classList.contains("score-values") ? 14 : 8;
+      fitTextElement(node, minPx);
+    });
+  });
+}
+
 function publishContractReport(report) {
   lastContractReport = report;
   try {
@@ -459,6 +509,8 @@ function renderScoreboard(template, data) {
 
   applyInspectorAndQaClass(root);
   applyDisplayOptions(root);
+  fitDynamicText(root);
+  requestAnimationFrame(() => fitDynamicText(root));
 
   const slotNames = collectRenderedSlotNames(root);
   const contractReport = evaluateRenderedSlots(template.id, slotNames);
@@ -556,6 +608,17 @@ function isPepsLiveDockSource(payload = null, sourceLabel = "") {
   return `${payload?.source || ""} ${sourceLabel || ""}`.toLowerCase().includes("pepslive-dock");
 }
 
+function isLiveDataOnlySource(payload = null, sourceLabel = "") {
+  const value = `${payload?.source || ""} ${sourceLabel || ""}`.toLowerCase();
+  return (
+    value.includes("pepslive-dock") ||
+    value.includes("relay") ||
+    value.includes("shared") ||
+    value.includes("bridge") ||
+    value.includes("storage")
+  );
+}
+
 function mergeMatchDataWithTemplateFallback(template, incoming = {}) {
   const merged = {
     ...(currentData || {}),
@@ -606,8 +669,10 @@ async function applyProtocolPayload(rawPayload, sourceLabel = "unknown") {
   const template = resolveTemplateForIncomingPayload(payload, sourceLabel);
   const isLockedToDifferentType = skinLockedToUrl && payload.type && payload.type !== template.type;
   const isDockPayload = isPepsLiveDockSource(payload, sourceLabel);
+  const keepUrlVisualState = skinLockedToUrl && isLiveDataOnlySource(payload, sourceLabel);
+  const shouldUpdateVisualState = !isLockedToDifferentType && !keepUrlVisualState;
   currentSkinId = template.id;
-  if (!isLockedToDifferentType) {
+  if (shouldUpdateVisualState) {
     currentAnimation = payload.animation?.style || currentAnimation;
     applyTheme(mergeIncomingTheme(payload, sourceLabel));
     if (!isDockPayload && payload.displayOptions && typeof payload.displayOptions === "object") {
